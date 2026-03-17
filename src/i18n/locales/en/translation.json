@@ -1,0 +1,11 @@
+{
+    "app": {
+        "title": "Dalia",
+        "welcome": "Welcome to Dalia"
+    },
+    "common": {
+        "loading": "Loading…",
+        "error": "Something went wrong",
+        "language": "Language"
+    }
+}
