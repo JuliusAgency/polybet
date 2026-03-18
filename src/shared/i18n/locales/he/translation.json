@@ -1,35 +1,128 @@
 {
-    "app": {
-        "title": "דליה",
-        "welcome": "ברוכים הבאים לדליה"
-    },
-    "common": {
-        "loading": "טוען…",
-        "error": "משהו השתבש",
-        "language": "שפה"
-    },
-    "nav": {
-        "dashboard": "לוח בקרה",
-        "managers": "מנהלים",
-        "betLog": "יומן הימורים",
-        "users": "משתמשים",
-        "treasury": "קופה",
-        "reports": "דוחות",
-        "activity": "פעילות",
-        "markets": "שווקים",
-        "myBets": "ההימורים שלי",
-        "wallet": "ארנק"
-    },
-    "auth": {
-        "signOut": "התנתק",
-        "loading": "טוען..."
-    },
-    "signIn": {
-        "title": "התחבר ל-PolyBet",
-        "username": "שם משתמש",
-        "password": "סיסמה",
-        "submit": "התחבר",
-        "submitting": "מתחבר...",
-        "errorInvalid": "שם משתמש או סיסמה שגויים"
-    }
+  "app": {
+    "title": "פוליבט",
+    "welcome": "ברוכים הבאים לפוליבט"
+  },
+  "common": {
+    "loading": "טוען…",
+    "error": "משהו השתבש",
+    "language": "שפה",
+    "cancel": "בטל",
+    "active": "פעיל",
+    "blocked": "חסום",
+    "processing": "מעבד…",
+    "saving": "שומר…",
+    "unknownError": "שגיאה לא ידועה",
+    "profile": "פרופיל",
+    "all": "הכל",
+    "noData": "אין נתונים"
+  },
+  "nav": {
+    "dashboard": "לוח בקרה",
+    "managers": "מנהלים",
+    "betLog": "יומן הימורים",
+    "users": "משתמשים",
+    "treasury": "קופה",
+    "reports": "דוחות",
+    "activity": "פעילות",
+    "markets": "שווקים",
+    "myBets": "ההימורים שלי",
+    "wallet": "ארנק"
+  },
+  "auth": {
+    "signOut": "התנתק",
+    "loading": "טוען..."
+  },
+  "signIn": {
+    "title": "התחבר לפוליבט",
+    "username": "שם משתמש",
+    "password": "סיסמה",
+    "submit": "התחבר",
+    "submitting": "מתחבר...",
+    "errorInvalid": "שם משתמש או סיסמה שגויים",
+    "errorBlocked": "חשבון זה נחסם. פנה למנהל שלך."
+  },
+  "managers": {
+    "title": "מנהלים",
+    "fullName": "שם מלא",
+    "username": "שם משתמש",
+    "balance": "יתרה",
+    "status": "סטטוס",
+    "noManagers": "לא נמצאו מנהלים"
+  },
+  "managerProfile": {
+    "title": "מנהל: {{name}}",
+    "subtitle": "משתמשים תחת מנהל זה",
+    "managerActions": "פעולות מנהל",
+    "deposit": "הפקדה",
+    "withdraw": "משיכה",
+    "block": "חסום",
+    "unblock": "בטל חסימה",
+    "resetPwd": "איפוס סיסמה",
+    "available": "זמין",
+    "inPlay": "בתהליך",
+    "actions": "פעולות",
+    "status": "סטטוס",
+    "username": "שם משתמש",
+    "fullName": "שם מלא",
+    "noUsers": "אין משתמשים תחת מנהל זה",
+    "amountLabel": "סכום",
+    "noteLabelOpt": "הערה (אופציונלי)",
+    "notePlaceholder": "סיבה…",
+    "amountError": "הסכום חייב להיות מספר חיובי",
+    "newPassword": "סיסמה חדשה",
+    "passwordPh": "מינימום 6 תווים",
+    "passwordError": "הסיסמה חייבת להכיל לפחות 6 תווים",
+    "reset": "אפס",
+    "actionLog": "יומן פעולות",
+    "financial": "פיננסי",
+    "account": "חשבון",
+    "noActions": "אין פעולות עדיין",
+    "confirmBlock": "האם אתה בטוח שברצונך לחסום את \"{{name}}\"?",
+    "confirmUnblock": "האם אתה בטוח שברצונך לבטל חסימה של \"{{name}}\"?",
+    "userBlockedSuccess": "המשתמש נחסם בהצלחה",
+    "userUnblockedSuccess": "חסימת המשתמש בוטלה בהצלחה",
+    "managerBlockedSuccess": "המנהל נחסם בהצלחה",
+    "managerUnblockedSuccess": "חסימת המנהל בוטלה בהצלחה",
+    "dateCol": "תאריך",
+    "actionCol": "פעולה",
+    "targetCol": "יעד",
+    "noteCol": "הערה",
+    "byCol": "על ידי"
+  },
+  "actionLabels": {
+    "adjustment": "הפקדה",
+    "transfer": "משיכה",
+    "block": "חסימה",
+    "unblock": "ביטול חסימה",
+    "reset_password": "איפוס סיסמה"
+  },
+  "globalLog": {
+    "title": "יומן כללי",
+    "betLog": "יומן הימורים",
+    "financialLog": "יומן פיננסי",
+    "comingSoon": "יומן הימורים — בקרוב",
+    "manager": "מנהל",
+    "allManagers": "כל המנהלים",
+    "month": "חודש",
+    "allMonths": "כל החודשים",
+    "year": "שנה",
+    "allYears": "כל השנים",
+    "clearFilters": "נקה פילטרים",
+    "months": ["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"]
+  },
+  "financialTable": {
+    "actionId": "מזהה פעולה",
+    "manager": "מנהל",
+    "userTarget": "משתמש יעד",
+    "type": "סוג",
+    "amount": "סכום",
+    "date": "תאריך",
+    "noTransactions": "לא נמצאו עסקאות",
+    "totalDeposits": "סך הפקדות",
+    "totalWithdrawals": "סך משיכות",
+    "netProfit": "רווח נקי",
+    "deposit": "הפקדה",
+    "withdrawal": "משיכה"
+  }
 }

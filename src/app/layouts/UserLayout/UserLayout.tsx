@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { ROUTES } from '@/app/router/routes';
+import { LanguageSwitcher } from '@/shared/ui/LanguageSwitcher';
 
 interface UserLayoutProps {
   children: ReactNode;
@@ -75,6 +76,7 @@ export const UserLayout = ({ children }: UserLayoutProps) => {
             >
               {t('auth.signOut')}
             </button>
+            <LanguageSwitcher />
           </div>
         </div>
       </header>

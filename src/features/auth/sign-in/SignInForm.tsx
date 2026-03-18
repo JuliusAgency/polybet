@@ -44,7 +44,9 @@ export const SignInForm = () => {
 
             {error !== null && (
                 <p role="alert" className="mb-4 text-sm" style={{ color: 'var(--color-loss)' }}>
-                    {t('signIn.errorInvalid')}
+                    {error === 'ACCOUNT_BLOCKED'
+                        ? t('signIn.errorBlocked')
+                        : t('signIn.errorInvalid')}
                 </p>
             )}
 

@@ -72,18 +72,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
         const {
             data: { subscription },
-        } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+        } = supabase.auth.onAuthStateChange((_event, newSession) => {
             setSession(newSession);
             setUser(newSession?.user ?? null);
 
             if (newSession?.user) {
-                await loadProfile(newSession.user.id);
+                loadProfile(newSession.user.id).finally(() => setLoading(false));
             } else {
                 setProfile(null);
                 setRole(null);
+                setLoading(false);
             }
-
-            setLoading(false);
         });
 
         return () => {
@@ -91,10 +90,52 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         };
     }, [loadProfile]);
 
+    // Force-logout when is_active is set to false while user is in session
+    useEffect(() => {
+        if (!user) return;
+
+        const channel = supabase
+            .channel(`profile-block-${user.id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'profiles',
+                    filter: `id=eq.${user.id}`,
+                },
+                (payload) => {
+                    const updated = payload.new as { is_active: boolean };
+                    if (updated.is_active === false) {
+                        void supabase.auth.signOut();
+                    }
+                },
+            )
+            .subscribe();
+
+        return () => {
+            void supabase.removeChannel(channel);
+        };
+    }, [user]);
+
     const signIn = useCallback(async ({ username, password }: SignInCredentials) => {
         const email = `${username}@polybet.internal`;
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+
+        // Check is_active immediately after successful auth
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (currentUser) {
+            const { data: profileData } = await supabase
+                .from('profiles')
+                .select('is_active')
+                .eq('id', currentUser.id)
+                .single();
+            if (profileData?.is_active === false) {
+                await supabase.auth.signOut();
+                throw new Error('ACCOUNT_BLOCKED');
+            }
+        }
     }, []);
 
     const signOut = useCallback(async () => {

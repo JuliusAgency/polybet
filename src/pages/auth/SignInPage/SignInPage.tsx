@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { SignInForm } from '@/features/auth/sign-in';
+import { LanguageSwitcher } from '@/shared/ui/LanguageSwitcher';
 
 const SignInPage = () => {
     const { t } = useTranslation();
@@ -10,6 +11,7 @@ const SignInPage = () => {
                 className="w-full max-w-md rounded-xl p-8 shadow-md"
                 style={{ backgroundColor: 'var(--color-bg-surface)' }}
             >
+                    <div className="flex justify-end mb-4"><LanguageSwitcher /></div>
                 <h1
                     className="text-3xl font-bold text-center mb-2"
                     style={{ color: 'var(--color-accent)' }}

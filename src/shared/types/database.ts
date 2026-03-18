@@ -16,6 +16,7 @@ export interface DbProfile {
   phone: string | null;
   notes: string | null;
   is_active: boolean;
+  cascade_blocked_by: string | null;
   created_by: string | null;
   created_at: string;
 }

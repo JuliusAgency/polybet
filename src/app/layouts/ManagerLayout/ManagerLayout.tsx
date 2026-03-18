@@ -3,17 +3,23 @@ import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { ROUTES } from '@/app/router/routes';
+import { LanguageSwitcher } from '@/shared/ui/LanguageSwitcher';
 
 interface ManagerLayoutProps {
   children: ReactNode;
 }
 
 export const ManagerLayout = ({ children }: ManagerLayoutProps) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { profile, signOut } = useAuth();
 
+  const isRTL = i18n.language === 'he';
+
   return (
-    <div className="flex rtl:flex-row-reverse min-h-screen bg-gray-950 text-gray-100">
+    <div
+      className="flex min-h-screen bg-gray-950 text-gray-100"
+      style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}
+    >
       {/* Sidebar */}
       <aside className="w-60 flex-shrink-0 bg-gray-900 flex flex-col">
         <div className="px-6 py-5 border-b border-gray-800">
@@ -71,16 +77,19 @@ export const ManagerLayout = ({ children }: ManagerLayoutProps) => {
           </NavLink>
         </nav>
 
-        <div className="px-4 py-4 border-t border-gray-800 flex items-center justify-between gap-2">
-          <span className="text-sm text-gray-400 truncate">
-            {profile?.username ?? ''}
-          </span>
-          <button
-            onClick={() => void signOut()}
-            className="text-sm text-gray-400 hover:text-white transition-colors flex-shrink-0"
-          >
-            {t('auth.signOut')}
-          </button>
+        <div className="px-4 py-4 border-t border-gray-800 flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm text-gray-400 truncate">
+              {profile?.username ?? ''}
+            </span>
+            <button
+              onClick={() => void signOut()}
+              className="text-sm text-gray-400 hover:text-white transition-colors flex-shrink-0"
+            >
+              {t('auth.signOut')}
+            </button>
+          </div>
+          <LanguageSwitcher />
         </div>
       </aside>
 

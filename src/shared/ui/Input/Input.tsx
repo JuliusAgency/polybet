@@ -27,7 +27,6 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         <input
           ref={ref}
           id={inputId}
-          dir="auto"
           aria-invalid={error ? 'true' : undefined}
           aria-describedby={error ? errorId : undefined}
           className={[

@@ -1,35 +1,128 @@
 {
-    "app": {
-        "title": "Dalia",
-        "welcome": "Welcome to Dalia"
-    },
-    "common": {
-        "loading": "Loading…",
-        "error": "Something went wrong",
-        "language": "Language"
-    },
-    "nav": {
-        "dashboard": "Dashboard",
-        "managers": "Managers",
-        "betLog": "Bet Log",
-        "users": "Users",
-        "treasury": "Treasury",
-        "reports": "Reports",
-        "activity": "Activity",
-        "markets": "Markets",
-        "myBets": "My Bets",
-        "wallet": "Wallet"
-    },
-    "auth": {
-        "signOut": "Sign Out",
-        "loading": "Loading..."
-    },
-    "signIn": {
-        "title": "Sign In to PolyBet",
-        "username": "Username",
-        "password": "Password",
-        "submit": "Sign In",
-        "submitting": "Signing in...",
-        "errorInvalid": "Invalid username or password"
-    }
+  "app": {
+    "title": "PolyBet",
+    "welcome": "Welcome to PolyBet"
+  },
+  "common": {
+    "loading": "Loading…",
+    "error": "Something went wrong",
+    "language": "Language",
+    "cancel": "Cancel",
+    "active": "Active",
+    "blocked": "Blocked",
+    "processing": "Processing…",
+    "saving": "Saving…",
+    "unknownError": "Unknown error",
+    "profile": "Profile",
+    "all": "All",
+    "noData": "No data"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "managers": "Managers",
+    "betLog": "Bet Log",
+    "users": "Users",
+    "treasury": "Treasury",
+    "reports": "Reports",
+    "activity": "Activity",
+    "markets": "Markets",
+    "myBets": "My Bets",
+    "wallet": "Wallet"
+  },
+  "auth": {
+    "signOut": "Sign Out",
+    "loading": "Loading..."
+  },
+  "signIn": {
+    "title": "Sign In to PolyBet",
+    "username": "Username",
+    "password": "Password",
+    "submit": "Sign In",
+    "submitting": "Signing in...",
+    "errorInvalid": "Invalid username or password",
+    "errorBlocked": "This account has been blocked. Contact your administrator."
+  },
+  "managers": {
+    "title": "Managers",
+    "fullName": "Full Name",
+    "username": "Username",
+    "balance": "Balance",
+    "status": "Status",
+    "noManagers": "No managers found"
+  },
+  "managerProfile": {
+    "title": "Manager: {{name}}",
+    "subtitle": "Users under this manager",
+    "managerActions": "Manager actions",
+    "deposit": "Deposit",
+    "withdraw": "Withdraw",
+    "block": "Block",
+    "unblock": "Unblock",
+    "resetPwd": "Reset Pwd",
+    "available": "Available",
+    "inPlay": "In-Play",
+    "actions": "Actions",
+    "status": "Status",
+    "username": "Username",
+    "fullName": "Full Name",
+    "noUsers": "No users under this manager",
+    "amountLabel": "Amount",
+    "noteLabelOpt": "Note (optional)",
+    "notePlaceholder": "Reason…",
+    "amountError": "Amount must be a positive number",
+    "newPassword": "New Password",
+    "passwordPh": "Min. 6 characters",
+    "passwordError": "Password must be at least 6 characters",
+    "reset": "Reset",
+    "actionLog": "Action Log",
+    "financial": "Financial",
+    "account": "Account",
+    "noActions": "No actions yet",
+    "confirmBlock": "Are you sure you want to block \"{{name}}\"?",
+    "confirmUnblock": "Are you sure you want to unblock \"{{name}}\"?",
+    "userBlockedSuccess": "User blocked successfully",
+    "userUnblockedSuccess": "User unblocked successfully",
+    "managerBlockedSuccess": "Manager blocked successfully",
+    "managerUnblockedSuccess": "Manager unblocked successfully",
+    "dateCol": "Date",
+    "actionCol": "Action",
+    "targetCol": "Target",
+    "noteCol": "Note",
+    "byCol": "By"
+  },
+  "actionLabels": {
+    "adjustment": "Deposit",
+    "transfer": "Withdrawal",
+    "block": "Block",
+    "unblock": "Unblock",
+    "reset_password": "Reset Password"
+  },
+  "globalLog": {
+    "title": "Global Log",
+    "betLog": "Bet Log",
+    "financialLog": "Financial Log",
+    "comingSoon": "Bet log — coming soon",
+    "manager": "Manager",
+    "allManagers": "All managers",
+    "month": "Month",
+    "allMonths": "All months",
+    "year": "Year",
+    "allYears": "All years",
+    "clearFilters": "Clear Filters",
+    "months": ["January","February","March","April","May","June","July","August","September","October","November","December"]
+  },
+  "financialTable": {
+    "actionId": "Action ID",
+    "manager": "Manager",
+    "userTarget": "User Target",
+    "type": "Type",
+    "amount": "Amount",
+    "date": "Date",
+    "noTransactions": "No transactions found",
+    "totalDeposits": "Total Deposits",
+    "totalWithdrawals": "Total Withdrawals",
+    "netProfit": "Net Profit",
+    "deposit": "Deposit",
+    "withdrawal": "Withdrawal"
+  }
 }
