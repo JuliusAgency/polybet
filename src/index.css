@@ -1,3 +1,55 @@
+@import './shared/theme/tokens.css';
+@import './shared/theme/fonts.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Base dark theme */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  background-color: var(--color-bg-base);
+  color: var(--color-text-primary);
+  font-family: var(--font-latin);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html[lang='he'] {
+  font-family: var(--font-hebrew);
+  direction: rtl;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: var(--color-bg-base);
+}
+
+/* Inputs inherit dark theme (browsers don't inherit color into form elements) */
+input, textarea, select {
+  background-color: var(--color-input-bg);
+  color: var(--color-text-primary);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}

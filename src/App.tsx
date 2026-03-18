@@ -1,13 +1,13 @@
-import '@/i18n';
-import { AuthProvider } from '@/contexts/AuthContext';
-import { Bootstrap } from '@/pages/Bootstrap';
+import { AppProviders } from '@/app/providers';
+import { Router } from '@/app/router';
+import '@/shared/i18n/config';
 
-const App = () => {
+function App() {
   return (
-    <AuthProvider>
-      <Bootstrap />
-    </AuthProvider>
+    <AppProviders>
+      <Router />
+    </AppProviders>
   );
-};
+}
 
 export default App;

@@ -1,0 +1,16 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Rubik:wght@400;500;600;700&display=swap');
+
+:root {
+  --font-latin: 'Inter', sans-serif;
+  --font-hebrew: 'Rubik', sans-serif;
+}
+
+/* Apply correct font based on document language */
+:root,
+:root:not([lang='he']) {
+  font-family: var(--font-latin);
+}
+
+:root[lang='he'] {
+  font-family: var(--font-hebrew);
+}

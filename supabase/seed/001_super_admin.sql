@@ -1,0 +1,1 @@
+-- Superseded by 002_test_users.sql which creates all test users including super admin.

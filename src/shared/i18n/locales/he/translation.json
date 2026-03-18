@@ -1,0 +1,35 @@
+{
+    "app": {
+        "title": "דליה",
+        "welcome": "ברוכים הבאים לדליה"
+    },
+    "common": {
+        "loading": "טוען…",
+        "error": "משהו השתבש",
+        "language": "שפה"
+    },
+    "nav": {
+        "dashboard": "לוח בקרה",
+        "managers": "מנהלים",
+        "betLog": "יומן הימורים",
+        "users": "משתמשים",
+        "treasury": "קופה",
+        "reports": "דוחות",
+        "activity": "פעילות",
+        "markets": "שווקים",
+        "myBets": "ההימורים שלי",
+        "wallet": "ארנק"
+    },
+    "auth": {
+        "signOut": "התנתק",
+        "loading": "טוען..."
+    },
+    "signIn": {
+        "title": "התחבר ל-PolyBet",
+        "username": "שם משתמש",
+        "password": "סיסמה",
+        "submit": "התחבר",
+        "submitting": "מתחבר...",
+        "errorInvalid": "שם משתמש או סיסמה שגויים"
+    }
+}

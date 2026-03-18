@@ -1,0 +1,35 @@
+{
+    "app": {
+        "title": "Dalia",
+        "welcome": "Welcome to Dalia"
+    },
+    "common": {
+        "loading": "Loading…",
+        "error": "Something went wrong",
+        "language": "Language"
+    },
+    "nav": {
+        "dashboard": "Dashboard",
+        "managers": "Managers",
+        "betLog": "Bet Log",
+        "users": "Users",
+        "treasury": "Treasury",
+        "reports": "Reports",
+        "activity": "Activity",
+        "markets": "Markets",
+        "myBets": "My Bets",
+        "wallet": "Wallet"
+    },
+    "auth": {
+        "signOut": "Sign Out",
+        "loading": "Loading..."
+    },
+    "signIn": {
+        "title": "Sign In to PolyBet",
+        "username": "Username",
+        "password": "Password",
+        "submit": "Sign In",
+        "submitting": "Signing in...",
+        "errorInvalid": "Invalid username or password"
+    }
+}
