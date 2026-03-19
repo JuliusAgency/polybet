@@ -44,7 +44,7 @@ export const ManagersManagementPage = () => {
           <table className="w-full text-sm">
             <thead>
               <tr
-                className="border-b text-left"
+                className="border-b text-start"
                 style={{ borderColor: 'var(--color-border)' }}
               >
                 {[
@@ -56,7 +56,7 @@ export const ManagersManagementPage = () => {
                 ].map((h, i) => (
                   <th
                     key={i}
-                    className="px-4 py-3 font-medium"
+                    className="px-4 py-3 font-medium text-start"
                     style={{ color: 'var(--color-text-secondary)' }}
                   >
                     {h}

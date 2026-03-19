@@ -15,7 +15,8 @@
     "unknownError": "שגיאה לא ידועה",
     "profile": "פרופיל",
     "all": "הכל",
-    "noData": "אין נתונים"
+    "noData": "אין נתונים",
+    "superAdminAlias": "מנהל על"
   },
   "nav": {
     "dashboard": "לוח בקרה",
@@ -123,6 +124,7 @@
     "totalWithdrawals": "סך משיכות",
     "netProfit": "רווח נקי",
     "deposit": "הפקדה",
-    "withdrawal": "משיכה"
+    "withdrawal": "משיכה",
+    "totalProfitCalc": "סה\"כ רווח מצטבר"
   }
 }

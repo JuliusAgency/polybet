@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Badge } from '@/shared/ui/Badge';
 import { useFinancialTransactions } from '@/features/admin/financial-transactions';
 import type { TransactionFilters } from '@/features/admin/financial-transactions';
+import { formatInitiatorName } from '@/shared/utils';
 
 interface FinancialTransactionsTableProps {
   managerId?: string;
@@ -20,6 +21,11 @@ const formatDate = (iso: string, locale: string): string => {
 const formatAmount = (amount: number, type: 'adjustment' | 'transfer'): string => {
   if (type === 'adjustment') return `+${amount.toFixed(2)}`;
   return `-${Math.abs(amount).toFixed(2)}`;
+};
+
+const formatRunningTotal = (value: number): string => {
+  if (value >= 0) return `+${value.toFixed(2)}`;
+  return value.toFixed(2); // negative sign already included
 };
 
 export const FinancialTransactionsTable = ({
@@ -59,7 +65,7 @@ export const FinancialTransactionsTable = ({
         <table className="w-full text-sm">
           <thead>
             <tr
-              className="border-b text-left"
+              className="border-b text-start"
               style={{ borderColor: 'var(--color-border)' }}
             >
               {[
@@ -68,11 +74,12 @@ export const FinancialTransactionsTable = ({
                 t('financialTable.userTarget'),
                 t('financialTable.type'),
                 t('financialTable.amount'),
+                t('financialTable.totalProfitCalc'),
                 t('financialTable.date'),
               ].map((h) => (
                 <th
                   key={h}
-                  className="px-4 py-3 font-medium"
+                  className="px-4 py-3 font-medium text-start"
                   style={{ color: 'var(--color-text-secondary)' }}
                 >
                   {h}
@@ -84,7 +91,7 @@ export const FinancialTransactionsTable = ({
             {transactions.length === 0 && (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={7}
                   className="px-4 py-8 text-center"
                   style={{ color: 'var(--color-text-secondary)' }}
                 >
@@ -106,7 +113,7 @@ export const FinancialTransactionsTable = ({
                   {tx.id.slice(0, 8)}
                 </td>
                 <td className="px-4 py-3" style={{ color: 'var(--color-text-primary)' }}>
-                  {tx.manager_username}
+                  {formatInitiatorName(tx.initiator_role, tx.manager_username, t)}
                 </td>
                 <td className="px-4 py-3" style={{ color: 'var(--color-text-primary)' }}>
                   {tx.user_username}
@@ -127,6 +134,16 @@ export const FinancialTransactionsTable = ({
                   }}
                 >
                   {formatAmount(tx.amount, tx.type)}
+                </td>
+                <td
+                  className="px-4 py-3 font-mono"
+                  style={{
+                    color: tx.total_profit_calc >= 0
+                      ? 'var(--color-win)'
+                      : 'var(--color-loss)',
+                  }}
+                >
+                  {formatRunningTotal(tx.total_profit_calc)}
                 </td>
                 <td className="px-4 py-3" style={{ color: 'var(--color-text-secondary)' }}>
                   {formatDate(tx.created_at, i18n.language)}

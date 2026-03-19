@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/shared/api/supabase';
 
 export interface TransactionFilters {
@@ -21,6 +22,7 @@ export interface FinancialTransactionRow {
   manager_username: string;
   manager_full_name: string;
   initiator_role: string;
+  total_profit_calc: number; // computed: running cumulative net profit (oldest→newest)
 }
 
 export interface TransactionTotals {
@@ -71,7 +73,15 @@ const fetchFinancialTransactions = async (
 
   if (error) throw new Error(error.message);
 
-  return (data ?? []) as FinancialTransactionRow[];
+  // Rows arrive newest-first from DB. Compute running total oldest→newest, then reverse back.
+  const raw = (data ?? []) as Omit<FinancialTransactionRow, 'total_profit_calc'>[];
+  const ascending = [...raw].reverse();
+  let running = 0;
+  const withRunningTotal: FinancialTransactionRow[] = ascending.map((tx) => {
+    running += tx.amount; // amount is already signed: adjustment=positive, transfer=negative
+    return { ...tx, total_profit_calc: running };
+  });
+  return withRunningTotal.reverse(); // back to newest-first for display
 };
 
 const computeTotals = (transactions: FinancialTransactionRow[]): TransactionTotals => {
@@ -96,10 +106,29 @@ const computeTotals = (transactions: FinancialTransactionRow[]): TransactionTota
 export function useFinancialTransactions(
   filters: TransactionFilters = {},
 ): UseFinancialTransactionsResult {
+  const queryClient = useQueryClient();
+
   const { data, isLoading, error } = useQuery({
     queryKey: ['admin', 'financial-transactions', filters.managerId, filters.month, filters.year],
     queryFn: () => fetchFinancialTransactions(filters),
   });
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('balance_transactions_inserts')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'balance_transactions' },
+        () => {
+          void queryClient.invalidateQueries({ queryKey: ['admin', 'financial-transactions'] });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   const transactions = data ?? [];
   const totals = computeTotals(transactions);

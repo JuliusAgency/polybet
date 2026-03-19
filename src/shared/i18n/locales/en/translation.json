@@ -15,7 +15,8 @@
     "unknownError": "Unknown error",
     "profile": "Profile",
     "all": "All",
-    "noData": "No data"
+    "noData": "No data",
+    "superAdminAlias": "Super Admin"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -123,6 +124,7 @@
     "totalWithdrawals": "Total Withdrawals",
     "netProfit": "Net Profit",
     "deposit": "Deposit",
-    "withdrawal": "Withdrawal"
+    "withdrawal": "Withdrawal",
+    "totalProfitCalc": "Total Profit Calc"
   }
 }

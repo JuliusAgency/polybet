@@ -11,6 +11,7 @@ import { useAdjustBalance, useAdjustManagerBalance } from '@/features/admin/adju
 import { useToggleUserBlock, useResetPassword } from '@/features/admin/manage-user';
 import { useManagerUsers, useManagerActionLogs } from '@/features/admin/manager-users';
 import type { DbProfile } from '@/shared/types/database';
+import { formatInitiatorName } from '@/shared/utils';
 
 const ACTION_LOG_QUERY_KEY = ['admin', 'action-logs'];
 
@@ -380,7 +381,7 @@ export const ManagerProfilePage = () => {
           <table className="w-full text-sm">
             <thead>
               <tr
-                className="border-b text-left"
+                className="border-b text-start"
                 style={{ borderColor: 'var(--color-border)' }}
               >
                 {[
@@ -393,7 +394,7 @@ export const ManagerProfilePage = () => {
                 ].map((h) => (
                   <th
                     key={h}
-                    className="whitespace-nowrap px-4 py-3 font-medium"
+                    className="whitespace-nowrap px-4 py-3 font-medium text-start"
                     style={{ color: 'var(--color-text-secondary)' }}
                   >
                     {h}
@@ -631,7 +632,7 @@ export const ManagerProfilePage = () => {
             <table className="w-full text-sm">
               <thead>
                 <tr
-                  className="border-b text-left"
+                  className="border-b text-start"
                   style={{ borderColor: 'var(--color-border)' }}
                 >
                   {[
@@ -644,7 +645,7 @@ export const ManagerProfilePage = () => {
                   ].map((h) => (
                     <th
                       key={h}
-                      className="whitespace-nowrap px-4 py-3 font-medium"
+                      className="whitespace-nowrap px-4 py-3 font-medium text-start"
                       style={{ color: 'var(--color-text-secondary)' }}
                     >
                       {h}
@@ -702,7 +703,7 @@ export const ManagerProfilePage = () => {
                       {log.note ?? '—'}
                     </td>
                     <td className="px-4 py-3" style={{ color: 'var(--color-text-secondary)' }}>
-                      @{log.initiator_username}
+                      {formatInitiatorName(log.initiator_role, log.initiator_username, t)}
                     </td>
                   </tr>
                 ))}

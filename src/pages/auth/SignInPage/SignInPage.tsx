@@ -25,6 +25,12 @@ const SignInPage = () => {
                     {t('signIn.title')}
                 </h2>
                 <SignInForm />
+                <p
+                    className="mt-6 text-center text-xs"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                >
+                    v{__APP_VERSION__}
+                </p>
             </div>
         </div>
     );
