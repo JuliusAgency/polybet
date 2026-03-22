@@ -31,8 +31,8 @@ export function useMyBets() {
         .order('placed_at', { ascending: false });
 
       if (error) throw new Error(error.message);
-      // Supabase returns joined relations as objects; cast matches runtime shape
-      return (data ?? []) as MyBet[];
+      // Supabase infers joined relations as arrays; cast via unknown matches runtime shape
+      return (data ?? []) as unknown as MyBet[];
     },
     enabled: !!session,
   });

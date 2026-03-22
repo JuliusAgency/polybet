@@ -32,7 +32,7 @@ export function useMyUsers() {
 
       return links.map((l) => ({
         user_id: l.user_id,
-        profiles: l.profiles as UserRow['profiles'],
+        profiles: l.profiles as unknown as UserRow['profiles'],
         balances: balanceMap.get(l.user_id) ?? null,
       }));
     },
