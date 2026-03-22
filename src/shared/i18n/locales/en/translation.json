@@ -13,6 +13,9 @@
     "processing": "Processing…",
     "saving": "Saving…",
     "unknownError": "Unknown error",
+    "required": "Required",
+    "dismiss": "Dismiss",
+    "done": "Done",
     "profile": "Profile",
     "all": "All",
     "noData": "No data",
@@ -49,7 +52,15 @@
     "username": "Username",
     "balance": "Balance",
     "status": "Status",
-    "noManagers": "No managers found"
+    "noManagers": "No managers found",
+    "createManager": "Create Manager",
+    "createManagerTitle": "Create New Manager",
+    "usernameTaken": "This username is already taken",
+    "createSuccess": "Manager created successfully",
+    "margin": "Margin %",
+    "marginError": "Must be a number between 0 and 100",
+    "password": "Password",
+    "credentialCard": "Manager Credentials"
   },
   "managerProfile": {
     "title": "Manager: {{name}}",
@@ -110,7 +121,14 @@
     "year": "Year",
     "allYears": "All years",
     "clearFilters": "Clear Filters",
-    "months": ["January","February","March","April","May","June","July","August","September","October","November","December"]
+    "months": ["January","February","March","April","May","June","July","August","September","October","November","December"],
+    "allStatuses": "All Statuses",
+    "status": "Status",
+    "user": "User",
+    "date": "Date",
+    "odds": "Odds",
+    "payout": "Payout",
+    "selection": "Selection"
   },
   "financialTable": {
     "actionId": "Action ID",
@@ -126,5 +144,75 @@
     "deposit": "Deposit",
     "withdrawal": "Withdrawal",
     "totalProfitCalc": "Total Profit Calc"
+  },
+  "users": {
+    "title": "Users",
+    "createUser": "Create User",
+    "newUserTitle": "Create New User",
+    "phone": "Phone / Telegram (optional)",
+    "notes": "Notes (optional)",
+    "credentialCard": "User Credentials",
+    "copyUsername": "Copy Username",
+    "copyPassword": "Copy Password",
+    "copied": "Copied!",
+    "copyFailed": "Copy failed",
+    "createdSuccess": "User created successfully",
+    "noUsers": "No users found",
+    "usernameTaken": "This username is already taken",
+    "passwordWarning": "Save this password now — it will not be shown again.",
+    "available": "Available",
+    "inPlay": "In-Play"
+  },
+  "treasury": {
+    "title": "Treasury",
+    "amount": "Amount",
+    "note": "Note (optional)",
+    "amountError": "Amount must be a positive number",
+    "depositTitle": "Deposit to {{username}}",
+    "withdrawalTitle": "Withdraw from {{username}}",
+    "deposit": "Deposit",
+    "withdraw": "Withdraw",
+    "success": "Done successfully",
+    "noUsers": "No users found"
+  },
+  "markets": {
+    "title": "Markets",
+    "noMarkets": "No open markets available",
+    "betSlipTitle": "Place a Bet",
+    "stakeLabel": "Stake",
+    "balance": "Balance: {{amount}}",
+    "insufficientBalance": "Insufficient balance",
+    "allIn": "All In",
+    "potentialPayout": "Potential Payout",
+    "confirmBet": "Confirm Bet",
+    "betPlaced": "Bet placed successfully!"
+  },
+  "bet": {
+    "open": "Open",
+    "won": "Won",
+    "lost": "Lost",
+    "cancelled": "Cancelled"
+  },
+  "myBets": {
+    "title": "My Bets",
+    "openTab": "Open",
+    "historyTab": "History",
+    "betId": "Bet ID",
+    "market": "Market",
+    "selection": "Selection",
+    "wager": "Wager",
+    "potentialPayout": "Potential Payout",
+    "status": "Status",
+    "settled": "Settled",
+    "noOpenBets": "You have no open bets",
+    "noHistory": "No settled bets yet",
+    "totalWagered": "Total Wagered",
+    "totalWon": "Total Payout",
+    "pnl": "P&L"
+  },
+  "settlement": {
+    "syncMarkets": "Sync Markets",
+    "syncDone": "Synced: {{synced}}, Settled: {{settled}}",
+    "syncError": "Sync failed"
   }
 }

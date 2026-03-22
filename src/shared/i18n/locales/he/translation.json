@@ -13,6 +13,9 @@
     "processing": "מעבד…",
     "saving": "שומר…",
     "unknownError": "שגיאה לא ידועה",
+    "required": "שדה חובה",
+    "dismiss": "סגור",
+    "done": "סיום",
     "profile": "פרופיל",
     "all": "הכל",
     "noData": "אין נתונים",
@@ -49,7 +52,15 @@
     "username": "שם משתמש",
     "balance": "יתרה",
     "status": "סטטוס",
-    "noManagers": "לא נמצאו מנהלים"
+    "noManagers": "לא נמצאו מנהלים",
+    "createManager": "צור מנהל",
+    "createManagerTitle": "צור מנהל חדש",
+    "usernameTaken": "שם המשתמש כבר תפוס",
+    "createSuccess": "המנהל נוצר בהצלחה",
+    "margin": "מרווח %",
+    "marginError": "חייב להיות מספר בין 0 ל-100",
+    "password": "סיסמה",
+    "credentialCard": "פרטי כניסה למנהל"
   },
   "managerProfile": {
     "title": "מנהל: {{name}}",
@@ -110,7 +121,14 @@
     "year": "שנה",
     "allYears": "כל השנים",
     "clearFilters": "נקה פילטרים",
-    "months": ["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"]
+    "months": ["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"],
+    "allStatuses": "כל הסטטוסים",
+    "status": "סטטוס",
+    "user": "משתמש",
+    "date": "תאריך",
+    "odds": "מכפיל",
+    "payout": "תשלום",
+    "selection": "בחירה"
   },
   "financialTable": {
     "actionId": "מזהה פעולה",
@@ -126,5 +144,75 @@
     "deposit": "הפקדה",
     "withdrawal": "משיכה",
     "totalProfitCalc": "סה\"כ רווח מצטבר"
+  },
+  "users": {
+    "title": "משתמשים",
+    "createUser": "צור משתמש",
+    "newUserTitle": "צור משתמש חדש",
+    "phone": "טלפון / טלגרם (אופציונלי)",
+    "notes": "הערות (אופציונלי)",
+    "credentialCard": "פרטי כניסה",
+    "copyUsername": "העתק שם משתמש",
+    "copyPassword": "העתק סיסמה",
+    "copied": "הועתק!",
+    "copyFailed": "ההעתקה נכשלה",
+    "createdSuccess": "המשתמש נוצר בהצלחה",
+    "noUsers": "לא נמצאו משתמשים",
+    "usernameTaken": "שם המשתמש כבר תפוס",
+    "passwordWarning": "שמור את הסיסמה עכשיו — היא לא תוצג שוב.",
+    "available": "זמין",
+    "inPlay": "בתהליך"
+  },
+  "treasury": {
+    "title": "קופה",
+    "amount": "סכום",
+    "note": "הערה (אופציונלי)",
+    "amountError": "הסכום חייב להיות מספר חיובי",
+    "depositTitle": "הפקדה ל-{{username}}",
+    "withdrawalTitle": "משיכה מ-{{username}}",
+    "deposit": "הפקדה",
+    "withdraw": "משיכה",
+    "success": "בוצע בהצלחה",
+    "noUsers": "לא נמצאו משתמשים"
+  },
+  "markets": {
+    "title": "שווקים",
+    "noMarkets": "אין שווקים פתוחים כרגע",
+    "betSlipTitle": "הנח הימור",
+    "stakeLabel": "סכום הימור",
+    "balance": "יתרה: {{amount}}",
+    "insufficientBalance": "יתרה לא מספיקה",
+    "allIn": "הכל פנימה",
+    "potentialPayout": "תשואה פוטנציאלית",
+    "confirmBet": "אשר הימור",
+    "betPlaced": "ההימור הונח בהצלחה!"
+  },
+  "bet": {
+    "open": "פתוח",
+    "won": "זכה",
+    "lost": "הפסיד",
+    "cancelled": "בוטל"
+  },
+  "myBets": {
+    "title": "ההימורים שלי",
+    "openTab": "פתוחים",
+    "historyTab": "היסטוריה",
+    "betId": "מזהה הימור",
+    "market": "שוק",
+    "selection": "בחירה",
+    "wager": "סכום",
+    "potentialPayout": "תשואה פוטנציאלית",
+    "status": "סטטוס",
+    "settled": "הוסדר",
+    "noOpenBets": "אין לך הימורים פתוחים",
+    "noHistory": "אין הימורים מוסדרים עדיין",
+    "totalWagered": "סך ההימורים",
+    "totalWon": "סך קבלות",
+    "pnl": "רווח/הפסד"
+  },
+  "settlement": {
+    "syncMarkets": "סנכרן שווקים",
+    "syncDone": "סונכרנו: {{synced}}, הוסדרו: {{settled}}",
+    "syncError": "הסנכרון נכשל"
   }
 }

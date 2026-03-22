@@ -19,9 +19,9 @@ export const UserLayout = ({ children }: UserLayoutProps) => {
       <header className="bg-gray-900 border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
           {/* Logo + Nav links */}
-          <div className="flex items-center gap-6 rtl:flex-row-reverse">
+          <div className="flex items-center gap-6">
             <span className="text-lg font-bold text-white">PolyBet</span>
-            <nav className="flex items-center gap-1 rtl:flex-row-reverse">
+            <nav className="flex items-center gap-1">
               <NavLink
                 to={ROUTES.USER.MARKETS}
                 className={({ isActive }) =>
@@ -62,7 +62,7 @@ export const UserLayout = ({ children }: UserLayoutProps) => {
           </div>
 
           {/* Right: balance placeholder + sign out */}
-          <div className="flex items-center gap-4 rtl:flex-row-reverse">
+          <div className="flex items-center gap-4">
             <span className="text-sm text-gray-400">
               {profile?.username ?? ''}
             </span>

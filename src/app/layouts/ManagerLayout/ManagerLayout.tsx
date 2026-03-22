@@ -10,15 +10,12 @@ interface ManagerLayoutProps {
 }
 
 export const ManagerLayout = ({ children }: ManagerLayoutProps) => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { profile, signOut } = useAuth();
-
-  const isRTL = i18n.language === 'he';
 
   return (
     <div
       className="flex min-h-screen bg-gray-950 text-gray-100"
-      style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}
     >
       {/* Sidebar */}
       <aside className="w-60 flex-shrink-0 bg-gray-900 flex flex-col">

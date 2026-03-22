@@ -1,8 +1,12 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/Button';
+import { Badge } from '@/shared/ui/Badge';
 import { useManagers } from '@/features/admin/managers';
+import { useBetLog } from '@/features/admin/bet-log';
+import type { BetStatus } from '@/features/admin/bet-log';
 import { FinancialTransactionsTable } from '@/widgets/FinancialTransactionsTable';
+import { useSyncMarkets } from '@/features/admin/settlement';
 
 type Tab = 'bet-log' | 'financial-log';
 
@@ -13,7 +17,7 @@ const selectStyle: React.CSSProperties = {
 };
 
 const GlobalBetLogPage = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const months = t('globalLog.months', { returnObjects: true }) as string[];
   const [activeTab, setActiveTab] = useState<Tab>('bet-log');
 
@@ -21,6 +25,12 @@ const GlobalBetLogPage = () => {
   const [managerId, setManagerId] = useState<string>('');
   const [month, setMonth] = useState<string>('');
   const [year, setYear] = useState<string>('');
+
+  // Filters for bet-log tab
+  const [betManagerId, setBetManagerId] = useState<string>('');
+  const [betStatus, setBetStatus] = useState<string>('');
+
+  const syncMutation = useSyncMarkets();
 
   const { data: managers } = useManagers();
 
@@ -39,17 +49,70 @@ const GlobalBetLogPage = () => {
     year: year ? Number(year) : undefined,
   };
 
+  const { rows: betRows, isLoading: betLoading } = useBetLog({
+    managerId: betManagerId || undefined,
+    status: betStatus ? (betStatus as BetStatus) : undefined,
+  });
+
+  const handleClearBetFilters = () => {
+    setBetManagerId('');
+    setBetStatus('');
+  };
+
+  // Column headers for the bet-log table
+  const betLogColumns = [
+    t('globalLog.date'),
+    t('globalLog.user'),
+    t('globalLog.manager'),
+    t('myBets.market'),
+    t('globalLog.selection'),
+    t('myBets.wager'),
+    t('globalLog.odds'),
+    t('globalLog.payout'),
+    t('globalLog.status'),
+  ];
+
+  // Map bet status to Badge variant
+  const betStatusVariant = (status: BetStatus) => {
+    if (status === 'won') return 'win' as const;
+    if (status === 'lost') return 'loss' as const;
+    if (status === 'open') return 'open' as const;
+    return 'default' as const;
+  };
+
   return (
     <div
       className="min-h-screen p-6"
       style={{ backgroundColor: 'var(--color-bg-base)' }}
     >
-      <h1
-        className="mb-6 text-2xl font-bold"
-        style={{ color: 'var(--color-text-primary)' }}
-      >
-        {t('globalLog.title')}
-      </h1>
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
+          {t('globalLog.title')}
+        </h1>
+        <div className="flex items-center gap-3">
+          {/* Sync result brief message */}
+          {syncMutation.data && (
+            <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+              {t('settlement.syncDone', {
+                synced: syncMutation.data.markets_synced,
+                settled: syncMutation.data.markets_settled,
+              })}
+            </span>
+          )}
+          {syncMutation.error && (
+            <span className="text-sm" style={{ color: 'var(--color-loss)' }}>
+              {t('settlement.syncError')}
+            </span>
+          )}
+          <Button
+            variant="primary"
+            onClick={() => syncMutation.mutate()}
+            disabled={syncMutation.isPending}
+          >
+            {syncMutation.isPending ? t('common.processing') : t('settlement.syncMarkets')}
+          </Button>
+        </div>
+      </div>
 
       {/* Tabs */}
       <div
@@ -83,8 +146,180 @@ const GlobalBetLogPage = () => {
 
       {/* Tab content */}
       {activeTab === 'bet-log' && (
-        <div style={{ color: 'var(--color-text-secondary)' }}>
-          {t('globalLog.comingSoon')}
+        <div className="flex flex-col gap-4">
+          {/* Filters */}
+          <div
+            className="flex flex-wrap items-end gap-3 rounded-xl border p-4"
+            style={{
+              backgroundColor: 'var(--color-bg-surface)',
+              borderColor: 'var(--color-border)',
+            }}
+          >
+            {/* Manager dropdown */}
+            <div className="flex flex-col gap-1">
+              <label
+                className="text-xs font-medium"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                {t('globalLog.manager')}
+              </label>
+              <select
+                value={betManagerId}
+                onChange={(e) => setBetManagerId(e.target.value)}
+                className="rounded-lg border px-3 py-2 text-sm outline-none"
+                style={selectStyle}
+              >
+                <option value="">{t('globalLog.allManagers')}</option>
+                {managers?.map(({ profile }) => (
+                  <option key={profile.id} value={profile.id}>
+                    {profile.full_name} (@{profile.username})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Status dropdown */}
+            <div className="flex flex-col gap-1">
+              <label
+                className="text-xs font-medium"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                {t('globalLog.status')}
+              </label>
+              <select
+                value={betStatus}
+                onChange={(e) => setBetStatus(e.target.value)}
+                className="rounded-lg border px-3 py-2 text-sm outline-none"
+                style={selectStyle}
+              >
+                <option value="">{t('globalLog.allStatuses')}</option>
+                <option value="open">{t('bet.open')}</option>
+                <option value="won">{t('bet.won')}</option>
+                <option value="lost">{t('bet.lost')}</option>
+                <option value="cancelled">{t('bet.cancelled')}</option>
+              </select>
+            </div>
+
+            {/* Clear filters */}
+            <Button variant="secondary" onClick={handleClearBetFilters}>
+              {t('globalLog.clearFilters')}
+            </Button>
+          </div>
+
+          {/* Table */}
+          {betLoading ? (
+            <p style={{ color: 'var(--color-text-secondary)' }}>{t('common.loading')}</p>
+          ) : (
+            <div
+              className="overflow-hidden rounded-xl border"
+              style={{
+                backgroundColor: 'var(--color-bg-surface)',
+                borderColor: 'var(--color-border)',
+              }}
+            >
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b" style={{ borderColor: 'var(--color-border)' }}>
+                    {betLogColumns.map((h) => (
+                      <th
+                        key={h}
+                        className="px-4 py-3 font-medium text-start"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {betRows.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={9}
+                        className="px-4 py-6 text-center"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        {t('common.noData')}
+                      </td>
+                    </tr>
+                  ) : (
+                    betRows.map((row) => (
+                      <tr
+                        key={row.id}
+                        className="border-b last:border-0"
+                        style={{ borderColor: 'var(--color-border)' }}
+                      >
+                        {/* Date */}
+                        <td
+                          className="px-4 py-3"
+                          style={{ color: 'var(--color-text-secondary)' }}
+                        >
+                          {new Date(row.placed_at).toLocaleDateString(i18n.language)}
+                        </td>
+                        {/* User */}
+                        <td
+                          className="px-4 py-3"
+                          style={{ color: 'var(--color-text-primary)' }}
+                        >
+                          @{row.user_username}
+                        </td>
+                        {/* Manager */}
+                        <td
+                          className="px-4 py-3"
+                          style={{ color: 'var(--color-text-secondary)' }}
+                        >
+                          {row.manager_username ? `@${row.manager_username}` : '—'}
+                        </td>
+                        {/* Market */}
+                        <td
+                          className="px-4 py-3"
+                          style={{ color: 'var(--color-text-primary)' }}
+                        >
+                          {row.market_description.length > 40
+                            ? `${row.market_description.slice(0, 40)}…`
+                            : row.market_description}
+                        </td>
+                        {/* Selection */}
+                        <td
+                          className="px-4 py-3"
+                          style={{ color: 'var(--color-text-secondary)' }}
+                        >
+                          {row.outcome_name}
+                        </td>
+                        {/* Wager */}
+                        <td
+                          className="px-4 py-3 font-mono"
+                          style={{ color: 'var(--color-text-primary)' }}
+                        >
+                          {row.stake.toFixed(2)}
+                        </td>
+                        {/* Odds */}
+                        <td
+                          className="px-4 py-3 font-mono"
+                          style={{ color: 'var(--color-text-secondary)' }}
+                        >
+                          {row.locked_odds.toFixed(2)}
+                        </td>
+                        {/* Payout */}
+                        <td
+                          className="px-4 py-3 font-mono"
+                          style={{ color: 'var(--color-text-primary)' }}
+                        >
+                          {row.potential_payout.toFixed(2)}
+                        </td>
+                        {/* Status */}
+                        <td className="px-4 py-3">
+                          <Badge variant={betStatusVariant(row.status)}>
+                            {t(`bet.${row.status}`)}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
