@@ -1,12 +1,13 @@
 /**
  * Database types matching the Supabase schema.
  * Tables: profiles, managers, manager_user_links, balances,
- *         markets, market_outcomes, bets, balance_transactions, system_settings
+ *         markets, market_outcomes, bets, balance_transactions, system_settings, sync_runs
  */
 
 export type MarketStatus = 'open' | 'closed' | 'resolved';
 export type BetStatus = 'open' | 'won' | 'lost' | 'cancelled';
 export type TransactionType = 'mint' | 'transfer' | 'bet_lock' | 'bet_payout' | 'adjustment';
+export type SyncRunStatus = 'running' | 'completed' | 'failed';
 
 export interface DbProfile {
   id: string;
@@ -91,4 +92,23 @@ export interface DbBalanceTransaction {
 export interface DbSystemSetting {
   key: string;
   value: unknown;
+}
+
+export interface DbSyncRun {
+  id: string;
+  created_by: string | null;
+  status: SyncRunStatus;
+  phase: string;
+  max_pages: number;
+  progress_current: number;
+  progress_total: number;
+  markets_synced: number;
+  outcomes_updated: number;
+  markets_settled: number;
+  errors: string[];
+  error_message: string | null;
+  created_at: string;
+  started_at: string;
+  updated_at: string;
+  finished_at: string | null;
 }

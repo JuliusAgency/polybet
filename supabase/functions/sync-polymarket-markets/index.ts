@@ -4,6 +4,15 @@
 // Invoked on a schedule (configured in Supabase Dashboard) or manually via HTTP GET/POST.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { buildCorsPreflightResponse, jsonWithCors } from '../_shared/cors.ts';
+import { evaluateSyncAuthorization } from '../_shared/syncAuth.ts';
+import {
+  buildCompletedProgressUpdate,
+  buildFailedProgressUpdate,
+  buildFetchedProgressUpdate,
+  buildIncrementedProgressUpdate,
+  buildStartedProgressUpdate,
+} from '../_shared/syncRunProgress.ts';
 
 // ─── Gamma API types (actual field names from gamma-api.polymarket.com) ────────
 
@@ -21,6 +30,10 @@ interface GammaMarket {
   volume: string | number;
   liquidity: string | number;
   image: string | null;
+}
+
+interface SyncRequestBody {
+  run_id?: string;
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -75,24 +88,72 @@ async function fetchGammaMarkets(baseUrl: string, maxPages = 0): Promise<GammaMa
 // ─── Main handler ─────────────────────────────────────────────────────────────
 
 Deno.serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') {
+    return buildCorsPreflightResponse();
+  }
+
   if (req.method !== 'GET' && req.method !== 'POST') {
-    return new Response(
-      JSON.stringify({ error: 'Method not allowed' }),
-      { status: 405, headers: { 'Content-Type': 'application/json' } },
-    );
+    return jsonWithCors({ error: 'Method not allowed' }, 405);
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 
-  if (!supabaseUrl || !supabaseKey) {
-    return new Response(
-      JSON.stringify({ success: false, error: 'Missing Supabase env vars' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } },
-    );
+  if (!supabaseUrl || !supabaseKey || !anonKey) {
+    return jsonWithCors({ success: false, error: 'Missing Supabase env vars' }, 500);
   }
 
-  const supabase = createClient(supabaseUrl, supabaseKey);
+  const authHeader = req.headers.get('Authorization');
+  const adminClient = createClient(supabaseUrl, supabaseKey);
+  const isServiceRoleRequest = authHeader === `Bearer ${supabaseKey}`;
+  const callerClient = createClient(supabaseUrl, anonKey, {
+    global: { headers: { Authorization: authHeader ?? '' } },
+  });
+
+  const {
+    data: { user: callerUser },
+    error: callerAuthErr,
+  } = await callerClient.auth.getUser();
+
+  const { data: callerProfile, error: profileErr } = callerUser
+    ? await adminClient.from('profiles').select('role').eq('id', callerUser.id).maybeSingle()
+    : { data: null, error: null };
+
+  const authResult = evaluateSyncAuthorization({
+    authHeader,
+    callerUserId: callerUser?.id ?? null,
+    callerRole: (callerProfile?.role as string | null | undefined) ?? null,
+    serviceRoleAuthorized: isServiceRoleRequest,
+    authError: callerAuthErr?.message ?? null,
+    profileError: profileErr?.message ?? null,
+  });
+
+  if (!authResult.ok) {
+    return jsonWithCors(authResult.body, authResult.status);
+  }
+
+  const supabase = adminClient;
+  const now = new Date().toISOString();
+
+  let body: SyncRequestBody = {};
+  if (req.method === 'POST') {
+    const rawBody = await req.text();
+    if (rawBody.trim()) {
+      try {
+        body = JSON.parse(rawBody) as SyncRequestBody;
+      } catch {
+        return jsonWithCors({ error: 'Invalid JSON body' }, 400);
+      }
+    }
+  }
+
+  const reqUrl = new URL(req.url);
+  const maxPages = parseInt(reqUrl.searchParams.get('max_pages') ?? '0', 10);
+  const runId = body.run_id ?? crypto.randomUUID();
+
+  let totalCount = 0;
+  let processedCount = 0;
 
   const stats = {
     markets_synced: 0,
@@ -101,8 +162,37 @@ Deno.serve(async (req: Request) => {
     errors: [] as string[],
   };
 
+  const { error: insertRunErr } = await supabase.from('sync_runs').upsert({
+    id: runId,
+    created_by: authResult.callerId,
+    created_at: now,
+    started_at: now,
+    updated_at: now,
+    ...buildStartedProgressUpdate(maxPages),
+  }, { onConflict: 'id' });
+
+  if (insertRunErr) {
+    return jsonWithCors({ error: 'internal_error', details: insertRunErr.message }, 500);
+  }
+
+  const updateRun = async (patch: Record<string, unknown>) => {
+    const { error } = await supabase
+      .from('sync_runs')
+      .update({
+        ...patch,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', runId);
+
+    if (error) {
+      console.error('sync_runs update failed:', error.message);
+    }
+  };
+
   try {
     // ── 1. Read sync_auto_show_all setting ────────────────────────────────────
+    await updateRun({ phase: 'fetching_active' });
+
     const { data: settingRow, error: settingErr } = await supabase
       .from('system_settings')
       .select('value')
@@ -117,20 +207,21 @@ Deno.serve(async (req: Request) => {
       settingRow?.value === true || settingRow?.value === 'true';
 
     // ── 2. Fetch markets from Gamma API ───────────────────────────────────────
-    // max_pages query param: limits pages fetched (useful for testing). 0 = unlimited.
-    const reqUrl = new URL(req.url);
-    const maxPages = parseInt(reqUrl.searchParams.get('max_pages') ?? '0', 10);
+    const activeMarkets = await fetchGammaMarkets(ACTIVE_MARKETS_URL, maxPages).catch((e: unknown) => {
+      stats.errors.push(`Failed to fetch active markets: ${e instanceof Error ? e.message : String(e)}`);
+      return [] as GammaMarket[];
+    });
 
-    const [activeMarkets, resolvedMarkets] = await Promise.all([
-      fetchGammaMarkets(ACTIVE_MARKETS_URL, maxPages).catch((e: unknown) => {
-        stats.errors.push(`Failed to fetch active markets: ${e instanceof Error ? e.message : String(e)}`);
-        return [] as GammaMarket[];
-      }),
-      fetchGammaMarkets(RESOLVED_MARKETS_URL, maxPages).catch((e: unknown) => {
-        stats.errors.push(`Failed to fetch resolved markets: ${e instanceof Error ? e.message : String(e)}`);
-        return [] as GammaMarket[];
-      }),
-    ]);
+    await updateRun({ phase: 'fetching_resolved' });
+
+    const resolvedMarkets = await fetchGammaMarkets(RESOLVED_MARKETS_URL, maxPages).catch((e: unknown) => {
+      stats.errors.push(`Failed to fetch resolved markets: ${e instanceof Error ? e.message : String(e)}`);
+      return [] as GammaMarket[];
+    });
+
+    totalCount = activeMarkets.length + resolvedMarkets.length;
+
+    await updateRun(buildFetchedProgressUpdate(activeMarkets.length, resolvedMarkets.length));
 
     // ── 3. Upsert active markets ──────────────────────────────────────────────
     for (const gm of activeMarkets) {
@@ -139,25 +230,68 @@ Deno.serve(async (req: Request) => {
       } catch (e: unknown) {
         stats.errors.push(`Error upserting active market ${gm.conditionId}: ${e instanceof Error ? e.message : String(e)}`);
       }
+      processedCount++;
+      await updateRun({
+        ...buildIncrementedProgressUpdate({
+          processedCount,
+          activeCount: activeMarkets.length,
+          totalCount,
+        }),
+        markets_synced: stats.markets_synced,
+        outcomes_updated: stats.outcomes_updated,
+        markets_settled: stats.markets_settled,
+        errors: stats.errors,
+        error_message: stats.errors[0] ?? null,
+      });
     }
 
     // ── 4. Process resolved markets ───────────────────────────────────────────
+    if (activeMarkets.length === 0) {
+      await updateRun(buildIncrementedProgressUpdate({
+        processedCount,
+        activeCount: activeMarkets.length,
+        totalCount,
+      }));
+    }
+
     for (const gm of resolvedMarkets) {
       try {
         await processResolvedMarket(supabase, gm, autoShowAll, stats);
       } catch (e: unknown) {
         stats.errors.push(`Error processing resolved market ${gm.conditionId}: ${e instanceof Error ? e.message : String(e)}`);
       }
+      processedCount++;
+      await updateRun({
+        ...buildIncrementedProgressUpdate({
+          processedCount,
+          activeCount: activeMarkets.length,
+          totalCount,
+        }),
+        markets_synced: stats.markets_synced,
+        outcomes_updated: stats.outcomes_updated,
+        markets_settled: stats.markets_settled,
+        errors: stats.errors,
+        error_message: stats.errors[0] ?? null,
+      });
     }
   } catch (e: unknown) {
-    stats.errors.push(`Unexpected sync error: ${e instanceof Error ? e.message : String(e)}`);
+    const errorMessage = `Unexpected sync error: ${e instanceof Error ? e.message : String(e)}`;
+    const failedStats = {
+      ...stats,
+      errors: [...stats.errors, errorMessage],
+    };
+    await updateRun(buildFailedProgressUpdate(errorMessage, failedStats));
+    return jsonWithCors({ success: false, run_id: runId, ...failedStats }, 200);
   }
 
+  await updateRun(buildCompletedProgressUpdate({
+    processedCount,
+    totalCount,
+    stats,
+  }));
+
   const success = stats.errors.length === 0;
-  return new Response(
-    JSON.stringify({ success, ...stats }),
-    { status: success ? 200 : 207, headers: { 'Content-Type': 'application/json' } },
-  );
+  return jsonWithCors({ success, run_id: runId, ...stats }, 200);
 });
 
 // ─── upsertMarket ─────────────────────────────────────────────────────────────

@@ -4,16 +4,21 @@ interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
+  closeDisabled?: boolean;
   children: ReactNode;
 }
 
-export const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
+export const Modal = ({ isOpen, onClose, title, closeDisabled = false, children }: ModalProps) => {
   const titleId = useId();
 
   useEffect(() => {
     if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (closeDisabled) {
+        return;
+      }
+
       if (e.key === 'Escape') {
         onClose();
       }
@@ -23,7 +28,7 @@ export const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen, onClose]);
+  }, [closeDisabled, isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -34,7 +39,11 @@ export const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
         zIndex: 'var(--z-modal-backdrop)',
         backgroundColor: 'rgba(0, 0, 0, 0.6)',
       }}
-      onClick={onClose}
+      onClick={() => {
+        if (!closeDisabled) {
+          onClose();
+        }
+      }}
     >
       <div
         role="dialog"
@@ -63,8 +72,13 @@ export const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
             </h2>
             <button
               onClick={onClose}
+              disabled={closeDisabled}
               className="flex h-7 w-7 items-center justify-center rounded-lg text-lg transition-colors"
-              style={{ color: 'var(--color-text-secondary)' }}
+              style={{
+                color: 'var(--color-text-secondary)',
+                opacity: closeDisabled ? 0.4 : 1,
+                cursor: closeDisabled ? 'not-allowed' : 'pointer',
+              }}
               aria-label="Close"
             >
               ×
@@ -76,8 +90,13 @@ export const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
           <div className="flex justify-end px-5 pt-4">
             <button
               onClick={onClose}
+              disabled={closeDisabled}
               className="flex h-7 w-7 items-center justify-center rounded-lg text-lg transition-colors"
-              style={{ color: 'var(--color-text-secondary)' }}
+              style={{
+                color: 'var(--color-text-secondary)',
+                opacity: closeDisabled ? 0.4 : 1,
+                cursor: closeDisabled ? 'not-allowed' : 'pointer',
+              }}
               aria-label="Close"
             >
               ×

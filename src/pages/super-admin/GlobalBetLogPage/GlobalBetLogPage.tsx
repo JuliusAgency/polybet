@@ -6,7 +6,8 @@ import { useManagers } from '@/features/admin/managers';
 import { useBetLog } from '@/features/admin/bet-log';
 import type { BetStatus } from '@/features/admin/bet-log';
 import { FinancialTransactionsTable } from '@/widgets/FinancialTransactionsTable';
-import { useSyncMarkets } from '@/features/admin/settlement';
+import type { DbSyncRun } from '@/shared/types/database';
+import { SyncMarketsModal } from './components/SyncMarketsModal';
 
 type Tab = 'bet-log' | 'financial-log';
 
@@ -20,6 +21,8 @@ const GlobalBetLogPage = () => {
   const { t, i18n } = useTranslation();
   const months = t('globalLog.months', { returnObjects: true }) as string[];
   const [activeTab, setActiveTab] = useState<Tab>('bet-log');
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+  const [lastSyncRun, setLastSyncRun] = useState<DbSyncRun | null>(null);
 
   // Filters for financial tab
   const [managerId, setManagerId] = useState<string>('');
@@ -29,8 +32,6 @@ const GlobalBetLogPage = () => {
   // Filters for bet-log tab
   const [betManagerId, setBetManagerId] = useState<string>('');
   const [betStatus, setBetStatus] = useState<string>('');
-
-  const syncMutation = useSyncMarkets();
 
   const { data: managers } = useManagers();
 
@@ -90,29 +91,32 @@ const GlobalBetLogPage = () => {
           {t('globalLog.title')}
         </h1>
         <div className="flex items-center gap-3">
-          {/* Sync result brief message */}
-          {syncMutation.data && (
+          {lastSyncRun && (
             <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
               {t('settlement.syncDone', {
-                synced: syncMutation.data.markets_synced,
-                settled: syncMutation.data.markets_settled,
+                synced: lastSyncRun.markets_synced,
+                settled: lastSyncRun.markets_settled,
               })}
-            </span>
-          )}
-          {syncMutation.error && (
-            <span className="text-sm" style={{ color: 'var(--color-loss)' }}>
-              {t('settlement.syncError')}
             </span>
           )}
           <Button
             variant="primary"
-            onClick={() => syncMutation.mutate()}
-            disabled={syncMutation.isPending}
+            onClick={() => setIsSyncModalOpen(true)}
           >
-            {syncMutation.isPending ? t('common.processing') : t('settlement.syncMarkets')}
+            {t('settlement.syncMarkets')}
           </Button>
         </div>
       </div>
+
+      <SyncMarketsModal
+        isOpen={isSyncModalOpen}
+        onClose={() => setIsSyncModalOpen(false)}
+        onCompleted={(run) => {
+          if (run.status === 'completed') {
+            setLastSyncRun(run);
+          }
+        }}
+      />
 
       {/* Tabs */}
       <div

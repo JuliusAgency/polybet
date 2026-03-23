@@ -213,7 +213,38 @@
   },
   "settlement": {
     "syncMarkets": "סנכרן שווקים",
+    "syncModalTitle": "סנכרון שווקים",
+    "syncModalDescription": "בחר כמה עמודי Polymarket לעבד בהרצה הזו.",
     "syncDone": "סונכרנו: {{synced}}, הוסדרו: {{settled}}",
-    "syncError": "הסנכרון נכשל"
+    "syncError": "הסנכרון נכשל",
+    "startSync": "התחל סנכרון",
+    "runAgain": "הרץ שוב",
+    "currentPhase": "שלב נוכחי",
+    "progressCount": "{{current}} / {{total}} שווקים",
+    "syncedCount": "שווקים שסונכרנו",
+    "outcomesCount": "תוצאות שעודכנו",
+    "settledCount": "שווקים שהוסדרו",
+    "errorListTitle": "שגיאות אחרונות",
+    "keepOpenTitle": "השאר את הלשונית פתוחה",
+    "keepOpenDescription": "סנכרון מלא של שווקים עשוי לקחת זמן. אל תסגור את הלשונית אחרי תחילת ההרצה.",
+    "keepOpenRunning": "הסנכרון עדיין רץ. סגירת הלשונית עלולה לקטוע את הצפייה בהתקדמות בזמן אמת.",
+    "keepOpenDone": "ההרצה הסתיימה. אפשר לסגור את החלון או להתחיל סנכרון נוסף.",
+    "scope": {
+      "quick": "בדיקה מהירה",
+      "balanced": "אצווה מאוזנת",
+      "deep": "אצווה עמוקה",
+      "all": "כל העמודים הזמינים"
+    },
+    "scopeHintPages": "עיבוד של {{count}} עמוד(ים) לכל feed של שווקים בהרצה הזו.",
+    "scopeHintAll": "עיבוד של כל העמודים הזמינים. זו ההרצה הארוכה ביותר.",
+    "phase": {
+      "starting": "מתחיל הרצה",
+      "fetching_active": "טוען שווקים פעילים",
+      "fetching_resolved": "טוען שווקים מוסדרים",
+      "syncing_active": "מסנכרן שווקים פעילים",
+      "syncing_resolved": "מסנכרן שווקים מוסדרים",
+      "completed": "הושלם",
+      "failed": "נכשל"
+    }
   }
 }

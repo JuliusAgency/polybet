@@ -213,7 +213,38 @@
   },
   "settlement": {
     "syncMarkets": "Sync Markets",
+    "syncModalTitle": "Sync Markets",
+    "syncModalDescription": "Choose how many Polymarket pages to process in this run.",
     "syncDone": "Synced: {{synced}}, Settled: {{settled}}",
-    "syncError": "Sync failed"
+    "syncError": "Sync failed",
+    "startSync": "Start Sync",
+    "runAgain": "Run Again",
+    "currentPhase": "Current phase",
+    "progressCount": "{{current}} / {{total}} markets",
+    "syncedCount": "Markets synced",
+    "outcomesCount": "Outcomes updated",
+    "settledCount": "Markets settled",
+    "errorListTitle": "Latest errors",
+    "keepOpenTitle": "Keep this tab open",
+    "keepOpenDescription": "A full market sync can take a while. Do not close the tab once the run starts.",
+    "keepOpenRunning": "Sync is still running. Closing the tab may interrupt your view of the real-time progress.",
+    "keepOpenDone": "The run finished. You can close this modal or start another sync.",
+    "scope": {
+      "quick": "Quick check",
+      "balanced": "Balanced batch",
+      "deep": "Deep batch",
+      "all": "All available pages"
+    },
+    "scopeHintPages": "Process {{count}} page(s) per market feed in this run.",
+    "scopeHintAll": "Process every available page. This is the longest run.",
+    "phase": {
+      "starting": "Starting run",
+      "fetching_active": "Fetching active markets",
+      "fetching_resolved": "Fetching resolved markets",
+      "syncing_active": "Syncing active markets",
+      "syncing_resolved": "Syncing resolved markets",
+      "completed": "Completed",
+      "failed": "Failed"
+    }
   }
 }

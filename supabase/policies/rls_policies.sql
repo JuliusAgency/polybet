@@ -11,6 +11,7 @@ ALTER TABLE market_outcomes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE balance_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE system_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sync_runs ENABLE ROW LEVEL SECURITY;
 
 -- Helper function to get current user's role
 CREATE OR REPLACE FUNCTION get_my_role()
@@ -127,6 +128,10 @@ CREATE POLICY "No delete on transactions" ON balance_transactions
 -- system_settings
 CREATE POLICY "Super admin can manage settings" ON system_settings
   FOR ALL USING (is_super_admin());
+
+-- sync_runs
+CREATE POLICY "Super admin can view sync runs" ON sync_runs
+  FOR SELECT USING (is_super_admin());
 
 -- manager_user_links
 CREATE POLICY "Manager can view own links" ON manager_user_links

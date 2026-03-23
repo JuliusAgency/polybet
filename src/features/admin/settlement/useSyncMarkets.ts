@@ -1,20 +1,33 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/shared/api/supabase';
+import { invokeSupabaseFunction } from '@/shared/api/supabase';
 
-interface SyncResult {
+export interface SyncResult {
+  run_id: string;
+  success: boolean;
   markets_synced: number;
   markets_settled: number;
   errors: string[];
 }
 
+interface StartSyncParams {
+  maxPages: number;
+  runId: string;
+}
+
 export function useSyncMarkets() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (): Promise<SyncResult> => {
-      // max_pages=1 limits to ~100 active + 50 resolved markets per manual sync
-      // to avoid hitting Edge Function CPU/memory limits
-      const { data, error } = await supabase.functions.invoke('sync-polymarket-markets?max_pages=1');
-      if (error) throw new Error(error.message);
+    mutationFn: async ({ maxPages, runId }: StartSyncParams): Promise<SyncResult> => {
+      const { data, error } = await invokeSupabaseFunction<SyncResult>(
+        `sync-polymarket-markets?max_pages=${maxPages}`,
+        {
+          body: { run_id: runId },
+        },
+      );
+      if (error) {
+        const functionError = error as { message?: string };
+        throw new Error(functionError.message ?? 'Function invocation failed');
+      }
       if (!data) throw new Error('No response from sync function');
       // Validate expected shape before returning
       if (typeof data.markets_synced !== 'number' || typeof data.markets_settled !== 'number') {
@@ -26,6 +39,7 @@ export function useSyncMarkets() {
       // Refresh markets and bet log after sync
       queryClient.invalidateQueries({ queryKey: ['markets'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'bet-log'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'sync-run'] });
     },
   });
 }
