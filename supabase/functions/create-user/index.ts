@@ -2,7 +2,8 @@
 // Creates a new manager (by super_admin) or end user (by manager).
 // POST { role, fullName, username, password, phone?, notes?, margin? }
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { authorizeEdgeCall } from '../_shared/edgeAuth.ts';
+import { buildCorsPreflightResponse, jsonWithCors } from '../_shared/cors.ts';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -18,33 +19,17 @@ interface CreateUserRequest {
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-    },
-  });
-}
-
 // ─── Main handler ─────────────────────────────────────────────────────────────
 
 Deno.serve(async (req: Request) => {
   // CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      },
-    });
+    return buildCorsPreflightResponse('POST, OPTIONS');
   }
 
   // Only accept POST
   if (req.method !== 'POST') {
-    return json({ error: 'Method not allowed. Use POST.' }, 405);
+    return jsonWithCors({ error: 'Method not allowed. Use POST.' }, 405);
   }
 
   // ── 1. Parse request body ─────────────────────────────────────────────────
@@ -52,7 +37,7 @@ Deno.serve(async (req: Request) => {
   try {
     body = (await req.json()) as CreateUserRequest;
   } catch {
-    return json({ error: 'Invalid JSON body' }, 400);
+    return jsonWithCors({ error: 'Invalid JSON body' }, 400);
   }
 
   // ── 2. Validate required fields ───────────────────────────────────────────
@@ -63,63 +48,27 @@ Deno.serve(async (req: Request) => {
   if (!body.password) missingFields.push('password');
 
   if (missingFields.length > 0) {
-    return json({ error: 'missing_fields', fields: missingFields }, 400);
+    return jsonWithCors({ error: 'missing_fields', fields: missingFields }, 400);
   }
 
   if (body.role !== 'manager' && body.role !== 'user') {
-    return json({ error: 'invalid_role' }, 400);
+    return jsonWithCors({ error: 'invalid_role' }, 400);
   }
 
   const { role, fullName, username, password, phone, notes, margin } = body;
 
-  // ── 3. Extract caller JWT ─────────────────────────────────────────────────
-  const authHeader = req.headers.get('Authorization');
-  if (!authHeader) {
-    return json({ error: 'Unauthorized' }, 401);
-  }
-
-  // ── 4. Build Supabase clients ─────────────────────────────────────────────
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const serviceKey  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  const anonKey     = Deno.env.get('SUPABASE_ANON_KEY');
-  if (!supabaseUrl || !serviceKey || !anonKey) {
-    return json({ error: 'internal_error', details: 'env_misconfigured' }, 500);
-  }
-
-  // Service client for admin operations (bypasses RLS)
-  const adminClient = createClient(supabaseUrl, serviceKey);
-
-  // Caller client to verify identity and role
-  const callerClient = createClient(supabaseUrl, anonKey, {
-    global: { headers: { Authorization: authHeader } },
+  // ── 3. Authorize caller ───────────────────────────────────────────────────
+  const authResult = await authorizeEdgeCall(req, {
+    allowedRoles: ['super_admin', 'manager'],
   });
 
-  // ── 5. Resolve caller identity ────────────────────────────────────────────
-  const { data: { user: callerUser }, error: callerAuthErr } = await callerClient.auth.getUser();
-
-  if (callerAuthErr || !callerUser) {
-    return json({ error: 'Unauthorized' }, 401);
+  if (!authResult.ok) {
+    return jsonWithCors(authResult.body, authResult.status);
   }
 
-  const callerId = callerUser.id;
-
-  // ── 6. Look up caller's role from profiles ────────────────────────────────
-  const { data: callerProfile, error: profileErr } = await adminClient
-    .from('profiles')
-    .select('role')
-    .eq('id', callerId)
-    .maybeSingle();
-
-  if (profileErr) {
-    return json({ error: 'internal_error', details: profileErr.message }, 500);
-  }
-
-  if (!callerProfile) {
-    return json({ error: 'Forbidden' }, 403);
-  }
-
-  type UserRole = 'super_admin' | 'manager' | 'user';
-  const callerRole = callerProfile.role as UserRole;
+  const adminClient = authResult.adminClient;
+  const callerId = authResult.callerId!;
+  const callerRole = authResult.callerRole!;
 
   // ── 7. Authorization check ────────────────────────────────────────────────
   if (callerRole === 'super_admin') {
@@ -127,10 +76,10 @@ Deno.serve(async (req: Request) => {
   } else if (callerRole === 'manager') {
     // manager can only create user
     if (role !== 'user') {
-      return json({ error: 'Forbidden' }, 403);
+      return jsonWithCors({ error: 'Forbidden' }, 403);
     }
   } else {
-    return json({ error: 'Forbidden' }, 403);
+    return jsonWithCors({ error: 'Forbidden' }, 403);
   }
 
   // ── 8. Check username uniqueness ──────────────────────────────────────────
@@ -141,11 +90,11 @@ Deno.serve(async (req: Request) => {
     .maybeSingle();
 
   if (usernameCheckErr) {
-    return json({ error: 'internal_error', details: usernameCheckErr.message }, 500);
+    return jsonWithCors({ error: 'internal_error', details: usernameCheckErr.message }, 500);
   }
 
   if (existingProfile) {
-    return json({ error: 'username_taken' }, 409);
+    return jsonWithCors({ error: 'username_taken' }, 409);
   }
 
   // ── 9. Create auth user ───────────────────────────────────────────────────
@@ -156,7 +105,7 @@ Deno.serve(async (req: Request) => {
   });
 
   if (createAuthErr || !newAuthUser?.user) {
-    return json(
+    return jsonWithCors(
       { error: 'internal_error', details: createAuthErr?.message ?? 'Failed to create auth user' },
       500,
     );
@@ -179,7 +128,7 @@ Deno.serve(async (req: Request) => {
   if (profileInsertErr) {
     // Attempt cleanup: remove the auth user we just created
     await adminClient.auth.admin.deleteUser(newUserId);
-    return json({ error: 'internal_error', details: profileInsertErr.message }, 500);
+    return jsonWithCors({ error: 'internal_error', details: profileInsertErr.message }, 500);
   }
 
   // ── 11. Role-specific inserts ─────────────────────────────────────────────
@@ -196,7 +145,7 @@ Deno.serve(async (req: Request) => {
       // Attempt cleanup
       await adminClient.from('profiles').delete().eq('id', newUserId);
       await adminClient.auth.admin.deleteUser(newUserId);
-      return json({ error: 'internal_error', details: managerInsertErr.message }, 500);
+      return jsonWithCors({ error: 'internal_error', details: managerInsertErr.message }, 500);
     }
   } else {
     // role === 'user'
@@ -210,7 +159,7 @@ Deno.serve(async (req: Request) => {
         // Attempt cleanup
         await adminClient.from('profiles').delete().eq('id', newUserId);
         await adminClient.auth.admin.deleteUser(newUserId);
-        return json({ error: 'internal_error', details: linkInsertErr.message }, 500);
+        return jsonWithCors({ error: 'internal_error', details: linkInsertErr.message }, 500);
       }
     }
     // If super_admin creates a user, skip manager_user_links (not applicable in this sprint)
@@ -228,12 +177,12 @@ Deno.serve(async (req: Request) => {
       }
       await adminClient.from('profiles').delete().eq('id', newUserId);
       await adminClient.auth.admin.deleteUser(newUserId);
-      return json({ error: 'internal_error', details: balanceInsertErr.message }, 500);
+      return jsonWithCors({ error: 'internal_error', details: balanceInsertErr.message }, 500);
     }
   }
 
   // ── 12. Return success ────────────────────────────────────────────────────
-  return json({
+  return jsonWithCors({
     success:           true,
     id:                newUserId,
     username,

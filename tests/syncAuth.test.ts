@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { evaluateSyncAuthorization } from '../supabase/functions/_shared/syncAuth.ts';
+import { authorizeEdgeRequest } from '../supabase/functions/_shared/edgeAuthRules.ts';
 
 test('sync authorization requires an Authorization header', () => {
   assert.deepEqual(
-    evaluateSyncAuthorization({
+    authorizeEdgeRequest({
       authHeader: null,
       callerUserId: null,
       callerRole: null,
@@ -15,10 +15,12 @@ test('sync authorization requires an Authorization header', () => {
 
 test('sync authorization rejects non-super-admin roles', () => {
   assert.deepEqual(
-    evaluateSyncAuthorization({
+    authorizeEdgeRequest({
       authHeader: 'Bearer token',
       callerUserId: 'user-1',
       callerRole: 'manager',
+    }, {
+      allowedRoles: ['super_admin'],
     }),
     { ok: false, status: 403, body: { error: 'Forbidden' } },
   );
@@ -26,23 +28,27 @@ test('sync authorization rejects non-super-admin roles', () => {
 
 test('sync authorization allows super admin callers', () => {
   assert.deepEqual(
-    evaluateSyncAuthorization({
+    authorizeEdgeRequest({
       authHeader: 'Bearer token',
       callerUserId: 'user-1',
       callerRole: 'super_admin',
+    }, {
+      allowedRoles: ['super_admin'],
     }),
-    { ok: true, callerId: 'user-1' },
+    { ok: true, callerId: 'user-1', callerRole: 'super_admin', isServiceRole: false },
   );
 });
 
 test('sync authorization allows service role callers', () => {
   assert.deepEqual(
-    evaluateSyncAuthorization({
+    authorizeEdgeRequest({
       authHeader: 'Bearer service-role',
       callerUserId: null,
       callerRole: null,
       serviceRoleAuthorized: true,
+    }, {
+      allowServiceRole: true,
     }),
-    { ok: true, callerId: null },
+    { ok: true, callerId: null, callerRole: null, isServiceRole: true },
   );
 });

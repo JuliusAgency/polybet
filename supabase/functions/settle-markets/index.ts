@@ -4,7 +4,8 @@
 // where the stored polymarket winner token matches.
 // Delegates actual settlement to the settle_market SQL RPC.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { authorizeEdgeCall } from '../_shared/edgeAuth.ts';
+import { buildCorsPreflightResponse, jsonWithCors } from '../_shared/cors.ts';
 
 interface SettleRequest {
   market_id: string;
@@ -12,22 +13,13 @@ interface SettleRequest {
 }
 
 Deno.serve(async (req: Request) => {
-  // Only accept POST
-  if (req.method !== 'POST') {
-    return new Response(
-      JSON.stringify({ error: 'Method not allowed. Use POST.' }),
-      { status: 405, headers: { 'Content-Type': 'application/json' } },
-    );
+  if (req.method === 'OPTIONS') {
+    return buildCorsPreflightResponse('POST, OPTIONS');
   }
 
-  // Authorization: must be service role key
-  const authHeader = req.headers.get('Authorization') ?? '';
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-  if (authHeader !== `Bearer ${serviceRoleKey}`) {
-    return new Response(
-      JSON.stringify({ error: 'Unauthorized' }),
-      { status: 401, headers: { 'Content-Type': 'application/json' } },
-    );
+  // Only accept POST
+  if (req.method !== 'POST') {
+    return jsonWithCors({ error: 'Method not allowed. Use POST.' }, 405);
   }
 
   // Parse body
@@ -35,32 +27,28 @@ Deno.serve(async (req: Request) => {
   try {
     body = (await req.json()) as SettleRequest;
   } catch {
-    return new Response(
-      JSON.stringify({ error: 'Invalid JSON body' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } },
-    );
+    return jsonWithCors({ error: 'Invalid JSON body' }, 400);
   }
 
   const { market_id, winning_outcome_id } = body;
 
   if (!market_id) {
-    return new Response(
-      JSON.stringify({ error: 'market_id is required' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } },
-    );
+    return jsonWithCors({ error: 'market_id is required' }, 400);
   }
 
-  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+  const authResult = await authorizeEdgeCall(req, {
+    allowServiceRole: true,
+  });
 
-  if (!supabaseUrl || !supabaseKey) {
-    return new Response(
-      JSON.stringify({ success: false, error: 'Missing Supabase env vars' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } },
-    );
+  if (!authResult.ok || !authResult.isServiceRole) {
+    if (!authResult.ok) {
+      return jsonWithCors(authResult.body, authResult.status);
+    }
+
+    return jsonWithCors({ error: 'Forbidden' }, 403);
   }
 
-  const supabase = createClient(supabaseUrl, supabaseKey);
+  const supabase = authResult.adminClient;
 
   try {
     // ── 1. Verify market exists and is not already resolved ───────────────────
@@ -71,24 +59,15 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
 
     if (marketErr) {
-      return new Response(
-        JSON.stringify({ success: false, error: `DB error: ${marketErr.message}` }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } },
-      );
+      return jsonWithCors({ success: false, error: `DB error: ${marketErr.message}` }, 500);
     }
 
     if (!market) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Market not found' }),
-        { status: 404, headers: { 'Content-Type': 'application/json' } },
-      );
+      return jsonWithCors({ success: false, error: 'Market not found' }, 404);
     }
 
     if (market.status === 'resolved') {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Market is already resolved' }),
-        { status: 409, headers: { 'Content-Type': 'application/json' } },
-      );
+      return jsonWithCors({ success: false, error: 'Market is already resolved' }, 409);
     }
 
     // ── 2. Resolve winning_outcome_id if not provided ─────────────────────────
@@ -103,14 +82,11 @@ Deno.serve(async (req: Request) => {
       );
 
       if (!resolvedWinnerOutcomeId) {
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error:
-              'winning_outcome_id not provided and could not be determined from Polymarket API',
-          }),
-          { status: 422, headers: { 'Content-Type': 'application/json' } },
-        );
+        return jsonWithCors({
+          success: false,
+          error:
+            'winning_outcome_id not provided and could not be determined from Polymarket API',
+        }, 422);
       }
     }
 
@@ -121,32 +97,23 @@ Deno.serve(async (req: Request) => {
     });
 
     if (settleErr) {
-      return new Response(
-        JSON.stringify({ success: false, error: settleErr.message }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } },
-      );
+      return jsonWithCors({ success: false, error: settleErr.message }, 500);
     }
 
     // result shape: { settled: number, winners: number, losers: number }
     const { settled, winners, losers } = (result as { settled: number; winners: number; losers: number }) ?? {};
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        market_id,
-        winning_outcome_id: resolvedWinnerOutcomeId,
-        settled:            settled ?? 0,
-        winners:            winners ?? 0,
-        losers:             losers  ?? 0,
-      }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } },
-    );
+    return jsonWithCors({
+      success: true,
+      market_id,
+      winning_outcome_id: resolvedWinnerOutcomeId,
+      settled:            settled ?? 0,
+      winners:            winners ?? 0,
+      losers:             losers  ?? 0,
+    });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Unknown error';
-    return new Response(
-      JSON.stringify({ success: false, error: message }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } },
-    );
+    return jsonWithCors({ success: false, error: message }, 500);
   }
 });
 

@@ -4,9 +4,9 @@
 // Invoked on a schedule (configured in Supabase Dashboard) or manually via HTTP GET/POST.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { authorizeEdgeCall } from '../_shared/edgeAuth.ts';
 import { buildCorsPreflightResponse, jsonWithCors } from '../_shared/cors.ts';
 import { resolveWinnerTokenId } from '../_shared/polymarketWinner.ts';
-import { evaluateSyncAuthorization } from '../_shared/syncAuth.ts';
 import {
   buildCompletedProgressUpdate,
   buildFailedProgressUpdate,
@@ -110,44 +110,16 @@ Deno.serve(async (req: Request) => {
     return jsonWithCors({ error: 'Method not allowed' }, 405);
   }
 
-  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-  const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
-
-  if (!supabaseUrl || !supabaseKey || !anonKey) {
-    return jsonWithCors({ success: false, error: 'Missing Supabase env vars' }, 500);
-  }
-
-  const authHeader = req.headers.get('Authorization');
-  const adminClient = createClient(supabaseUrl, supabaseKey);
-  const isServiceRoleRequest = authHeader === `Bearer ${supabaseKey}`;
-  const callerClient = createClient(supabaseUrl, anonKey, {
-    global: { headers: { Authorization: authHeader ?? '' } },
-  });
-
-  const {
-    data: { user: callerUser },
-    error: callerAuthErr,
-  } = await callerClient.auth.getUser();
-
-  const { data: callerProfile, error: profileErr } = callerUser
-    ? await adminClient.from('profiles').select('role').eq('id', callerUser.id).maybeSingle()
-    : { data: null, error: null };
-
-  const authResult = evaluateSyncAuthorization({
-    authHeader,
-    callerUserId: callerUser?.id ?? null,
-    callerRole: (callerProfile?.role as string | null | undefined) ?? null,
-    serviceRoleAuthorized: isServiceRoleRequest,
-    authError: callerAuthErr?.message ?? null,
-    profileError: profileErr?.message ?? null,
+  const authResult = await authorizeEdgeCall(req, {
+    allowServiceRole: true,
+    allowedRoles: ['super_admin'],
   });
 
   if (!authResult.ok) {
     return jsonWithCors(authResult.body, authResult.status);
   }
 
-  const supabase = adminClient;
+  const supabase = authResult.adminClient;
   const now = new Date().toISOString();
 
   let body: SyncRequestBody = {};
@@ -178,7 +150,7 @@ Deno.serve(async (req: Request) => {
 
   const { error: insertRunErr } = await supabase.from('sync_runs').upsert({
     id: runId,
-    created_by: authResult.callerId,
+    created_by: authResult.isServiceRole ? null : authResult.callerId,
     created_at: now,
     started_at: now,
     updated_at: now,
@@ -203,109 +175,120 @@ Deno.serve(async (req: Request) => {
     }
   };
 
-  try {
-    // ── 1. Read sync_auto_show_all setting ────────────────────────────────────
-    await updateRun({ phase: 'fetching_active' });
+  const runSync = async () => {
+    try {
+      // ── 1. Read sync_auto_show_all setting ──────────────────────────────────
+      await updateRun({ phase: 'fetching_active' });
 
-    const { data: settingRow, error: settingErr } = await supabase
-      .from('system_settings')
-      .select('value')
-      .eq('key', 'sync_auto_show_all')
-      .maybeSingle();
+      const { data: settingRow, error: settingErr } = await supabase
+        .from('system_settings')
+        .select('value')
+        .eq('key', 'sync_auto_show_all')
+        .maybeSingle();
 
-    if (settingErr) {
-      stats.errors.push(`Failed to read system_settings: ${settingErr.message}`);
-    }
-
-    const autoShowAll: boolean =
-      settingRow?.value === true || settingRow?.value === 'true';
-
-    // ── 2. Fetch markets from Gamma API ───────────────────────────────────────
-    const activeMarkets = await fetchGammaMarkets(ACTIVE_MARKETS_URL, maxPages).catch((e: unknown) => {
-      stats.errors.push(`Failed to fetch active markets: ${e instanceof Error ? e.message : String(e)}`);
-      return [] as GammaMarket[];
-    });
-
-    await updateRun({ phase: 'fetching_resolved' });
-
-    const resolvedMarkets = await fetchGammaMarkets(RESOLVED_MARKETS_URL, maxPages).catch((e: unknown) => {
-      stats.errors.push(`Failed to fetch resolved markets: ${e instanceof Error ? e.message : String(e)}`);
-      return [] as GammaMarket[];
-    });
-
-    totalCount = activeMarkets.length + resolvedMarkets.length;
-
-    await updateRun(buildFetchedProgressUpdate(activeMarkets.length, resolvedMarkets.length));
-
-    // ── 3. Upsert active markets ──────────────────────────────────────────────
-    for (const gm of activeMarkets) {
-      try {
-        await upsertMarket(supabase, gm, 'open', autoShowAll, stats);
-      } catch (e: unknown) {
-        stats.errors.push(`Error upserting active market ${gm.conditionId}: ${e instanceof Error ? e.message : String(e)}`);
+      if (settingErr) {
+        stats.errors.push(`Failed to read system_settings: ${settingErr.message}`);
       }
-      processedCount++;
-      await updateRun({
-        ...buildIncrementedProgressUpdate({
+
+      const autoShowAll: boolean =
+        settingRow?.value === true || settingRow?.value === 'true';
+
+      // ── 2. Fetch markets from Gamma API ─────────────────────────────────────
+      const activeMarkets = await fetchGammaMarkets(ACTIVE_MARKETS_URL, maxPages).catch((e: unknown) => {
+        stats.errors.push(`Failed to fetch active markets: ${e instanceof Error ? e.message : String(e)}`);
+        return [] as GammaMarket[];
+      });
+
+      await updateRun({ phase: 'fetching_resolved' });
+
+      const resolvedMarkets = await fetchGammaMarkets(RESOLVED_MARKETS_URL, maxPages).catch((e: unknown) => {
+        stats.errors.push(`Failed to fetch resolved markets: ${e instanceof Error ? e.message : String(e)}`);
+        return [] as GammaMarket[];
+      });
+
+      totalCount = activeMarkets.length + resolvedMarkets.length;
+
+      await updateRun(buildFetchedProgressUpdate(activeMarkets.length, resolvedMarkets.length));
+
+      // ── 3. Upsert active markets ────────────────────────────────────────────
+      for (const gm of activeMarkets) {
+        try {
+          await upsertMarket(supabase, gm, 'open', autoShowAll, stats);
+        } catch (e: unknown) {
+          stats.errors.push(`Error upserting active market ${gm.conditionId}: ${e instanceof Error ? e.message : String(e)}`);
+        }
+        processedCount++;
+        await updateRun({
+          ...buildIncrementedProgressUpdate({
+            processedCount,
+            activeCount: activeMarkets.length,
+            totalCount,
+          }),
+          markets_synced: stats.markets_synced,
+          outcomes_updated: stats.outcomes_updated,
+          markets_settled: stats.markets_settled,
+          errors: stats.errors,
+          error_message: stats.errors[0] ?? null,
+        });
+      }
+
+      // ── 4. Process resolved markets ─────────────────────────────────────────
+      if (activeMarkets.length === 0) {
+        await updateRun(buildIncrementedProgressUpdate({
           processedCount,
           activeCount: activeMarkets.length,
           totalCount,
-        }),
-        markets_synced: stats.markets_synced,
-        outcomes_updated: stats.outcomes_updated,
-        markets_settled: stats.markets_settled,
-        errors: stats.errors,
-        error_message: stats.errors[0] ?? null,
-      });
-    }
+        }));
+      }
 
-    // ── 4. Process resolved markets ───────────────────────────────────────────
-    if (activeMarkets.length === 0) {
-      await updateRun(buildIncrementedProgressUpdate({
+      for (const gm of resolvedMarkets) {
+        try {
+          await processResolvedMarket(supabase, gm, autoShowAll, stats);
+        } catch (e: unknown) {
+          stats.errors.push(`Error processing resolved market ${gm.conditionId}: ${e instanceof Error ? e.message : String(e)}`);
+        }
+        processedCount++;
+        await updateRun({
+          ...buildIncrementedProgressUpdate({
+            processedCount,
+            activeCount: activeMarkets.length,
+            totalCount,
+          }),
+          markets_synced: stats.markets_synced,
+          outcomes_updated: stats.outcomes_updated,
+          markets_settled: stats.markets_settled,
+          errors: stats.errors,
+          error_message: stats.errors[0] ?? null,
+        });
+      }
+
+      await updateRun(buildCompletedProgressUpdate({
         processedCount,
-        activeCount: activeMarkets.length,
         totalCount,
+        stats,
       }));
+    } catch (e: unknown) {
+      const errorMessage = `Unexpected sync error: ${e instanceof Error ? e.message : String(e)}`;
+      const failedStats = {
+        ...stats,
+        errors: [...stats.errors, errorMessage],
+      };
+      await updateRun(buildFailedProgressUpdate(errorMessage, failedStats));
     }
+  };
 
-    for (const gm of resolvedMarkets) {
-      try {
-        await processResolvedMarket(supabase, gm, autoShowAll, stats);
-      } catch (e: unknown) {
-        stats.errors.push(`Error processing resolved market ${gm.conditionId}: ${e instanceof Error ? e.message : String(e)}`);
-      }
-      processedCount++;
-      await updateRun({
-        ...buildIncrementedProgressUpdate({
-          processedCount,
-          activeCount: activeMarkets.length,
-          totalCount,
-        }),
-        markets_synced: stats.markets_synced,
-        outcomes_updated: stats.outcomes_updated,
-        markets_settled: stats.markets_settled,
-        errors: stats.errors,
-        error_message: stats.errors[0] ?? null,
-      });
-    }
-  } catch (e: unknown) {
-    const errorMessage = `Unexpected sync error: ${e instanceof Error ? e.message : String(e)}`;
-    const failedStats = {
-      ...stats,
-      errors: [...stats.errors, errorMessage],
-    };
-    await updateRun(buildFailedProgressUpdate(errorMessage, failedStats));
-    return jsonWithCors({ success: false, run_id: runId, ...failedStats }, 200);
-  }
+  const backgroundTask = runSync();
+  const edgeRuntime = (globalThis as typeof globalThis & {
+    EdgeRuntime?: { waitUntil?: (promise: Promise<unknown>) => void };
+  }).EdgeRuntime;
 
-  await updateRun(buildCompletedProgressUpdate({
-    processedCount,
-    totalCount,
-    stats,
-  }));
+  edgeRuntime?.waitUntil?.(backgroundTask);
 
-  const success = stats.errors.length === 0;
-  return jsonWithCors({ success, run_id: runId, ...stats }, 200);
+  return jsonWithCors({
+    success: true,
+    accepted: true,
+    run_id: runId,
+  }, 202);
 });
 
 // ─── upsertMarket ─────────────────────────────────────────────────────────────

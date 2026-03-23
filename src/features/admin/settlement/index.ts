@@ -1,3 +1,4 @@
 export { useSyncMarkets } from './useSyncMarkets';
 export { useSyncRun } from './useSyncRun';
-export type { SyncResult } from './useSyncMarkets';
+export { parseSyncStartResponse } from './syncStartResponse';
+export type { SyncStartResponse } from './syncStartResponse';

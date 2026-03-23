@@ -1,5 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
-import { BUTTON_VARIANTS, type ButtonVariant } from './const';
+import type { ButtonVariant } from './const';
+import { getButtonClassName } from './className';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
     variant?: ButtonVariant;
@@ -7,11 +8,13 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export const Button = ({ variant = 'primary', children, className = '', ...rest }: ButtonProps) => {
-    const variantClasses = BUTTON_VARIANTS[variant];
-
     return (
         <button
-            className={`rounded-lg px-4 py-2 font-medium transition-colors cursor-pointer ${variantClasses} ${className}`}
+            className={getButtonClassName({
+                variant,
+                disabled: rest.disabled,
+                className,
+            })}
             {...rest}
         >
             {children}

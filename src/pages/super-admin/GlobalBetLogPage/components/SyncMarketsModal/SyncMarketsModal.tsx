@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import type { DbSyncRun } from '@/shared/types/database';
 import { Modal } from '@/shared/ui/Modal';
@@ -14,6 +15,7 @@ interface SyncMarketsModalProps {
 }
 
 export const SyncMarketsModal = ({ isOpen, onClose, onCompleted }: SyncMarketsModalProps) => {
+  const queryClient = useQueryClient();
   const { t } = useTranslation();
   const [selectedMaxPages, setSelectedMaxPages] = useState<number>(1);
   const [runId, setRunId] = useState<string | null>(null);
@@ -49,8 +51,10 @@ export const SyncMarketsModal = ({ isOpen, onClose, onCompleted }: SyncMarketsMo
     if (reportedRunIdRef.current === run.id) return;
 
     reportedRunIdRef.current = run.id;
+    queryClient.invalidateQueries({ queryKey: ['markets'] });
+    queryClient.invalidateQueries({ queryKey: ['admin', 'bet-log'] });
     onCompleted?.(run);
-  }, [onCompleted, run]);
+  }, [onCompleted, queryClient, run]);
 
   useEffect(() => {
     if (isOpen) return;
@@ -236,7 +240,7 @@ export const SyncMarketsModal = ({ isOpen, onClose, onCompleted }: SyncMarketsMo
             </div>
           )}
 
-          {syncMutation.error && (
+          {syncMutation.error && !run && (
             <p role="alert" className="text-sm" style={{ color: 'var(--color-loss)' }}>
               {syncMutation.error.message}
             </p>
