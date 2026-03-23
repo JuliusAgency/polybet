@@ -3,7 +3,7 @@
 CREATE TABLE sync_runs (
   id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   created_by        uuid REFERENCES profiles(id) ON DELETE SET NULL,
-  status            text NOT NULL CHECK (status IN ('running', 'completed', 'failed')),
+  status            text NOT NULL CHECK (status IN ('running', 'completed', 'completed_with_warnings', 'failed')),
   phase             text NOT NULL,
   max_pages         integer NOT NULL DEFAULT 0 CHECK (max_pages >= 0),
   progress_current  integer NOT NULL DEFAULT 0 CHECK (progress_current >= 0),

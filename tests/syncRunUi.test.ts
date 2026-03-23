@@ -27,8 +27,9 @@ test('getSyncRunProgressPercent reports 100 for completed runs with zero totals'
   );
 });
 
-test('isSyncRunTerminal returns true only for completed and failed runs', () => {
+test('isSyncRunTerminal returns true for all terminal sync outcomes', () => {
   assert.equal(isSyncRunTerminal('running'), false);
   assert.equal(isSyncRunTerminal('completed'), true);
+  assert.equal(isSyncRunTerminal('completed_with_warnings'), true);
   assert.equal(isSyncRunTerminal('failed'), true);
 });

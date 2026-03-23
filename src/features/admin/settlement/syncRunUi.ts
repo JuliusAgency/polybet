@@ -8,7 +8,7 @@ export const SYNC_SCOPE_OPTIONS = [
 ] as const;
 
 export function isSyncRunTerminal(status: SyncRunStatus) {
-  return status === 'completed' || status === 'failed';
+  return status === 'completed' || status === 'completed_with_warnings' || status === 'failed';
 }
 
 export function getSyncRunProgressPercent(params: {
@@ -19,7 +19,7 @@ export function getSyncRunProgressPercent(params: {
   const { status, progress_current, progress_total } = params;
 
   if (progress_total <= 0) {
-    return status === 'completed' ? 100 : 0;
+    return status === 'completed' || status === 'completed_with_warnings' ? 100 : 0;
   }
 
   return Math.max(0, Math.min(100, Math.round((progress_current / progress_total) * 100)));

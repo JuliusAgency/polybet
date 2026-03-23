@@ -224,7 +224,7 @@
     "syncedCount": "שווקים שסונכרנו",
     "outcomesCount": "תוצאות שעודכנו",
     "settledCount": "שווקים שהוסדרו",
-    "errorListTitle": "שגיאות אחרונות",
+    "issueListTitle": "בעיות אחרונות",
     "keepOpenTitle": "השאר את הלשונית פתוחה",
     "keepOpenDescription": "סנכרון מלא של שווקים עשוי לקחת זמן. אל תסגור את הלשונית אחרי תחילת ההרצה.",
     "keepOpenRunning": "הסנכרון עדיין רץ. סגירת הלשונית עלולה לקטוע את הצפייה בהתקדמות בזמן אמת.",
@@ -244,6 +244,7 @@
       "syncing_active": "מסנכרן שווקים פעילים",
       "syncing_resolved": "מסנכרן שווקים מוסדרים",
       "completed": "הושלם",
+      "completed_with_warnings": "הושלם עם אזהרות",
       "failed": "נכשל"
     }
   }

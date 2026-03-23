@@ -51,8 +51,8 @@ export function buildCompletedProgressUpdate(params: {
   const hasErrors = stats.errors.length > 0;
 
   return {
-    status: hasErrors ? ('failed' as const) : ('completed' as const),
-    phase: hasErrors ? ('failed' as const) : ('completed' as const),
+    status: hasErrors ? ('completed_with_warnings' as const) : ('completed' as const),
+    phase: hasErrors ? ('completed_with_warnings' as const) : ('completed' as const),
     progress_current: totalCount === 0 ? processedCount : totalCount,
     progress_total: totalCount,
     markets_synced: stats.markets_synced,

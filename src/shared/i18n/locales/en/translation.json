@@ -224,7 +224,7 @@
     "syncedCount": "Markets synced",
     "outcomesCount": "Outcomes updated",
     "settledCount": "Markets settled",
-    "errorListTitle": "Latest errors",
+    "issueListTitle": "Latest issues",
     "keepOpenTitle": "Keep this tab open",
     "keepOpenDescription": "A full market sync can take a while. Do not close the tab once the run starts.",
     "keepOpenRunning": "Sync is still running. Closing the tab may interrupt your view of the real-time progress.",
@@ -244,6 +244,7 @@
       "syncing_active": "Syncing active markets",
       "syncing_resolved": "Syncing resolved markets",
       "completed": "Completed",
+      "completed_with_warnings": "Completed with warnings",
       "failed": "Failed"
     }
   }

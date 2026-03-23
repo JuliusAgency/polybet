@@ -5,6 +5,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { buildCorsPreflightResponse, jsonWithCors } from '../_shared/cors.ts';
+import { resolveWinnerTokenId } from '../_shared/polymarketWinner.ts';
 import { evaluateSyncAuthorization } from '../_shared/syncAuth.ts';
 import {
   buildCompletedProgressUpdate,
@@ -30,6 +31,7 @@ interface GammaMarket {
   volume: string | number;
   liquidity: string | number;
   image: string | null;
+  tokens?: Array<{ token_id: string; winner?: boolean }>;
 }
 
 interface SyncRequestBody {
@@ -83,6 +85,18 @@ async function fetchGammaMarkets(baseUrl: string, maxPages = 0): Promise<GammaMa
   }
 
   return markets;
+}
+
+async function fetchGammaMarketDetails(conditionId: string): Promise<GammaMarket | null> {
+  const response = await fetch(`${GAMMA_API_BASE}/markets/${conditionId}`, {
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  return await response.json() as GammaMarket;
 }
 
 // ─── Main handler ─────────────────────────────────────────────────────────────
@@ -428,20 +442,13 @@ async function processResolvedMarket(
   const marketId: string = existing?.id ?? await resolveMarketId(supabase, gm.conditionId);
   await upsertOutcomes(supabase, marketId, gm, stats);
 
-  // Find winner: resolved markets have outcomePrices["1", "0"] or ["0", "1"]
-  // The winning outcome has price = "1"
-  const prices   = parseJsonField<string[]>(gm.outcomePrices, []);
-  const tokenIds = parseJsonField<string[]>(gm.clobTokenIds, []);
-  const winnerIndex = prices.findIndex((p) => parseFloat(p) >= 0.99);
+  const winnerTokenId = await resolveWinnerTokenId({
+    market: gm,
+    fetchMarketDetails: () => fetchGammaMarketDetails(gm.conditionId),
+  });
 
-  if (winnerIndex === -1) {
-    stats.errors.push(`Resolved market ${gm.conditionId}: cannot determine winner from prices ${gm.outcomePrices}`);
-    return;
-  }
-
-  const winnerTokenId = tokenIds[winnerIndex];
   if (!winnerTokenId) {
-    stats.errors.push(`Resolved market ${gm.conditionId}: no token ID for winner at index ${winnerIndex}`);
+    stats.errors.push(`Resolved market ${gm.conditionId}: winner not available in Polymarket resolution data`);
     return;
   }
 

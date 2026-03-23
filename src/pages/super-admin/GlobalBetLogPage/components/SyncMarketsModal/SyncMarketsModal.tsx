@@ -80,7 +80,11 @@ export const SyncMarketsModal = ({ isOpen, onClose, onCompleted }: SyncMarketsMo
     return t(`settlement.phase.${run.phase}`, { defaultValue: run.phase });
   }, [run, t]);
 
-  const statusTone = run?.status === 'failed' ? 'var(--color-loss)' : 'var(--color-text-secondary)';
+  const statusTone = run?.status === 'failed'
+    ? 'var(--color-loss)'
+    : run?.status === 'completed_with_warnings'
+      ? 'var(--color-warning)'
+      : 'var(--color-text-secondary)';
   const canStart = !syncMutation.isPending && !runId;
 
   return (
@@ -217,11 +221,16 @@ export const SyncMarketsModal = ({ isOpen, onClose, onCompleted }: SyncMarketsMo
           {!!run?.errors.length && (
             <div className="rounded-xl border px-4 py-3" style={{ borderColor: 'var(--color-border)' }}>
               <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                {t('settlement.errorListTitle')}
+                {t('settlement.issueListTitle')}
               </p>
-              <ul className="mt-2 flex flex-col gap-2 text-sm" style={{ color: 'var(--color-loss)' }}>
-                {run.errors.slice(0, 5).map((error) => (
-                  <li key={error}>{error}</li>
+              <ul
+                className="mt-2 flex max-h-56 flex-col gap-2 overflow-y-auto pe-1 text-sm"
+                style={{ color: 'var(--color-warning)' }}
+              >
+                {run.errors.slice(0, 10).map((error) => (
+                  <li key={error} className="break-all">
+                    {error}
+                  </li>
                 ))}
               </ul>
             </div>

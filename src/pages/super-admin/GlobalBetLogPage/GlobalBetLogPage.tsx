@@ -112,7 +112,7 @@ const GlobalBetLogPage = () => {
         isOpen={isSyncModalOpen}
         onClose={() => setIsSyncModalOpen(false)}
         onCompleted={(run) => {
-          if (run.status === 'completed') {
+          if (run.status === 'completed' || run.status === 'completed_with_warnings') {
             setLastSyncRun(run);
           }
         }}

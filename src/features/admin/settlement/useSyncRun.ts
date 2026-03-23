@@ -31,7 +31,9 @@ export function useSyncRun(runId: string | null) {
     refetchInterval: (query) => {
       const current = query.state.data;
       if (!runId) return false;
-      return current?.status === 'completed' || current?.status === 'failed' ? false : 1000;
+      return current?.status === 'completed' || current?.status === 'completed_with_warnings' || current?.status === 'failed'
+        ? false
+        : 1000;
     },
   });
 }

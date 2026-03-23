@@ -7,7 +7,7 @@
 export type MarketStatus = 'open' | 'closed' | 'resolved';
 export type BetStatus = 'open' | 'won' | 'lost' | 'cancelled';
 export type TransactionType = 'mint' | 'transfer' | 'bet_lock' | 'bet_payout' | 'adjustment';
-export type SyncRunStatus = 'running' | 'completed' | 'failed';
+export type SyncRunStatus = 'running' | 'completed' | 'completed_with_warnings' | 'failed';
 
 export interface DbProfile {
   id: string;

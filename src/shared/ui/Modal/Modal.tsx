@@ -49,7 +49,7 @@ export const Modal = ({ isOpen, onClose, title, closeDisabled = false, children 
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? titleId : undefined}
-        className="w-full max-w-md rounded-xl shadow-lg"
+        className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-xl shadow-lg"
         style={{
           backgroundColor: 'var(--color-bg-elevated)',
           zIndex: 'var(--z-modal)',
@@ -104,7 +104,7 @@ export const Modal = ({ isOpen, onClose, title, closeDisabled = false, children 
           </div>
         )}
 
-        <div className="px-5 py-4">{children}</div>
+        <div className="overflow-y-auto px-5 py-4">{children}</div>
       </div>
     </div>
   );
