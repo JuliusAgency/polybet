@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/shared/api/supabase';
+import { invokeSupabaseFunction } from '@/shared/api/supabase';
 
 interface CreateUserInput {
   fullName: string;
@@ -15,12 +15,16 @@ interface CreateUserResult {
   generatedPassword: string;
 }
 
+interface CreateUserFunctionResponse extends Partial<CreateUserResult> {
+  error?: string;
+}
+
 export function useCreateUser() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (vars: CreateUserInput): Promise<CreateUserResult> => {
-      const { data, error } = await supabase.functions.invoke('create-user', {
+      const { data, error } = await invokeSupabaseFunction<CreateUserFunctionResponse>('create-user', {
         body: {
           role: 'user',
           fullName: vars.fullName,
@@ -37,7 +41,7 @@ export function useCreateUser() {
         if (httpError.context instanceof Response && httpError.context.status === 409) {
           throw new Error('username_taken');
         }
-        throw new Error(error.message);
+        throw new Error(httpError.message ?? 'Function invocation failed');
       }
 
       if (data?.error === 'username_taken') {

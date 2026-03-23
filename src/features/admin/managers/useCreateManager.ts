@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/shared/api/supabase';
+import { invokeSupabaseFunction } from '@/shared/api/supabase';
 
 interface CreateManagerInput {
   fullName: string;
@@ -14,12 +14,16 @@ interface CreateManagerResult {
   generatedPassword: string;
 }
 
+interface CreateManagerFunctionResponse extends Partial<CreateManagerResult> {
+  error?: string;
+}
+
 export function useCreateManager() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (vars: CreateManagerInput): Promise<CreateManagerResult> => {
-      const { data, error } = await supabase.functions.invoke('create-user', {
+      const { data, error } = await invokeSupabaseFunction<CreateManagerFunctionResponse>('create-user', {
         body: {
           role: 'manager',
           fullName: vars.fullName,
@@ -35,7 +39,7 @@ export function useCreateManager() {
         if (httpError.context instanceof Response && httpError.context.status === 409) {
           throw new Error('username_taken');
         }
-        throw new Error(error.message);
+        throw new Error(httpError.message ?? 'Function invocation failed');
       }
 
       if (data?.error === 'username_taken') {

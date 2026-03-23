@@ -35,7 +35,8 @@
   },
   "auth": {
     "signOut": "Sign Out",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "sessionExpired": "Your session expired. Sign in again and retry."
   },
   "signIn": {
     "title": "Sign In to PolyBet",

@@ -4,6 +4,7 @@ import { Modal } from '@/shared/ui/Modal';
 import { Input } from '@/shared/ui/Input';
 import { Button } from '@/shared/ui/Button';
 import { useCreateManager } from '@/features/admin/managers';
+import { SESSION_EXPIRED_ERROR } from '@/shared/api/supabase';
 import { CredentialCard } from '@/pages/manager/UsersManagementPage/components/CredentialCard';
 
 interface CreateManagerModalProps {
@@ -124,7 +125,9 @@ export const CreateManagerModal = ({ isOpen, onClose, onSuccess }: CreateManager
   // Generic error: anything that is not username_taken
   const genericError =
     mutation.error && mutation.error.message !== 'username_taken'
-      ? mutation.error.message || t('common.unknownError')
+      ? mutation.error.message === SESSION_EXPIRED_ERROR
+        ? t('auth.sessionExpired')
+        : mutation.error.message || t('common.unknownError')
       : null;
 
   const isSubmitting = mutation.isPending;
