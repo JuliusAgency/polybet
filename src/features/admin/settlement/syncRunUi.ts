@@ -18,6 +18,35 @@ export function isSyncRunProgressIndeterminate(params: {
   return params.status === 'running' && params.progress_total <= 0;
 }
 
+export function getSyncRunFreshness(params: {
+  status: SyncRunStatus;
+  updated_at: string | null | undefined;
+  now?: Date;
+  staleAfterSeconds?: number;
+}) {
+  const {
+    status,
+    updated_at,
+    now = new Date(),
+    staleAfterSeconds = 15,
+  } = params;
+
+  if (!updated_at) {
+    return {
+      secondsSinceUpdate: null,
+      isStale: false,
+    };
+  }
+
+  const updatedAt = new Date(updated_at);
+  const secondsSinceUpdate = Math.max(0, Math.floor((now.getTime() - updatedAt.getTime()) / 1000));
+
+  return {
+    secondsSinceUpdate,
+    isStale: status === 'running' && secondsSinceUpdate >= staleAfterSeconds,
+  };
+}
+
 export function getSyncRunProgressPercent(params: {
   status: SyncRunStatus;
   progress_current: number;

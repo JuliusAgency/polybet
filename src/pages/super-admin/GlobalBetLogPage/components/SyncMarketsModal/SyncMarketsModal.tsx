@@ -6,7 +6,7 @@ import { Modal } from '@/shared/ui/Modal';
 import { Button } from '@/shared/ui/Button';
 import { ProgressBar } from '@/shared/ui/ProgressBar';
 import { useSyncMarkets, useSyncRun } from '@/features/admin/settlement';
-import { SYNC_SCOPE_OPTIONS, getSyncRunProgressPercent, isSyncRunProgressIndeterminate, isSyncRunTerminal } from '@/features/admin/settlement/syncRunUi';
+import { SYNC_SCOPE_OPTIONS, getSyncRunFreshness, getSyncRunProgressPercent, isSyncRunProgressIndeterminate, isSyncRunTerminal } from '@/features/admin/settlement/syncRunUi';
 
 interface SyncMarketsModalProps {
   isOpen: boolean;
@@ -34,6 +34,10 @@ export const SyncMarketsModal = ({ isOpen, onClose, onCompleted }: SyncMarketsMo
   const isIndeterminateProgress = isSyncRunProgressIndeterminate({
     status: run?.status ?? 'running',
     progress_total: run?.progress_total ?? 0,
+  });
+  const freshness = getSyncRunFreshness({
+    status: run?.status ?? 'running',
+    updated_at: run?.updated_at,
   });
 
   useEffect(() => {
@@ -228,6 +232,13 @@ export const SyncMarketsModal = ({ isOpen, onClose, onCompleted }: SyncMarketsMo
             <p className="mt-1" style={{ color: 'var(--color-text-secondary)' }}>
               {t(isRunning ? 'settlement.keepOpenRunning' : 'settlement.keepOpenDone')}
             </p>
+            {isRunning && freshness.secondsSinceUpdate !== null && (
+              <p className="mt-2 text-xs" style={{ color: freshness.isStale ? 'var(--color-warning)' : 'var(--color-text-secondary)' }}>
+                {freshness.isStale
+                  ? t('settlement.progressWaiting', { seconds: freshness.secondsSinceUpdate })
+                  : t('settlement.progressUpdatedAgo', { seconds: freshness.secondsSinceUpdate })}
+              </p>
+            )}
           </div>
 
           {!!run?.errors.length && (

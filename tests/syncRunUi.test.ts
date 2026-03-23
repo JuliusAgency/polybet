@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   getSyncRunProgressPercent,
+  getSyncRunFreshness,
   isSyncRunProgressIndeterminate,
   isSyncRunTerminal,
   SYNC_SCOPE_OPTIONS,
@@ -44,4 +45,26 @@ test('isSyncRunProgressIndeterminate returns true while totals are still unknown
     isSyncRunProgressIndeterminate({ status: 'completed', progress_total: 0 }),
     false,
   );
+});
+
+test('getSyncRunFreshness marks running syncs as stale after the threshold', () => {
+  const freshness = getSyncRunFreshness({
+    status: 'running',
+    updated_at: '2026-03-23T09:00:00.000Z',
+    now: new Date('2026-03-23T09:00:20.000Z'),
+  });
+
+  assert.equal(freshness.secondsSinceUpdate, 20);
+  assert.equal(freshness.isStale, true);
+});
+
+test('getSyncRunFreshness never marks terminal syncs as stale', () => {
+  const freshness = getSyncRunFreshness({
+    status: 'completed',
+    updated_at: '2026-03-23T09:00:00.000Z',
+    now: new Date('2026-03-23T09:10:00.000Z'),
+  });
+
+  assert.equal(freshness.secondsSinceUpdate, 600);
+  assert.equal(freshness.isStale, false);
 });

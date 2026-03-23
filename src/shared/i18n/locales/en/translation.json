@@ -222,6 +222,8 @@
     "currentPhase": "Current phase",
     "progressCount": "{{current}} / {{total}} markets",
     "progressPendingTotal": "{{current}} markets loaded so far",
+    "progressUpdatedAgo": "Last update {{seconds}}s ago.",
+    "progressWaiting": "Still waiting for the next Polymarket response. Last update {{seconds}}s ago.",
     "syncedCount": "Markets synced",
     "outcomesCount": "Outcomes updated",
     "settledCount": "Markets settled",

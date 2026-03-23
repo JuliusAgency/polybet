@@ -222,6 +222,8 @@
     "currentPhase": "שלב נוכחי",
     "progressCount": "{{current}} / {{total}} שווקים",
     "progressPendingTotal": "{{current}} שווקים נטענו עד כה",
+    "progressUpdatedAgo": "העדכון האחרון לפני {{seconds}} שניות.",
+    "progressWaiting": "עדיין ממתין לתגובה הבאה מ-Polymarket. העדכון האחרון לפני {{seconds}} שניות.",
     "syncedCount": "שווקים שסונכרנו",
     "outcomesCount": "תוצאות שעודכנו",
     "settledCount": "שווקים שהוסדרו",

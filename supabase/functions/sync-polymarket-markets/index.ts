@@ -6,6 +6,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { authorizeEdgeCall } from '../_shared/edgeAuth.ts';
 import { buildCorsPreflightResponse, jsonWithCors } from '../_shared/cors.ts';
+import { fetchJsonWithRetry } from '../_shared/gammaFetch.ts';
 import { resolveWinnerTokenId } from '../_shared/polymarketWinner.ts';
 import {
   buildCompletedProgressUpdate,
@@ -62,6 +63,7 @@ async function fetchGammaMarkets(
   baseUrl: string,
   maxPages = 0,
   onPageFetched?: (params: { fetchedCount: number; pagesFetched: number }) => Promise<void> | void,
+  onHeartbeat?: (params: { fetchedCount: number; pagesFetched: number; attempt: number }) => Promise<void> | void,
 ): Promise<GammaMarket[]> {
   const markets: GammaMarket[] = [];
   let offset = 0;
@@ -71,13 +73,17 @@ async function fetchGammaMarkets(
 
   while (true) {
     const url = `${baseUrl}&offset=${offset}`;
-    const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    const page = await fetchJsonWithRetry<GammaMarket[]>(url, {
+      headers: { Accept: 'application/json' },
+      onHeartbeat: ({ attempt }) => {
+        void onHeartbeat?.({
+          fetchedCount: markets.length,
+          pagesFetched: pages,
+          attempt,
+        });
+      },
+    });
 
-    if (!response.ok) {
-      throw new Error(`Gamma API error ${response.status}: ${await response.text()}`);
-    }
-
-    const page: GammaMarket[] = await response.json();
     if (!Array.isArray(page) || page.length === 0) break;
 
     markets.push(...page);
@@ -210,6 +216,11 @@ Deno.serve(async (req: Request) => {
           progress_current: fetchedCount,
           progress_total: 0,
         }),
+        ({ fetchedCount }) => updateRun({
+          phase: 'fetching_active',
+          progress_current: fetchedCount,
+          progress_total: 0,
+        }),
       ).catch((e: unknown) => {
         stats.errors.push(`Failed to fetch active markets: ${e instanceof Error ? e.message : String(e)}`);
         return [] as GammaMarket[];
@@ -220,6 +231,11 @@ Deno.serve(async (req: Request) => {
       const resolvedMarkets = await fetchGammaMarkets(
         RESOLVED_MARKETS_URL,
         maxPages,
+        ({ fetchedCount }) => updateRun({
+          phase: 'fetching_resolved',
+          progress_current: activeMarkets.length + fetchedCount,
+          progress_total: 0,
+        }),
         ({ fetchedCount }) => updateRun({
           phase: 'fetching_resolved',
           progress_current: activeMarkets.length + fetchedCount,
