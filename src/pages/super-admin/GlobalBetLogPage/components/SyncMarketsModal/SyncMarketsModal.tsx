@@ -6,7 +6,7 @@ import { Modal } from '@/shared/ui/Modal';
 import { Button } from '@/shared/ui/Button';
 import { ProgressBar } from '@/shared/ui/ProgressBar';
 import { useSyncMarkets, useSyncRun } from '@/features/admin/settlement';
-import { SYNC_SCOPE_OPTIONS, getSyncRunProgressPercent, isSyncRunTerminal } from '@/features/admin/settlement/syncRunUi';
+import { SYNC_SCOPE_OPTIONS, getSyncRunProgressPercent, isSyncRunProgressIndeterminate, isSyncRunTerminal } from '@/features/admin/settlement/syncRunUi';
 
 interface SyncMarketsModalProps {
   isOpen: boolean;
@@ -29,6 +29,10 @@ export const SyncMarketsModal = ({ isOpen, onClose, onCompleted }: SyncMarketsMo
   const progressPercent = getSyncRunProgressPercent({
     status: run?.status ?? 'running',
     progress_current: run?.progress_current ?? 0,
+    progress_total: run?.progress_total ?? 0,
+  });
+  const isIndeterminateProgress = isSyncRunProgressIndeterminate({
+    status: run?.status ?? 'running',
     progress_total: run?.progress_total ?? 0,
   });
 
@@ -172,19 +176,23 @@ export const SyncMarketsModal = ({ isOpen, onClose, onCompleted }: SyncMarketsMo
               </div>
               <div className="text-right">
                 <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                  {progressPercent}%
+                  {isIndeterminateProgress ? '...' : `${progressPercent}%`}
                 </p>
                 <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-                  {t('settlement.progressCount', {
-                    current: run?.progress_current ?? 0,
-                    total: run?.progress_total ?? 0,
-                  })}
+                  {isIndeterminateProgress
+                    ? t('settlement.progressPendingTotal', {
+                      current: run?.progress_current ?? 0,
+                    })
+                    : t('settlement.progressCount', {
+                      current: run?.progress_current ?? 0,
+                      total: run?.progress_total ?? 0,
+                    })}
                 </p>
               </div>
             </div>
 
             <div className="mt-4">
-              <ProgressBar value={progressPercent} />
+              <ProgressBar value={progressPercent} indeterminate={isIndeterminateProgress} />
             </div>
           </div>
 

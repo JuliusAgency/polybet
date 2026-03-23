@@ -221,6 +221,7 @@
     "runAgain": "הרץ שוב",
     "currentPhase": "שלב נוכחי",
     "progressCount": "{{current}} / {{total}} שווקים",
+    "progressPendingTotal": "{{current}} שווקים נטענו עד כה",
     "syncedCount": "שווקים שסונכרנו",
     "outcomesCount": "תוצאות שעודכנו",
     "settledCount": "שווקים שהוסדרו",

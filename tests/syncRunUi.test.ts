@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   getSyncRunProgressPercent,
+  isSyncRunProgressIndeterminate,
   isSyncRunTerminal,
   SYNC_SCOPE_OPTIONS,
 } from '../src/features/admin/settlement/syncRunUi.ts';
@@ -32,4 +33,15 @@ test('isSyncRunTerminal returns true for all terminal sync outcomes', () => {
   assert.equal(isSyncRunTerminal('completed'), true);
   assert.equal(isSyncRunTerminal('completed_with_warnings'), true);
   assert.equal(isSyncRunTerminal('failed'), true);
+});
+
+test('isSyncRunProgressIndeterminate returns true while totals are still unknown', () => {
+  assert.equal(
+    isSyncRunProgressIndeterminate({ status: 'running', progress_total: 0 }),
+    true,
+  );
+  assert.equal(
+    isSyncRunProgressIndeterminate({ status: 'completed', progress_total: 0 }),
+    false,
+  );
 });

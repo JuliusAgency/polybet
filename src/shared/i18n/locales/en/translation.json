@@ -221,6 +221,7 @@
     "runAgain": "Run Again",
     "currentPhase": "Current phase",
     "progressCount": "{{current}} / {{total}} markets",
+    "progressPendingTotal": "{{current}} markets loaded so far",
     "syncedCount": "Markets synced",
     "outcomesCount": "Outcomes updated",
     "settledCount": "Markets settled",

@@ -58,7 +58,11 @@ function parseJsonField<T>(value: string | null | undefined, fallback: T): T {
 
 /** Fetch pages from a Gamma API URL (handles offset pagination).
  *  @param maxPages - max number of pages to fetch (0 = unlimited) */
-async function fetchGammaMarkets(baseUrl: string, maxPages = 0): Promise<GammaMarket[]> {
+async function fetchGammaMarkets(
+  baseUrl: string,
+  maxPages = 0,
+  onPageFetched?: (params: { fetchedCount: number; pagesFetched: number }) => Promise<void> | void,
+): Promise<GammaMarket[]> {
   const markets: GammaMarket[] = [];
   let offset = 0;
   let pages = 0;
@@ -78,6 +82,10 @@ async function fetchGammaMarkets(baseUrl: string, maxPages = 0): Promise<GammaMa
 
     markets.push(...page);
     pages++;
+    await onPageFetched?.({
+      fetchedCount: markets.length,
+      pagesFetched: pages,
+    });
 
     if (page.length < limit) break;
     if (maxPages > 0 && pages >= maxPages) break;
@@ -194,14 +202,30 @@ Deno.serve(async (req: Request) => {
         settingRow?.value === true || settingRow?.value === 'true';
 
       // ── 2. Fetch markets from Gamma API ─────────────────────────────────────
-      const activeMarkets = await fetchGammaMarkets(ACTIVE_MARKETS_URL, maxPages).catch((e: unknown) => {
+      const activeMarkets = await fetchGammaMarkets(
+        ACTIVE_MARKETS_URL,
+        maxPages,
+        ({ fetchedCount }) => updateRun({
+          phase: 'fetching_active',
+          progress_current: fetchedCount,
+          progress_total: 0,
+        }),
+      ).catch((e: unknown) => {
         stats.errors.push(`Failed to fetch active markets: ${e instanceof Error ? e.message : String(e)}`);
         return [] as GammaMarket[];
       });
 
       await updateRun({ phase: 'fetching_resolved' });
 
-      const resolvedMarkets = await fetchGammaMarkets(RESOLVED_MARKETS_URL, maxPages).catch((e: unknown) => {
+      const resolvedMarkets = await fetchGammaMarkets(
+        RESOLVED_MARKETS_URL,
+        maxPages,
+        ({ fetchedCount }) => updateRun({
+          phase: 'fetching_resolved',
+          progress_current: activeMarkets.length + fetchedCount,
+          progress_total: 0,
+        }),
+      ).catch((e: unknown) => {
         stats.errors.push(`Failed to fetch resolved markets: ${e instanceof Error ? e.message : String(e)}`);
         return [] as GammaMarket[];
       });

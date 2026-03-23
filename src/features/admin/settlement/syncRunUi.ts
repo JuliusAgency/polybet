@@ -11,6 +11,13 @@ export function isSyncRunTerminal(status: SyncRunStatus) {
   return status === 'completed' || status === 'completed_with_warnings' || status === 'failed';
 }
 
+export function isSyncRunProgressIndeterminate(params: {
+  status: SyncRunStatus;
+  progress_total: number;
+}) {
+  return params.status === 'running' && params.progress_total <= 0;
+}
+
 export function getSyncRunProgressPercent(params: {
   status: SyncRunStatus;
   progress_current: number;
