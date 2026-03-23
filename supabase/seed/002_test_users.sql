@@ -20,27 +20,27 @@ BEGIN
     created_at, updated_at, is_sso_user, is_anonymous
   ) VALUES
     (admin_id,   '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-     'admin@polybet.internal',   crypt('Admin123!',   gen_salt('bf')), now(),
+     'admin@polybet.internal',   extensions.crypt('Admin123!',   extensions.gen_salt('bf')), now(),
      '', '', '', '',
      '{"provider":"email","providers":["email"]}', '{}', now(), now(), false, false),
 
     (manager_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-     'manager@polybet.internal', crypt('Manager123!', gen_salt('bf')), now(),
+     'manager@polybet.internal', extensions.crypt('Manager123!', extensions.gen_salt('bf')), now(),
      '', '', '', '',
      '{"provider":"email","providers":["email"]}', '{}', now(), now(), false, false),
 
     (user1_id,   '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-     'user1@polybet.internal',   crypt('User123!',    gen_salt('bf')), now(),
+     'user1@polybet.internal',   extensions.crypt('User123!',    extensions.gen_salt('bf')), now(),
      '', '', '', '',
      '{"provider":"email","providers":["email"]}', '{}', now(), now(), false, false),
 
     (user2_id,   '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-     'user2@polybet.internal',   crypt('User123!',    gen_salt('bf')), now(),
+     'user2@polybet.internal',   extensions.crypt('User123!',    extensions.gen_salt('bf')), now(),
      '', '', '', '',
      '{"provider":"email","providers":["email"]}', '{}', now(), now(), false, false),
 
     (user3_id,   '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-     'user3@polybet.internal',   crypt('User123!',    gen_salt('bf')), now(),
+     'user3@polybet.internal',   extensions.crypt('User123!',    extensions.gen_salt('bf')), now(),
      '', '', '', '',
      '{"provider":"email","providers":["email"]}', '{}', now(), now(), false, false)
   ON CONFLICT (id) DO NOTHING;

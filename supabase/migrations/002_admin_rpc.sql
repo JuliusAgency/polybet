@@ -146,7 +146,7 @@ BEGIN
   END IF;
 
   UPDATE auth.users
-  SET encrypted_password = crypt(p_new_password, gen_salt('bf'))
+  SET encrypted_password = extensions.crypt(p_new_password, extensions.gen_salt('bf'))
   WHERE id = p_target_user_id;
 
   IF NOT FOUND THEN
