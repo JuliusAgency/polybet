@@ -10,10 +10,11 @@ export const ManagerLayout = () => {
 
   return (
     <div
-      className="flex min-h-screen bg-gray-950 text-gray-100"
+      className="flex bg-gray-950 text-gray-100"
+      style={{ height: '100vh' }}
     >
       {/* Sidebar */}
-      <aside className="w-60 flex-shrink-0 bg-gray-900 flex flex-col">
+      <aside className="w-60 flex-shrink-0 bg-gray-900 flex flex-col overflow-y-auto">
         <div className="px-6 py-5 border-b border-gray-800">
           <span className="text-xl font-bold text-white">PolyBet</span>
         </div>
@@ -86,7 +87,7 @@ export const ManagerLayout = () => {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 min-h-0 overflow-y-auto">
         <Outlet />
       </main>
     </div>
