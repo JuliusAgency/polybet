@@ -113,9 +113,9 @@
   },
   "globalLog": {
     "title": "Global Log",
-    "betLog": "General Log",
+    "betLog": "Bet Records",
     "financialLog": "Financial Log",
-    "comingSoon": "General log — coming soon",
+    "comingSoon": "Bet records — coming soon",
     "manager": "Manager",
     "allManagers": "All managers",
     "month": "Month",

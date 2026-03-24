@@ -113,9 +113,9 @@
   },
   "globalLog": {
     "title": "יומן כללי",
-    "betLog": "יומן כללי",
-    "financialLog": "תיעוד תנועות",
-    "comingSoon": "יומן כללי — בקרוב",
+    "betLog": "תיעוד הימורים",
+    "financialLog": "תיעוד תנועות כספים",
+    "comingSoon": "תיעוד הימורים — בקרוב",
     "manager": "מנהל",
     "allManagers": "כל המנהלים",
     "month": "חודש",

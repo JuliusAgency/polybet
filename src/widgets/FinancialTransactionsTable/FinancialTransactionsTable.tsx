@@ -10,12 +10,13 @@ interface FinancialTransactionsTableProps {
   year?: number;
 }
 
-const formatDate = (iso: string, locale: string): string => {
-  return new Date(iso).toLocaleDateString(locale === 'he' ? 'he-IL' : 'en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
+const formatDate = (iso: string, locale: string): { date: string; time: string } => {
+  const d = new Date(iso);
+  const resolvedLocale = locale === 'he' ? 'he-IL' : 'en-GB';
+  return {
+    date: d.toLocaleDateString(resolvedLocale, { day: '2-digit', month: 'short', year: 'numeric' }),
+    time: d.toLocaleTimeString(resolvedLocale, { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+  };
 };
 
 const formatAmount = (amount: number, type: 'adjustment' | 'transfer'): string => {
@@ -145,8 +146,9 @@ export const FinancialTransactionsTable = ({
                 >
                   {formatRunningTotal(tx.total_profit_calc)}
                 </td>
-                <td className="px-4 py-3" style={{ color: 'var(--color-text-secondary)' }}>
-                  {formatDate(tx.created_at, i18n.language)}
+                <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                  <div>{formatDate(tx.created_at, i18n.language).date}</div>
+                  <div>{formatDate(tx.created_at, i18n.language).time}</div>
                 </td>
               </tr>
             ))}

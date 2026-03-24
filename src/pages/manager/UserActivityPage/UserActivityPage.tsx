@@ -179,10 +179,11 @@ const UserActivityPage = () => {
                   >
                     {/* Date */}
                     <td
-                      className="px-4 py-3"
+                      className="px-4 py-3 font-mono text-xs"
                       style={{ color: 'var(--color-text-secondary)' }}
                     >
-                      {new Date(row.placed_at).toLocaleDateString(i18n.language)}
+                      <div>{new Date(row.placed_at).toLocaleDateString(i18n.language)}</div>
+                      <div>{new Date(row.placed_at).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
                     </td>
 
                     {/* User — only at /activity */}
@@ -239,12 +240,15 @@ const UserActivityPage = () => {
 
                     {/* Settled date */}
                     <td
-                      className="px-4 py-3"
+                      className="px-4 py-3 font-mono text-xs"
                       style={{ color: 'var(--color-text-secondary)' }}
                     >
-                      {row.settled_at
-                        ? new Date(row.settled_at).toLocaleDateString(i18n.language)
-                        : '—'}
+                      {row.settled_at ? (
+                        <>
+                          <div>{new Date(row.settled_at).toLocaleDateString(i18n.language)}</div>
+                          <div>{new Date(row.settled_at).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
+                        </>
+                      ) : '—'}
                     </td>
 
                     {/* Status */}

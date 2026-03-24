@@ -27,8 +27,6 @@ function shortId(id: string): string {
 const MyBetsPage = () => {
   const { t, i18n } = useTranslation();
 
-  // Format a date string to a locale date string using the active language
-  const formatDate = (iso: string): string => new Date(iso).toLocaleDateString(i18n.language);
   const [activeTab, setActiveTab] = useState<Tab>('open');
   const { data: bets, isLoading } = useMyBets();
 
@@ -294,10 +292,15 @@ const MyBetsPage = () => {
                           </Badge>
                         </td>
                         <td
-                          className="px-4 py-3"
+                          className="px-4 py-3 font-mono text-xs"
                           style={{ color: 'var(--color-text-secondary)' }}
                         >
-                          {bet.settled_at ? formatDate(bet.settled_at) : '—'}
+                          {bet.settled_at ? (
+                            <>
+                              <div>{new Date(bet.settled_at).toLocaleDateString(i18n.language)}</div>
+                              <div>{new Date(bet.settled_at).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
+                            </>
+                          ) : '—'}
                         </td>
                       </tr>
                     ))}
