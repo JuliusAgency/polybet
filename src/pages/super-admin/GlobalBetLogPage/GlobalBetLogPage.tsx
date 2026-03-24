@@ -62,7 +62,6 @@ const GlobalBetLogPage = () => {
 
   // Column headers for the bet-log table
   const betLogColumns = [
-    t('globalLog.date'),
     t('globalLog.user'),
     t('globalLog.manager'),
     t('myBets.market'),
@@ -71,7 +70,7 @@ const GlobalBetLogPage = () => {
     t('globalLog.odds'),
     t('globalLog.payout'),
     t('globalLog.status'),
-    t('myBets.settled'),
+    t('globalLog.date'),
   ];
 
   // Map bet status to Badge variant
@@ -240,7 +239,7 @@ const GlobalBetLogPage = () => {
                   {betRows.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={10}
+                        colSpan={9}
                         className="px-4 py-6 text-center"
                         style={{ color: 'var(--color-text-secondary)' }}
                       >
@@ -254,13 +253,6 @@ const GlobalBetLogPage = () => {
                         className="border-b last:border-0"
                         style={{ borderColor: 'var(--color-border)' }}
                       >
-                        {/* Date */}
-                        <td
-                          className="px-4 py-3"
-                          style={{ color: 'var(--color-text-secondary)' }}
-                        >
-                          {new Date(row.placed_at).toLocaleDateString(i18n.language)}
-                        </td>
                         {/* User */}
                         <td
                           className="px-4 py-3"
@@ -318,14 +310,13 @@ const GlobalBetLogPage = () => {
                             {t(`bet.${row.status}`)}
                           </Badge>
                         </td>
-                        {/* Settled date */}
+                        {/* Date */}
                         <td
-                          className="px-4 py-3"
+                          className="px-4 py-3 font-mono text-xs"
                           style={{ color: 'var(--color-text-secondary)' }}
                         >
-                          {row.settled_at
-                            ? new Date(row.settled_at).toLocaleDateString(i18n.language)
-                            : '—'}
+                          <div>{new Date(row.placed_at).toLocaleDateString(i18n.language)}</div>
+                          <div>{new Date(row.placed_at).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
                         </td>
                       </tr>
                     ))

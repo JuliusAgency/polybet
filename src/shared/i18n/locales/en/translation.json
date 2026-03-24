@@ -24,7 +24,7 @@
   "nav": {
     "dashboard": "Dashboard",
     "managers": "Managers",
-    "betLog": "Bet Log",
+    "betLog": "General Log",
     "users": "Users",
     "treasury": "Treasury",
     "reports": "Reports",
@@ -113,9 +113,9 @@
   },
   "globalLog": {
     "title": "Global Log",
-    "betLog": "Bet Log",
+    "betLog": "General Log",
     "financialLog": "Financial Log",
-    "comingSoon": "Bet log — coming soon",
+    "comingSoon": "General log — coming soon",
     "manager": "Manager",
     "allManagers": "All managers",
     "month": "Month",

@@ -24,7 +24,7 @@
   "nav": {
     "dashboard": "לוח בקרה",
     "managers": "מנהלים",
-    "betLog": "יומן הימורים",
+    "betLog": "יומן כללי",
     "users": "משתמשים",
     "treasury": "קופה",
     "reports": "דוחות",
@@ -113,9 +113,9 @@
   },
   "globalLog": {
     "title": "יומן כללי",
-    "betLog": "יומן הימורים",
+    "betLog": "יומן כללי",
     "financialLog": "תיעוד תנועות",
-    "comingSoon": "יומן הימורים — בקרוב",
+    "comingSoon": "יומן כללי — בקרוב",
     "manager": "מנהל",
     "allManagers": "כל המנהלים",
     "month": "חודש",
