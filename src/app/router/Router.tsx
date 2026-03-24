@@ -66,57 +66,51 @@ export const Router = () => {
 
           {/* Super admin routes */}
           <Route
-            path="/admin/*"
+            path="/admin"
             element={
               <RoleGuard allowedRoles={['super_admin']}>
-                <SuperAdminLayout>
-                  <Routes>
-                    <Route path="dashboard" element={<AgentsDashboardPage />} />
-                    <Route path="managers" element={<ManagersManagementPage />} />
-                    <Route path="managers/:id" element={<ManagerProfilePage />} />
-                    <Route path="bets-log" element={<GlobalBetLogPage />} />
-                    <Route path="*" element={<Navigate to={ROUTES.ADMIN.DASHBOARD} replace />} />
-                  </Routes>
-                </SuperAdminLayout>
+                <SuperAdminLayout />
               </RoleGuard>
             }
-          />
+          >
+            <Route index element={<Navigate to={ROUTES.ADMIN.DASHBOARD} replace />} />
+            <Route path="dashboard" element={<AgentsDashboardPage />} />
+            <Route path="managers" element={<ManagersManagementPage />} />
+            <Route path="managers/:id" element={<ManagerProfilePage />} />
+            <Route path="bets-log" element={<GlobalBetLogPage />} />
+            <Route path="*" element={<Navigate to={ROUTES.ADMIN.DASHBOARD} replace />} />
+          </Route>
 
           {/* Manager routes */}
           <Route
-            path="/manager/*"
+            path="/manager"
             element={
               <RoleGuard allowedRoles={['manager']}>
-                <ManagerLayout>
-                  <Routes>
-                    <Route path="users" element={<UsersManagementPage />} />
-                    <Route path="users/:id" element={<UserActivityPage />} />
-                    <Route path="treasury" element={<TreasuryPage />} />
-                    <Route path="reports" element={<ReportsPage />} />
-                    <Route path="activity" element={<UserActivityPage />} />
-                    <Route path="*" element={<Navigate to={ROUTES.MANAGER.USERS} replace />} />
-                  </Routes>
-                </ManagerLayout>
+                <ManagerLayout />
               </RoleGuard>
             }
-          />
+          >
+            <Route index element={<Navigate to={ROUTES.MANAGER.USERS} replace />} />
+            <Route path="users" element={<UsersManagementPage />} />
+            <Route path="users/:id" element={<UserActivityPage />} />
+            <Route path="treasury" element={<TreasuryPage />} />
+            <Route path="reports" element={<ReportsPage />} />
+            <Route path="activity" element={<UserActivityPage />} />
+            <Route path="*" element={<Navigate to={ROUTES.MANAGER.USERS} replace />} />
+          </Route>
 
-          {/* User routes */}
+          {/* User routes - pathless layout route, paths matched from root */}
           <Route
-            path="/*"
             element={
               <RoleGuard allowedRoles={['user']}>
-                <UserLayout>
-                  <Routes>
-                    <Route path="markets" element={<MarketsFeedPage />} />
-                    <Route path="wallet" element={<WalletPage />} />
-                    <Route path="my-bets" element={<MyBetsPage />} />
-                    <Route path="*" element={<Navigate to={ROUTES.USER.MARKETS} replace />} />
-                  </Routes>
-                </UserLayout>
+                <UserLayout />
               </RoleGuard>
             }
-          />
+          >
+            <Route path="markets" element={<MarketsFeedPage />} />
+            <Route path="wallet" element={<WalletPage />} />
+            <Route path="my-bets" element={<MyBetsPage />} />
+          </Route>
 
           {/* Catch-all */}
           <Route path="*" element={<Navigate to={ROUTES.SIGN_IN} replace />} />

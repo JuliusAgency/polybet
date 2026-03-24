@@ -79,6 +79,9 @@ export const CreateUserModal = ({ isOpen, onClose }: CreateUserModalProps) => {
     if (!username.trim()) {
       setUsernameError(t('common.required'));
       valid = false;
+    } else if (/\s/.test(username.trim())) {
+      setUsernameError(t('users.usernameNoSpaces'));
+      valid = false;
     } else {
       setUsernameError('');
     }

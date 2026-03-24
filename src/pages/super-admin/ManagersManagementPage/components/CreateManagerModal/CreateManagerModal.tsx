@@ -69,6 +69,9 @@ export const CreateManagerModal = ({ isOpen, onClose, onSuccess }: CreateManager
     if (!username.trim()) {
       setUsernameError(t('common.required'));
       valid = false;
+    } else if (/\s/.test(username.trim())) {
+      setUsernameError(t('managers.usernameNoSpaces'));
+      valid = false;
     } else {
       setUsernameError('');
     }

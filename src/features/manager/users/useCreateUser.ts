@@ -33,6 +33,7 @@ export function useCreateUser() {
           phone: vars.phone,
           notes: vars.notes,
         },
+        signal: AbortSignal.timeout(20_000),
       });
 
       if (error) {

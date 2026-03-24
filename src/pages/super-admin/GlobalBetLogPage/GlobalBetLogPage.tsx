@@ -71,6 +71,7 @@ const GlobalBetLogPage = () => {
     t('globalLog.odds'),
     t('globalLog.payout'),
     t('globalLog.status'),
+    t('myBets.settled'),
   ];
 
   // Map bet status to Badge variant
@@ -239,7 +240,7 @@ const GlobalBetLogPage = () => {
                   {betRows.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={9}
+                        colSpan={10}
                         className="px-4 py-6 text-center"
                         style={{ color: 'var(--color-text-secondary)' }}
                       >
@@ -316,6 +317,15 @@ const GlobalBetLogPage = () => {
                           <Badge variant={betStatusVariant(row.status)}>
                             {t(`bet.${row.status}`)}
                           </Badge>
+                        </td>
+                        {/* Settled date */}
+                        <td
+                          className="px-4 py-3"
+                          style={{ color: 'var(--color-text-secondary)' }}
+                        >
+                          {row.settled_at
+                            ? new Date(row.settled_at).toLocaleDateString(i18n.language)
+                            : '—'}
                         </td>
                       </tr>
                     ))

@@ -57,6 +57,7 @@
     "createManager": "Create Manager",
     "createManagerTitle": "Create New Manager",
     "usernameTaken": "This username is already taken",
+    "usernameNoSpaces": "Username cannot contain spaces",
     "createSuccess": "Manager created successfully",
     "margin": "Margin %",
     "marginError": "Must be a number between 0 and 100",
@@ -160,6 +161,7 @@
     "createdSuccess": "User created successfully",
     "noUsers": "No users found",
     "usernameTaken": "This username is already taken",
+    "usernameNoSpaces": "Username cannot contain spaces",
     "passwordWarning": "Save this password now — it will not be shown again.",
     "available": "Available",
     "inPlay": "In-Play"
@@ -194,6 +196,10 @@
     "lost": "Lost",
     "cancelled": "Cancelled"
   },
+  "userActivity": {
+    "title": "Activity Log",
+    "allUsers": "All Users"
+  },
   "myBets": {
     "title": "My Bets",
     "openTab": "Open",
@@ -201,7 +207,7 @@
     "betId": "Bet ID",
     "market": "Market",
     "selection": "Selection",
-    "wager": "Wager",
+    "wager": "Stake",
     "potentialPayout": "Potential Payout",
     "status": "Status",
     "settled": "Settled",

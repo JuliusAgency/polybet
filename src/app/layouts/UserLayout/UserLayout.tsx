@@ -1,15 +1,10 @@
-import type { ReactNode } from 'react';
-import { NavLink } from 'react-router-dom';
+import { Outlet, NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { ROUTES } from '@/app/router/routes';
 import { LanguageSwitcher } from '@/shared/ui/LanguageSwitcher';
 
-interface UserLayoutProps {
-  children: ReactNode;
-}
-
-export const UserLayout = ({ children }: UserLayoutProps) => {
+export const UserLayout = () => {
   const { t } = useTranslation();
   const { profile, signOut } = useAuth();
 
@@ -83,7 +78,7 @@ export const UserLayout = ({ children }: UserLayoutProps) => {
 
       {/* Main content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6">
-        {children}
+        <Outlet />
       </main>
     </div>
   );

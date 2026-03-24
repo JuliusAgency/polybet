@@ -1,15 +1,11 @@
-import type { ReactNode } from 'react';
+import { Outlet } from 'react-router-dom';
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { ROUTES } from '@/app/router/routes';
 import { LanguageSwitcher } from '@/shared/ui/LanguageSwitcher';
 
-interface SuperAdminLayoutProps {
-  children: ReactNode;
-}
-
-export const SuperAdminLayout = ({ children }: SuperAdminLayoutProps) => {
+export const SuperAdminLayout = () => {
   const { t } = useTranslation();
   const { profile, signOut } = useAuth();
 
@@ -75,7 +71,7 @@ export const SuperAdminLayout = ({ children }: SuperAdminLayoutProps) => {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto">{children}</main>
+      <main className="flex-1 overflow-auto"><Outlet /></main>
     </div>
   );
 };

@@ -1,0 +1,1 @@
+export { useManagerBetLog } from './useManagerBetLog';

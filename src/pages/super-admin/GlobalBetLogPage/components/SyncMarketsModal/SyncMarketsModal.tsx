@@ -20,8 +20,11 @@ export const SyncMarketsModal = ({ isOpen, onClose, onCompleted }: SyncMarketsMo
   const [selectedMaxPages, setSelectedMaxPages] = useState<number>(1);
   const [runId, setRunId] = useState<string | null>(null);
   const syncMutation = useSyncMarkets();
+  const { reset: resetMutation } = syncMutation;
   const runQuery = useSyncRun(runId);
   const reportedRunIdRef = useRef<string | null>(null);
+  const onCompletedRef = useRef(onCompleted);
+  onCompletedRef.current = onCompleted;
 
   const run = runQuery.data;
   const isRunTerminal = run ? isSyncRunTerminal(run.status) : false;
@@ -61,17 +64,17 @@ export const SyncMarketsModal = ({ isOpen, onClose, onCompleted }: SyncMarketsMo
     reportedRunIdRef.current = run.id;
     queryClient.invalidateQueries({ queryKey: ['markets'] });
     queryClient.invalidateQueries({ queryKey: ['admin', 'bet-log'] });
-    onCompleted?.(run);
-  }, [onCompleted, queryClient, run]);
+    onCompletedRef.current?.(run);
+  }, [queryClient, run]);
 
   useEffect(() => {
     if (isOpen) return;
 
     setRunId(null);
     setSelectedMaxPages(1);
-    syncMutation.reset();
+    resetMutation();
     reportedRunIdRef.current = null;
-  }, [isOpen, syncMutation]);
+  }, [isOpen, resetMutation]);
 
   const handleStart = () => {
     const nextRunId = crypto.randomUUID();

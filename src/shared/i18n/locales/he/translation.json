@@ -57,6 +57,7 @@
     "createManager": "צור מנהל",
     "createManagerTitle": "צור מנהל חדש",
     "usernameTaken": "שם המשתמש כבר תפוס",
+    "usernameNoSpaces": "שם המשתמש לא יכול להכיל רווחים",
     "createSuccess": "המנהל נוצר בהצלחה",
     "margin": "מרווח %",
     "marginError": "חייב להיות מספר בין 0 ל-100",
@@ -113,7 +114,7 @@
   "globalLog": {
     "title": "יומן כללי",
     "betLog": "יומן הימורים",
-    "financialLog": "יומן פיננסי",
+    "financialLog": "תיעוד תנועות",
     "comingSoon": "יומן הימורים — בקרוב",
     "manager": "מנהל",
     "allManagers": "כל המנהלים",
@@ -160,6 +161,7 @@
     "createdSuccess": "המשתמש נוצר בהצלחה",
     "noUsers": "לא נמצאו משתמשים",
     "usernameTaken": "שם המשתמש כבר תפוס",
+    "usernameNoSpaces": "שם המשתמש לא יכול להכיל רווחים",
     "passwordWarning": "שמור את הסיסמה עכשיו — היא לא תוצג שוב.",
     "available": "זמין",
     "inPlay": "בתהליך"
@@ -183,7 +185,7 @@
     "stakeLabel": "סכום הימור",
     "balance": "יתרה: {{amount}}",
     "insufficientBalance": "יתרה לא מספיקה",
-    "allIn": "הכל פנימה",
+    "allIn": "אול אין",
     "potentialPayout": "תשואה פוטנציאלית",
     "confirmBet": "אשר הימור",
     "betPlaced": "ההימור הונח בהצלחה!"
@@ -194,6 +196,10 @@
     "lost": "הפסיד",
     "cancelled": "בוטל"
   },
+  "userActivity": {
+    "title": "יומן פעילות",
+    "allUsers": "כל המשתמשים"
+  },
   "myBets": {
     "title": "ההימורים שלי",
     "openTab": "פתוחים",
@@ -202,7 +208,7 @@
     "market": "שוק",
     "selection": "בחירה",
     "wager": "סכום",
-    "potentialPayout": "תשואה פוטנציאלית",
+    "potentialPayout": "סכום זכייה משוער",
     "status": "סטטוס",
     "settled": "הוסדר",
     "noOpenBets": "אין לך הימורים פתוחים",

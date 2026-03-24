@@ -1,15 +1,10 @@
-import type { ReactNode } from 'react';
-import { NavLink } from 'react-router-dom';
+import { Outlet, NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { ROUTES } from '@/app/router/routes';
 import { LanguageSwitcher } from '@/shared/ui/LanguageSwitcher';
 
-interface ManagerLayoutProps {
-  children: ReactNode;
-}
-
-export const ManagerLayout = ({ children }: ManagerLayoutProps) => {
+export const ManagerLayout = () => {
   const { t } = useTranslation();
   const { profile, signOut } = useAuth();
 
@@ -92,7 +87,7 @@ export const ManagerLayout = ({ children }: ManagerLayoutProps) => {
 
       {/* Main content */}
       <main className="flex-1 overflow-auto">
-        {children}
+        <Outlet />
       </main>
     </div>
   );

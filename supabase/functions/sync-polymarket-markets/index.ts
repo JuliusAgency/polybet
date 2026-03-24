@@ -37,6 +37,7 @@ interface GammaMarket {
 
 interface SyncRequestBody {
   run_id?: string;
+  mode?: 'full' | 'resolved_only' | 'active_page';
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -58,15 +59,17 @@ function parseJsonField<T>(value: string | null | undefined, fallback: T): T {
 }
 
 /** Fetch pages from a Gamma API URL (handles offset pagination).
- *  @param maxPages - max number of pages to fetch (0 = unlimited) */
+ *  @param maxPages    - max number of pages to fetch (0 = unlimited)
+ *  @param startOffset - initial pagination offset (default 0) */
 async function fetchGammaMarkets(
   baseUrl: string,
   maxPages = 0,
+  startOffset = 0,
   onPageFetched?: (params: { fetchedCount: number; pagesFetched: number }) => Promise<void> | void,
   onHeartbeat?: (params: { fetchedCount: number; pagesFetched: number; attempt: number }) => Promise<void> | void,
 ): Promise<GammaMarket[]> {
   const markets: GammaMarket[] = [];
-  let offset = 0;
+  let offset = startOffset;
   let pages = 0;
   const urlObj = new URL(baseUrl);
   const limit = parseInt(urlObj.searchParams.get('limit') ?? '100', 10);
@@ -151,6 +154,7 @@ Deno.serve(async (req: Request) => {
   const reqUrl = new URL(req.url);
   const maxPages = parseInt(reqUrl.searchParams.get('max_pages') ?? '0', 10);
   const runId = body.run_id ?? crypto.randomUUID();
+  const mode = body.mode ?? 'full';
 
   let totalCount = 0;
   let processedCount = 0;
@@ -192,8 +196,6 @@ Deno.serve(async (req: Request) => {
   const runSync = async () => {
     try {
       // ── 1. Read sync_auto_show_all setting ──────────────────────────────────
-      await updateRun({ phase: 'fetching_active' });
-
       const { data: settingRow, error: settingErr } = await supabase
         .from('system_settings')
         .select('value')
@@ -207,10 +209,132 @@ Deno.serve(async (req: Request) => {
       const autoShowAll: boolean =
         settingRow?.value === true || settingRow?.value === 'true';
 
-      // ── 2. Fetch markets from Gamma API ─────────────────────────────────────
+      // ── mode: resolved_only — settle open bets for recently resolved markets ─
+      if (mode === 'resolved_only') {
+        await updateRun({ phase: 'fetching_resolved' });
+
+        const resolvedMarkets = await fetchGammaMarkets(
+          RESOLVED_MARKETS_URL,
+          2, // max 2 pages (~100 recently resolved markets)
+          0,
+          ({ fetchedCount }) => updateRun({
+            phase: 'fetching_resolved',
+            progress_current: fetchedCount,
+            progress_total: 0,
+          }),
+          ({ fetchedCount }) => updateRun({
+            phase: 'fetching_resolved',
+            progress_current: fetchedCount,
+            progress_total: 0,
+          }),
+        ).catch((e: unknown) => {
+          stats.errors.push(`Failed to fetch resolved markets: ${e instanceof Error ? e.message : String(e)}`);
+          return [] as GammaMarket[];
+        });
+
+        totalCount = resolvedMarkets.length;
+        await updateRun(buildFetchedProgressUpdate(0, resolvedMarkets.length));
+
+        for (const gm of resolvedMarkets) {
+          try {
+            await processResolvedMarket(supabase, gm, autoShowAll, stats);
+          } catch (e: unknown) {
+            stats.errors.push(`Error processing resolved market ${gm.conditionId}: ${e instanceof Error ? e.message : String(e)}`);
+          }
+          processedCount++;
+          await updateRun({
+            ...buildIncrementedProgressUpdate({
+              processedCount,
+              activeCount: 0,
+              totalCount,
+            }),
+            markets_synced: stats.markets_synced,
+            outcomes_updated: stats.outcomes_updated,
+            markets_settled: stats.markets_settled,
+            errors: stats.errors,
+            error_message: stats.errors[0] ?? null,
+          });
+        }
+
+        await updateRun(buildCompletedProgressUpdate({ processedCount, totalCount, stats }));
+        return;
+      }
+
+      // ── mode: active_page — sync one page of active markets at cursor ────────
+      if (mode === 'active_page') {
+        const { data: offsetRow } = await supabase
+          .from('system_settings')
+          .select('value')
+          .eq('key', 'active_sync_offset')
+          .maybeSingle();
+
+        const currentOffset = parseInt(String(offsetRow?.value ?? '0'), 10) || 0;
+
+        await updateRun({ phase: 'fetching_active' });
+
+        const activeMarkets = await fetchGammaMarkets(
+          ACTIVE_MARKETS_URL,
+          1,
+          currentOffset,
+          ({ fetchedCount }) => updateRun({
+            phase: 'fetching_active',
+            progress_current: fetchedCount,
+            progress_total: 0,
+          }),
+          ({ fetchedCount }) => updateRun({
+            phase: 'fetching_active',
+            progress_current: fetchedCount,
+            progress_total: 0,
+          }),
+        ).catch((e: unknown) => {
+          stats.errors.push(`Failed to fetch active markets: ${e instanceof Error ? e.message : String(e)}`);
+          return [] as GammaMarket[];
+        });
+
+        totalCount = activeMarkets.length;
+        await updateRun(buildFetchedProgressUpdate(activeMarkets.length, 0));
+
+        for (const gm of activeMarkets) {
+          try {
+            await upsertMarket(supabase, gm, 'open', autoShowAll, stats);
+          } catch (e: unknown) {
+            stats.errors.push(`Error upserting active market ${gm.conditionId}: ${e instanceof Error ? e.message : String(e)}`);
+          }
+          processedCount++;
+          await updateRun({
+            ...buildIncrementedProgressUpdate({
+              processedCount,
+              activeCount: activeMarkets.length,
+              totalCount,
+            }),
+            markets_synced: stats.markets_synced,
+            outcomes_updated: stats.outcomes_updated,
+            markets_settled: stats.markets_settled,
+            errors: stats.errors,
+            error_message: stats.errors[0] ?? null,
+          });
+        }
+
+        // Advance cursor, or reset to 0 when the last page (< limit) was reached
+        const pageLimit = parseInt(new URL(ACTIVE_MARKETS_URL).searchParams.get('limit') ?? '100', 10);
+        const nextOffset = activeMarkets.length < pageLimit ? 0 : currentOffset + pageLimit;
+
+        await supabase
+          .from('system_settings')
+          .update({ value: String(nextOffset) })
+          .eq('key', 'active_sync_offset');
+
+        await updateRun(buildCompletedProgressUpdate({ processedCount, totalCount, stats }));
+        return;
+      }
+
+      // ── mode: full (default) — fetch all active + resolved markets ───────────
+      await updateRun({ phase: 'fetching_active' });
+
       const activeMarkets = await fetchGammaMarkets(
         ACTIVE_MARKETS_URL,
         maxPages,
+        0,
         ({ fetchedCount }) => updateRun({
           phase: 'fetching_active',
           progress_current: fetchedCount,
@@ -231,6 +355,7 @@ Deno.serve(async (req: Request) => {
       const resolvedMarkets = await fetchGammaMarkets(
         RESOLVED_MARKETS_URL,
         maxPages,
+        0,
         ({ fetchedCount }) => updateRun({
           phase: 'fetching_resolved',
           progress_current: activeMarkets.length + fetchedCount,
