@@ -42,7 +42,7 @@ export function useUserTransactions({ startDate, endDate }: UseUserTransactionsP
         // Include the full end date by going to the start of the next day
         const nextDay = new Date(endDate);
         nextDay.setDate(nextDay.getDate() + 1);
-        query = query.lt('created_at', nextDay.toISOString().slice(0, 10));
+        query = query.lt('created_at', nextDay.toISOString());
       }
 
       const { data, error } = await query;
