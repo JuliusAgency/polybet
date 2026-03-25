@@ -37,7 +37,7 @@ interface GammaMarket {
 
 interface SyncRequestBody {
   run_id?: string;
-  mode?: 'full' | 'resolved_only' | 'active_page';
+  mode?: 'full' | 'resolved_only' | 'active_page' | 'backfill';
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
