@@ -217,6 +217,23 @@
     "totalWon": "Total Payout",
     "pnl": "P&L"
   },
+  "wallet": {
+    "title": "Wallet",
+    "available": "Available Balance",
+    "inPlay": "In-Play Balance",
+    "totalEquity": "Total Equity",
+    "transactions": "Transactions",
+    "date": "Date",
+    "type": "Type",
+    "amount": "Amount",
+    "runningBalance": "Running Balance",
+    "note": "Note",
+    "from": "From",
+    "to": "To",
+    "deposit": "Deposit",
+    "withdrawal": "Withdrawal",
+    "noTransactions": "No transactions"
+  },
   "settlement": {
     "syncMarkets": "Sync Markets",
     "syncModalTitle": "Sync Markets",

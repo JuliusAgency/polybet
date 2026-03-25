@@ -217,6 +217,23 @@
     "totalWon": "סך קבלות",
     "pnl": "רווח/הפסד"
   },
+  "wallet": {
+    "title": "ארנק",
+    "available": "יתרה זמינה",
+    "inPlay": "יתרה במשחק",
+    "totalEquity": "סך הון",
+    "transactions": "תנועות",
+    "date": "תאריך",
+    "type": "סוג",
+    "amount": "סכום",
+    "runningBalance": "יתרה שוטפת",
+    "note": "הערה",
+    "from": "מתאריך",
+    "to": "עד תאריך",
+    "deposit": "הפקדה",
+    "withdrawal": "משיכה",
+    "noTransactions": "אין תנועות"
+  },
   "settlement": {
     "syncMarkets": "סנכרן שווקים",
     "syncModalTitle": "סנכרון שווקים",
