@@ -260,6 +260,74 @@ Deno.serve(async (req: Request) => {
         return;
       }
 
+      // ── mode: backfill — settle any open bets whose market resolved on Polymarket ─
+      if (mode === 'backfill') {
+        await updateRun({ phase: 'syncing_resolved' });
+
+        // Step 1: collect distinct market IDs that have open bets
+        const { data: openBetRows, error: betsErr } = await supabase
+          .from('bets')
+          .select('market_id')
+          .eq('status', 'open');
+
+        if (betsErr || !Array.isArray(openBetRows)) {
+          stats.errors.push(`Failed to fetch open bets: ${betsErr?.message ?? 'unexpected format'}`);
+          await updateRun(buildCompletedProgressUpdate({ processedCount: 0, totalCount: 0, stats }));
+          return;
+        }
+
+        const marketIds = [...new Set(openBetRows.map((b) => b.market_id as string))];
+
+        if (marketIds.length === 0) {
+          await updateRun(buildCompletedProgressUpdate({ processedCount: 0, totalCount: 0, stats }));
+          return;
+        }
+
+        // Step 2: load market rows, skip already-resolved ones
+        const { data: openMarkets, error: marketsErr } = await supabase
+          .from('markets')
+          .select('id, polymarket_id')
+          .in('id', marketIds)
+          .neq('status', 'resolved');
+
+        if (marketsErr || !Array.isArray(openMarkets)) {
+          stats.errors.push(`Failed to fetch market details: ${marketsErr?.message ?? 'unexpected format'}`);
+          await updateRun(buildCompletedProgressUpdate({ processedCount: 0, totalCount: 0, stats }));
+          return;
+        }
+
+        // Deduplicate by polymarket_id (polymarket_id is unique in schema; safety measure only)
+        const unique = [...new Map(openMarkets.map((m) => [m.polymarket_id, m])).values()];
+        totalCount = unique.length;
+        await updateRun(buildFetchedProgressUpdate(0, unique.length));
+
+        // Step 3: for each market, fetch from Polymarket and settle if resolved
+        for (const { polymarket_id } of unique) {
+          try {
+            const gm = await fetchGammaMarketDetails(polymarket_id);
+            if (gm?.resolved) {
+              await processResolvedMarket(supabase, gm, autoShowAll, stats);
+            }
+          } catch (e: unknown) {
+            stats.errors.push(
+              `Backfill check failed for ${polymarket_id}: ${e instanceof Error ? e.message : String(e)}`
+            );
+          }
+          processedCount++;
+          await updateRun({
+            ...buildIncrementedProgressUpdate({ processedCount, activeCount: 0, totalCount }),
+            markets_synced: stats.markets_synced,
+            outcomes_updated: stats.outcomes_updated,
+            markets_settled: stats.markets_settled,
+            errors: stats.errors,
+            error_message: stats.errors[0] ?? null,
+          });
+        }
+
+        await updateRun(buildCompletedProgressUpdate({ processedCount, totalCount, stats }));
+        return;
+      }
+
       // ── mode: active_page — sync one page of active markets at cursor ────────
       if (mode === 'active_page') {
         const { data: offsetRow } = await supabase
