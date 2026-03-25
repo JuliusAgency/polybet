@@ -52,7 +52,7 @@ export function useUserTransactions({ startDate, endDate }: UseUserTransactionsP
     enabled: !!session,
   });
 
-  // Subscribe to new inserts on balance_transactions to keep the list fresh
+  // Invalidate all date-range variants for this user on any new transaction insert
   useEffect(() => {
     if (!userId) return;
 

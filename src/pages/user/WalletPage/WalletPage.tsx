@@ -4,8 +4,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/shared/api/supabase';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { useUserBalance } from '@/features/bet';
-import { useUserTransactions } from '@/features/user/wallet';
+import { useUserTransactions } from '@/features/wallet';
 import { Card } from '@/shared/ui/Card';
+import { Input } from '@/shared/ui/Input';
 
 const WalletPage = () => {
   const { t, i18n } = useTranslation();
@@ -137,47 +138,19 @@ const WalletPage = () => {
         </h2>
 
         {/* Date range filter row */}
-        <div className="mb-4 flex flex-wrap gap-3 items-center">
-          <div className="flex items-center gap-2">
-            <label
-              className="text-sm font-medium"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
-              {t('wallet.from')}
-            </label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="rounded-lg border px-3 py-1.5 text-sm"
-              style={{
-                backgroundColor: 'var(--color-bg-surface)',
-                borderColor: 'var(--color-border)',
-                color: 'var(--color-text-primary)',
-                outline: 'none',
-              }}
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <label
-              className="text-sm font-medium"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
-              {t('wallet.to')}
-            </label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="rounded-lg border px-3 py-1.5 text-sm"
-              style={{
-                backgroundColor: 'var(--color-bg-surface)',
-                borderColor: 'var(--color-border)',
-                color: 'var(--color-text-primary)',
-                outline: 'none',
-              }}
-            />
-          </div>
+        <div className="mb-4 flex flex-wrap gap-3 items-end">
+          <Input
+            type="date"
+            label={t('wallet.from')}
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+          />
+          <Input
+            type="date"
+            label={t('wallet.to')}
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+          />
         </div>
 
         {/* Transactions table */}
@@ -227,7 +200,7 @@ const WalletPage = () => {
               </thead>
               <tbody>
                 {transactions.map((tx) => {
-                  const isDeposit = tx.amount >= 0;
+                  const isDeposit = tx.type === 'adjustment';
                   const amountColor = isDeposit ? 'var(--color-win)' : 'var(--color-loss)';
                   const amountPrefix = isDeposit ? '+' : '';
 
