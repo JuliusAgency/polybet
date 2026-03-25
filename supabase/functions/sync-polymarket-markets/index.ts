@@ -105,15 +105,13 @@ async function fetchGammaMarkets(
 }
 
 async function fetchGammaMarketDetails(conditionId: string): Promise<GammaMarket | null> {
-  const response = await fetch(`${GAMMA_API_BASE}/markets/${conditionId}`, {
-    headers: { Accept: 'application/json' },
-  });
-
-  if (!response.ok) {
+  try {
+    return await fetchJsonWithRetry<GammaMarket>(`${GAMMA_API_BASE}/markets/${conditionId}`, {
+      headers: { Accept: 'application/json' },
+    });
+  } catch {
     return null;
   }
-
-  return await response.json() as GammaMarket;
 }
 
 // ─── Main handler ─────────────────────────────────────────────────────────────
@@ -276,7 +274,7 @@ Deno.serve(async (req: Request) => {
           return;
         }
 
-        const marketIds = [...new Set(openBetRows.map((b) => b.market_id as string))];
+        const marketIds = [...new Set(openBetRows.map((b) => b.market_id).filter(Boolean) as string[])];
 
         if (marketIds.length === 0) {
           await updateRun(buildCompletedProgressUpdate({ processedCount: 0, totalCount: 0, stats }));
@@ -299,7 +297,7 @@ Deno.serve(async (req: Request) => {
         // Deduplicate by polymarket_id (polymarket_id is unique in schema; safety measure only)
         const unique = [...new Map(openMarkets.map((m) => [m.polymarket_id, m])).values()];
         totalCount = unique.length;
-        await updateRun(buildFetchedProgressUpdate(0, unique.length));
+        await updateRun(buildFetchedProgressUpdate(0, unique.length)); // activeCount=0 → phase stays 'syncing_resolved'
 
         // Step 3: for each market, fetch from Polymarket and settle if resolved
         for (const { polymarket_id } of unique) {
