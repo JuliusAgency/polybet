@@ -188,13 +188,20 @@
     "allIn": "All In",
     "potentialPayout": "Potential Payout",
     "confirmBet": "Confirm Bet",
-    "betPlaced": "Bet placed successfully!"
+    "betPlaced": "Bet placed successfully!",
+    "filterAll": "All",
+    "searchPlaceholder": "Search markets…",
+    "volume": "Vol"
   },
   "bet": {
     "open": "Open",
     "won": "Won",
     "lost": "Lost",
     "cancelled": "Cancelled"
+  },
+  "reports": {
+    "title": "Reports",
+    "allUsers": "All users"
   },
   "userActivity": {
     "title": "Activity Log",
@@ -233,6 +240,16 @@
     "deposit": "Deposit",
     "withdrawal": "Withdrawal",
     "noTransactions": "No transactions"
+  },
+  "agentsDashboard": {
+    "title": "Agents Dashboard",
+    "agentCol": "Agent",
+    "monthlyDeposits": "Monthly Deposits",
+    "monthlyWithdrawals": "Monthly Withdrawals",
+    "currentBalance": "Current Balance",
+    "monthlyPnl": "Monthly P&L",
+    "statusCol": "Status",
+    "searchPlaceholder": "Search agents…"
   },
   "settlement": {
     "syncMarkets": "Sync Markets",

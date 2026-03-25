@@ -1,13 +1,15 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Badge } from '@/shared/ui/Badge';
 import type { Market, MarketOutcome } from '@/features/bet';
 
 interface MarketCardProps {
   market: Market;
-  onOutcomeClick: (outcome: MarketOutcome) => void;
+  onOutcomeClick: (market: Market, outcome: MarketOutcome) => void;
 }
 
 export const MarketCard = ({ market, onOutcomeClick }: MarketCardProps) => {
+  const { t } = useTranslation();
   const [hoveredOutcomeId, setHoveredOutcomeId] = useState<string | null>(null);
 
   return (
@@ -33,6 +35,13 @@ export const MarketCard = ({ market, onOutcomeClick }: MarketCardProps) => {
         {market.question}
       </p>
 
+      {/* Volume */}
+      {market.volume != null && market.volume > 0 && (
+        <p className="mb-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+          {t('markets.volume')}: {market.volume.toLocaleString()}
+        </p>
+      )}
+
       {/* Outcomes */}
       <div className="flex flex-wrap gap-2">
         {market.market_outcomes.map((outcome) => {
@@ -40,7 +49,7 @@ export const MarketCard = ({ market, onOutcomeClick }: MarketCardProps) => {
           return (
             <button
               key={outcome.id}
-              onClick={() => onOutcomeClick(outcome)}
+              onClick={() => onOutcomeClick(market, outcome)}
               onMouseEnter={() => setHoveredOutcomeId(outcome.id)}
               onMouseLeave={() => setHoveredOutcomeId(null)}
               className="cursor-pointer rounded-lg px-3 py-2 text-sm transition-colors"

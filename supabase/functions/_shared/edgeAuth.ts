@@ -63,7 +63,12 @@ export async function authorizeEdgeCall(
     };
   }
 
-  const isServiceRoleRequest = authHeader === `Bearer ${clients.serviceRoleKey}`;
+  // Accept either the auto-injected service role key or a custom CRON_SECRET
+  // (CRON_SECRET is set as an edge function secret and stored in vault under the same name)
+  const cronSecret = Deno.env.get('CRON_SECRET') ?? '';
+  const isServiceRoleRequest =
+    authHeader === `Bearer ${clients.serviceRoleKey}` ||
+    (cronSecret.length > 0 && authHeader === `Bearer ${cronSecret}`);
 
   if (options.allowServiceRole && isServiceRoleRequest) {
     return {

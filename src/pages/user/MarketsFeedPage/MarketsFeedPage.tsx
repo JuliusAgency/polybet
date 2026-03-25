@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMarkets, useUserBalance } from '@/features/bet';
 import type { Market, MarketOutcome } from '@/features/bet';
@@ -17,6 +17,8 @@ const MarketsFeedPage = () => {
 
   const [selectedBet, setSelectedBet] = useState<SelectedBet | null>(null);
   const [showSuccessBanner, setShowSuccessBanner] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Auto-dismiss success banner after 3 seconds
   useEffect(() => {
@@ -29,9 +31,9 @@ const MarketsFeedPage = () => {
     return () => clearTimeout(timer);
   }, [showSuccessBanner]);
 
-  const handleOutcomeClick = (market: Market, outcome: MarketOutcome) => {
+  const handleOutcomeClick = useCallback((market: Market, outcome: MarketOutcome) => {
     setSelectedBet({ market, outcome });
-  };
+  }, []);
 
   const handleBetSuccess = () => {
     setSelectedBet(null);
@@ -39,6 +41,24 @@ const MarketsFeedPage = () => {
   };
 
   const availableBalance = balance?.available ?? 0;
+
+  // Derive unique categories from loaded markets
+  const categories = useMemo(() => {
+    if (!markets) return [];
+    const unique = new Set(markets.map((m) => m.category).filter(Boolean));
+    return Array.from(unique) as string[];
+  }, [markets]);
+
+  // Filter markets client-side by category and search query
+  const filteredMarkets = useMemo(() => {
+    if (!markets) return [];
+    return markets.filter((m) => {
+      const matchesCategory = !selectedCategory || m.category === selectedCategory;
+      const matchesSearch =
+        !searchQuery || m.question.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesCategory && matchesSearch;
+    });
+  }, [markets, selectedCategory, searchQuery]);
 
   return (
     <div
@@ -81,21 +101,90 @@ const MarketsFeedPage = () => {
         </p>
       )}
 
-      {/* Empty state */}
+      {/* Filter bar — shown when data is loaded without errors */}
+      {!isLoading && !isError && (
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          {/* Category pills */}
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setSelectedCategory('')}
+              className="rounded-full px-3 py-1 text-sm font-medium transition-colors"
+              style={{
+                backgroundColor: !selectedCategory
+                  ? 'var(--color-accent)'
+                  : 'var(--color-bg-elevated)',
+                color: !selectedCategory
+                  ? 'var(--color-bg-base)'
+                  : 'var(--color-text-secondary)',
+                border: '1px solid var(--color-border)',
+              }}
+            >
+              {t('markets.filterAll')}
+            </button>
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat === selectedCategory ? '' : cat)}
+                className="rounded-full px-3 py-1 text-sm font-medium transition-colors"
+                style={{
+                  backgroundColor:
+                    selectedCategory === cat
+                      ? 'var(--color-accent)'
+                      : 'var(--color-bg-elevated)',
+                  color:
+                    selectedCategory === cat
+                      ? 'var(--color-bg-base)'
+                      : 'var(--color-text-secondary)',
+                  border: '1px solid var(--color-border)',
+                }}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          {/* Search input */}
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t('markets.searchPlaceholder')}
+            className="rounded-lg border px-3 py-1.5 text-sm outline-none"
+            style={{
+              backgroundColor: 'var(--color-bg-elevated)',
+              borderColor: 'var(--color-border)',
+              color: 'var(--color-text-primary)',
+            }}
+          />
+        </div>
+      )}
+
+      {/* Empty state — no markets at all */}
       {!isLoading && !isError && markets?.length === 0 && (
         <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
           {t('markets.noMarkets')}
         </p>
       )}
 
+      {/* Empty state — filters produced no results */}
+      {!isLoading &&
+        !isError &&
+        markets &&
+        markets.length > 0 &&
+        filteredMarkets.length === 0 && (
+          <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+            {t('common.noData')}
+          </p>
+        )}
+
       {/* Markets grid */}
-      {!isLoading && !isError && markets && markets.length > 0 && (
+      {!isLoading && !isError && filteredMarkets.length > 0 && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {markets.map((market) => (
+          {filteredMarkets.map((market) => (
             <MarketCard
               key={market.id}
               market={market}
-              onOutcomeClick={(outcome) => handleOutcomeClick(market, outcome)}
+              onOutcomeClick={handleOutcomeClick}
             />
           ))}
         </div>

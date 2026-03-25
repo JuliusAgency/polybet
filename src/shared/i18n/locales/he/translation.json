@@ -188,13 +188,20 @@
     "allIn": "אול אין",
     "potentialPayout": "תשואה פוטנציאלית",
     "confirmBet": "אשר הימור",
-    "betPlaced": "ההימור הונח בהצלחה!"
+    "betPlaced": "ההימור הונח בהצלחה!",
+    "filterAll": "הכל",
+    "searchPlaceholder": "חיפוש שווקים…",
+    "volume": "נפח"
   },
   "bet": {
     "open": "פתוח",
     "won": "זכה",
     "lost": "הפסיד",
     "cancelled": "בוטל"
+  },
+  "reports": {
+    "title": "דוחות",
+    "allUsers": "כל המשתמשים"
   },
   "userActivity": {
     "title": "יומן פעילות",
@@ -233,6 +240,16 @@
     "deposit": "הפקדה",
     "withdrawal": "משיכה",
     "noTransactions": "אין תנועות"
+  },
+  "agentsDashboard": {
+    "title": "לוח סוכנים",
+    "agentCol": "סוכן",
+    "monthlyDeposits": "הפקדות חודשיות",
+    "monthlyWithdrawals": "משיכות חודשיות",
+    "currentBalance": "יתרה נוכחית",
+    "monthlyPnl": "רווח/הפסד חודשי",
+    "statusCol": "סטטוס",
+    "searchPlaceholder": "חיפוש סוכנים…"
   },
   "settlement": {
     "syncMarkets": "סנכרן שווקים",

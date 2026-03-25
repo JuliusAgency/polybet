@@ -26,7 +26,7 @@ ALTER TABLE market_outcomes
 -- ────────────────────────────────────────────────────────────────
 INSERT INTO system_settings (key, value) VALUES
   ('sync_interval_seconds', '60'),
-  ('sync_auto_show_all',    'false')
+  ('sync_auto_show_all',    'true')
 ON CONFLICT (key) DO NOTHING;
 
 -- ────────────────────────────────────────────────────────────────
