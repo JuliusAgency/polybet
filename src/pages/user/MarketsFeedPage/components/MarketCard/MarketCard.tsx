@@ -35,12 +35,24 @@ export const MarketCard = ({ market, onOutcomeClick }: MarketCardProps) => {
         {market.question}
       </p>
 
-      {/* Volume */}
-      {market.volume != null && market.volume > 0 && (
-        <p className="mb-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-          {t('markets.volume')}: {market.volume.toLocaleString()}
-        </p>
-      )}
+      {/* Volume and close date */}
+      <div className="mb-2 flex flex-wrap gap-x-4">
+        {market.volume != null && market.volume > 0 && (
+          <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+            {t('markets.volume')}: {market.volume.toLocaleString()}
+          </p>
+        )}
+        {market.close_at && (
+          <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+            {t('markets.closesAt')}:{' '}
+            {new Date(market.close_at).toLocaleDateString(undefined, {
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric',
+            })}
+          </p>
+        )}
+      </div>
 
       {/* Outcomes */}
       <div className="flex flex-wrap gap-2">

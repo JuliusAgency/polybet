@@ -76,6 +76,7 @@ export const FinancialTransactionsTable = ({
                 t('financialTable.type'),
                 t('financialTable.amount'),
                 t('financialTable.totalProfitCalc'),
+                t('financialTable.note'),
                 t('financialTable.date'),
               ].map((h) => (
                 <th
@@ -92,7 +93,7 @@ export const FinancialTransactionsTable = ({
             {transactions.length === 0 && (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={8}
                   className="px-4 py-8 text-center"
                   style={{ color: 'var(--color-text-secondary)' }}
                 >
@@ -145,6 +146,9 @@ export const FinancialTransactionsTable = ({
                   }}
                 >
                   {formatRunningTotal(tx.total_profit_calc)}
+                </td>
+                <td className="px-4 py-3 text-xs max-w-[180px]" style={{ color: 'var(--color-text-muted)' }}>
+                  {tx.note ?? '—'}
                 </td>
                 <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--color-text-secondary)' }}>
                   <div>{formatDate(tx.created_at, i18n.language).date}</div>

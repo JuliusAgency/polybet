@@ -3,6 +3,39 @@ import { useTranslation } from 'react-i18next';
 import { useMyBets, type MyBet } from '@/features/bet';
 import { Badge } from '@/shared/ui/Badge';
 
+const CopyIdCell = ({ id }: { id: string }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    void navigator.clipboard.writeText(id).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  };
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <span>{`${id.slice(0, 8)}...`}</span>
+      <button
+        onClick={handleCopy}
+        title={id}
+        style={{ color: copied ? 'var(--color-win)' : 'var(--color-text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, lineHeight: 0 }}
+      >
+        {copied ? (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        ) : (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          </svg>
+        )}
+      </button>
+    </div>
+  );
+};
+
 type Tab = 'open' | 'history';
 
 // Map settled bet status to Badge variant
@@ -19,10 +52,6 @@ function historyRowBg(status: MyBet['status']): string | undefined {
   return undefined;
 }
 
-// Format a UUID to an abbreviated display string
-function shortId(id: string): string {
-  return `${id.slice(0, 8)}...`;
-}
 
 const MyBetsPage = () => {
   const { t, i18n } = useTranslation();
@@ -147,7 +176,7 @@ const MyBetsPage = () => {
                         className="px-4 py-3 font-mono text-xs"
                         style={{ color: 'var(--color-text-secondary)' }}
                       >
-                        {shortId(bet.id)}
+                        <CopyIdCell id={bet.id} />
                       </td>
                       <td
                         className="px-4 py-3"
@@ -256,7 +285,7 @@ const MyBetsPage = () => {
                           className="px-4 py-3 font-mono text-xs"
                           style={{ color: 'var(--color-text-secondary)' }}
                         >
-                          {shortId(bet.id)}
+                          <CopyIdCell id={bet.id} />
                         </td>
                         <td
                           className="px-4 py-3"

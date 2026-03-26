@@ -25,6 +25,7 @@
     "dashboard": "Dashboard",
     "managers": "Managers",
     "betLog": "General Log",
+    "testLab": "Test Lab",
     "users": "Users",
     "treasury": "Treasury",
     "reports": "Reports",
@@ -145,7 +146,8 @@
     "netProfit": "Net Profit",
     "deposit": "Deposit",
     "withdrawal": "Withdrawal",
-    "totalProfitCalc": "Total Profit Calc"
+    "totalProfitCalc": "Total Profit Calc",
+    "note": "Note"
   },
   "users": {
     "title": "Users",
@@ -191,7 +193,8 @@
     "betPlaced": "Bet placed successfully!",
     "filterAll": "All",
     "searchPlaceholder": "Search markets…",
-    "volume": "Vol"
+    "volume": "Vol",
+    "closesAt": "Closes"
   },
   "bet": {
     "open": "Open",
@@ -290,5 +293,29 @@
       "completed_with_warnings": "Completed with warnings",
       "failed": "Failed"
     }
+  },
+  "testLab": {
+    "title": "Test Lab",
+    "placeBetCard": "Place Demo Bet",
+    "settleCard": "Settle Market",
+    "selectUser": "Test User",
+    "selectMarket": "Market",
+    "selectOutcome": "Outcome",
+    "stake": "Stake",
+    "winningOutcome": "Winning Outcome",
+    "balance": "Balance",
+    "inPlay": "In Play",
+    "potentialPayout": "Potential Payout",
+    "placeBet": "Place Demo Bet",
+    "settle": "Settle",
+    "betPlaced": "Bet placed! ID: {{id}}",
+    "settled": "Settled {{settled}} bets — Winners: {{winners}}, Losers: {{losers}}",
+    "noOpenMarkets": "No open markets available",
+    "selectMarketFirst": "Select a market first",
+    "selectUserFirst": "Select a user first",
+    "pickUser": "Pick a user…",
+    "pickMarket": "Pick a market…",
+    "pickOutcome": "Pick an outcome…",
+    "marketCreated": "Demo market created"
   }
 }

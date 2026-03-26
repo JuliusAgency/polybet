@@ -3,10 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { ROUTES } from '@/app/router/routes';
 import { LanguageSwitcher } from '@/shared/ui/LanguageSwitcher';
+import { useUserBalance } from '@/features/bet';
 
 export const UserLayout = () => {
   const { t } = useTranslation();
   const { profile, signOut } = useAuth();
+  const { data: balance } = useUserBalance();
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 flex flex-col">
@@ -61,10 +63,11 @@ export const UserLayout = () => {
             <span className="text-sm text-gray-400">
               {profile?.username ?? ''}
             </span>
-            <span className="text-sm text-gray-500">
-              {/* Balance placeholder */}
-              —
-            </span>
+            {balance != null && (
+              <span className="text-sm font-mono font-semibold text-green-400">
+                {(balance.available).toFixed(2)}
+              </span>
+            )}
             <button
               onClick={() => void signOut()}
               className="text-sm text-gray-400 hover:text-white transition-colors"

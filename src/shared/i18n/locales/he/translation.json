@@ -25,6 +25,7 @@
     "dashboard": "לוח בקרה",
     "managers": "מנהלים",
     "betLog": "יומן כללי",
+    "testLab": "מעבדת בדיקות",
     "users": "משתמשים",
     "treasury": "קופה",
     "reports": "דוחות",
@@ -145,7 +146,8 @@
     "netProfit": "רווח נקי",
     "deposit": "הפקדה",
     "withdrawal": "משיכה",
-    "totalProfitCalc": "סה\"כ רווח מצטבר"
+    "totalProfitCalc": "סה\"כ רווח מצטבר",
+    "note": "הערה"
   },
   "users": {
     "title": "משתמשים",
@@ -191,7 +193,8 @@
     "betPlaced": "ההימור הונח בהצלחה!",
     "filterAll": "הכל",
     "searchPlaceholder": "חיפוש שווקים…",
-    "volume": "נפח"
+    "volume": "נפח",
+    "closesAt": "נסגר"
   },
   "bet": {
     "open": "פתוח",
@@ -290,5 +293,29 @@
       "completed_with_warnings": "הושלם עם אזהרות",
       "failed": "נכשל"
     }
+  },
+  "testLab": {
+    "title": "מעבדת בדיקות",
+    "placeBetCard": "הנחת הימור דמו",
+    "settleCard": "סגירת שוק",
+    "selectUser": "משתמש בדיקה",
+    "selectMarket": "שוק",
+    "selectOutcome": "תוצאה",
+    "stake": "סכום הימור",
+    "winningOutcome": "תוצאה מנצחת",
+    "balance": "יתרה",
+    "inPlay": "בהימור",
+    "potentialPayout": "תשלום פוטנציאלי",
+    "placeBet": "הנח הימור דמו",
+    "settle": "סגור שוק",
+    "betPlaced": "הימור הונח! מזהה: {{id}}",
+    "settled": "נסגרו {{settled}} הימורים — זוכים: {{winners}}, מפסידים: {{losers}}",
+    "noOpenMarkets": "אין שווקים פתוחים",
+    "selectMarketFirst": "בחר שוק תחילה",
+    "selectUserFirst": "בחר משתמש תחילה",
+    "pickUser": "בחר משתמש…",
+    "pickMarket": "בחר שוק…",
+    "pickOutcome": "בחר תוצאה…",
+    "marketCreated": "שוק דמו נוצר"
   }
 }

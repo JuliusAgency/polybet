@@ -6,6 +6,7 @@ export const ROUTES = {
     MANAGERS: '/admin/managers',
     MANAGER_PROFILE: '/admin/managers/:id',
     BET_LOG: '/admin/bets-log',
+    TEST_LAB: '/admin/test-lab',
   },
 
   MANAGER: {

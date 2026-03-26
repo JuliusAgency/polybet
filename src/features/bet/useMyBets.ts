@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/shared/api/supabase';
 import { useAuth } from '@/shared/hooks/useAuth';
 
@@ -16,10 +17,31 @@ export interface MyBet {
 
 export function useMyBets() {
   const { session } = useAuth();
+  const queryClient = useQueryClient();
+  const userId = session?.user.id;
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const channel = supabase
+      .channel(`user_bets_${userId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'bets', filter: `user_id=eq.${userId}` },
+        () => {
+          void queryClient.invalidateQueries({ queryKey: ['user', 'bets', userId] });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [userId, queryClient]);
 
   return useQuery<MyBet[]>({
     // Include user id in key to prevent cross-user cache collisions on session switch
-    queryKey: ['user', 'bets', session?.user.id],
+    queryKey: ['user', 'bets', userId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('bets')
