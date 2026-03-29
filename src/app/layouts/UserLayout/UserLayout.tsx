@@ -4,9 +4,7 @@ import { useAuth } from '@/shared/hooks/useAuth';
 import { ROUTES } from '@/app/router/routes';
 import { LanguageSwitcher } from '@/shared/ui/LanguageSwitcher';
 import { UnseenBadge } from '@/shared/ui/UnseenBadge';
-import { useUserBalance } from '@/features/bet';
-import { useBetResultNotifications } from '@/features/bet/useBetResultNotifications';
-import { useUnseenBetsCount } from '@/features/bet/useUnseenBetsCount';
+import { useUserBalance, useBetResultNotifications, useUnseenBetsCount } from '@/features/bet';
 
 export const UserLayout = () => {
   const { t } = useTranslation();

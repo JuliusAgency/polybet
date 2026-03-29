@@ -200,7 +200,11 @@
     "open": "Open",
     "won": "Won",
     "lost": "Lost",
-    "cancelled": "Cancelled"
+    "cancelled": "Cancelled",
+    "notification": {
+      "won": "{{market}} · {{outcome}} · Stake {{stake}} → Payout {{payout}} 🎉",
+      "lost": "{{market}} · {{outcome}} · Stake {{stake}} — lost"
+    }
   },
   "reports": {
     "title": "Reports",
@@ -225,7 +229,8 @@
     "noHistory": "No settled bets yet",
     "totalWagered": "Total Wagered",
     "totalWon": "Total Payout",
-    "pnl": "P&L"
+    "pnl": "P&L",
+    "markAllSeen": "Mark {{count}} result(s) as seen"
   },
   "wallet": {
     "title": "Wallet",

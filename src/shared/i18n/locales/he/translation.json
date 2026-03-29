@@ -200,7 +200,11 @@
     "open": "פתוח",
     "won": "זכה",
     "lost": "הפסיד",
-    "cancelled": "בוטל"
+    "cancelled": "בוטל",
+    "notification": {
+      "won": "{{market}} · {{outcome}} · הימור {{stake}} → תשלום {{payout}} 🎉",
+      "lost": "{{market}} · {{outcome}} · הימור {{stake}} — הפסד"
+    }
   },
   "reports": {
     "title": "דוחות",
@@ -225,7 +229,8 @@
     "noHistory": "אין הימורים מוסדרים עדיין",
     "totalWagered": "סך ההימורים",
     "totalWon": "סך קבלות",
-    "pnl": "רווח/הפסד"
+    "pnl": "רווח/הפסד",
+    "markAllSeen": "סמן {{count}} תוצאות כנצפו"
   },
   "wallet": {
     "title": "ארנק",
