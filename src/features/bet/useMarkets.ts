@@ -5,16 +5,22 @@ import { supabase } from '@/shared/api/supabase';
 export interface MarketOutcome {
   id: string;
   name: string;
+  price: number | null;
   odds: number;
   effective_odds: number;
+  polymarket_token_id: string | null;
 }
 
 export interface Market {
   id: string;
+  polymarket_id: string;
   question: string;
+  status: 'open' | 'closed' | 'resolved' | 'archived';
+  winning_outcome_id: string | null;
   category: string | null;
   image_url: string | null;
   close_at: string | null;
+  last_synced_at: string | null;
   volume?: number | null;
   market_outcomes: MarketOutcome[];
 }
@@ -28,9 +34,9 @@ export function useMarkets() {
       const { data, error } = await supabase
         .from('markets')
         .select(
-          'id, question, category, image_url, close_at, volume, market_outcomes!market_outcomes_market_id_fkey(id, name, odds, effective_odds)',
+          'id, polymarket_id, question, status, winning_outcome_id, category, image_url, close_at, last_synced_at, volume, market_outcomes!market_outcomes_market_id_fkey(id, name, price, odds, effective_odds, polymarket_token_id)',
         )
-        .eq('status', 'open')
+        .in('status', ['open', 'closed', 'resolved'])
         .eq('is_visible', true)
         .order('created_at', { ascending: false });
 

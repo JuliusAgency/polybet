@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFinancialTransactions } from '@/features/admin/financial-transactions';
 import { useMyUsers } from '@/features/manager/users';
+import { useManagerGroupStats } from '@/features/stats';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { Card } from '@/shared/ui/Card';
 import { Button } from '@/shared/ui/Button';
@@ -24,6 +25,7 @@ const ReportsPage = () => {
   const [selectedUserId, setSelectedUserId] = useState('');
 
   const { data: users } = useMyUsers();
+  const { stats: groupStats } = useManagerGroupStats();
 
   const { transactions, isLoading } = useFinancialTransactions({
     managerId: session?.user.id,
@@ -130,6 +132,48 @@ const ReportsPage = () => {
             }}
           >
             {filteredTotals.netProfit.toFixed(2)}
+          </p>
+        </Card>
+      </div>
+
+      {/* Group betting metrics */}
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <Card>
+          <p
+            className="mb-1 text-sm font-medium"
+            style={{ color: 'var(--color-text-secondary)' }}
+          >
+            {t('reports.groupOpenExposure')}
+          </p>
+          <p className="text-xl font-bold font-mono" style={{ color: 'var(--color-text-primary)' }}>
+            {groupStats.group_open_exposure.toFixed(2)}
+          </p>
+        </Card>
+
+        <Card>
+          <p
+            className="mb-1 text-sm font-medium"
+            style={{ color: 'var(--color-text-secondary)' }}
+          >
+            {t('reports.groupTurnover')}
+          </p>
+          <p className="text-xl font-bold font-mono" style={{ color: 'var(--color-text-primary)' }}>
+            {groupStats.group_turnover.toFixed(2)}
+          </p>
+        </Card>
+
+        <Card>
+          <p
+            className="mb-1 text-sm font-medium"
+            style={{ color: 'var(--color-text-secondary)' }}
+          >
+            {t('reports.groupPnl')}
+          </p>
+          <p
+            className="text-xl font-bold font-mono"
+            style={{ color: groupStats.group_pnl >= 0 ? 'var(--color-win)' : 'var(--color-error)' }}
+          >
+            {groupStats.group_pnl.toFixed(2)}
           </p>
         </Card>
       </div>

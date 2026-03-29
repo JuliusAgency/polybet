@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { Button } from '@/shared/ui/Button';
 import { Badge } from '@/shared/ui/Badge';
-import { useMyUsers } from '@/features/manager/users';
-import { AdjustBalanceModal } from './components/AdjustBalanceModal';
+import { AdjustBalanceModal } from '@/features/manager/balance';
+import { useManagerToggleUserBlock, useMyUsers } from '@/features/manager/users';
 
 interface ModalState {
   userId: string;
@@ -14,8 +16,38 @@ interface ModalState {
 const TreasuryPage = () => {
   const { t } = useTranslation();
   const { data, isLoading, error } = useMyUsers();
-
+  const queryClient = useQueryClient();
   const [modalState, setModalState] = useState<ModalState | null>(null);
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
+  const toggleUserBlock = useManagerToggleUserBlock();
+
+  const handleToggleBlock = async (userId: string, username: string, isActive: boolean) => {
+    const confirmMessage = isActive
+      ? t('managerProfile.confirmBlock', { name: username })
+      : t('managerProfile.confirmUnblock', { name: username });
+
+    if (!window.confirm(confirmMessage)) return;
+
+    setPendingUserId(userId);
+
+    try {
+      await toggleUserBlock.mutateAsync({ targetUserId: userId });
+      await queryClient.invalidateQueries({ queryKey: ['manager', 'users'] });
+      toast.success(
+        isActive
+          ? t('managerProfile.userBlockedSuccess')
+          : t('managerProfile.userUnblockedSuccess'),
+      );
+    } catch (mutationError) {
+      toast.error(
+        mutationError instanceof Error
+          ? mutationError.message
+          : t('common.unknownError'),
+      );
+    } finally {
+      setPendingUserId(null);
+    }
+  };
 
   return (
     <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--color-bg-base)' }}>
@@ -80,7 +112,7 @@ const TreasuryPage = () => {
                   className="px-4 py-3 font-medium text-start"
                   style={{ color: 'var(--color-text-secondary)' }}
                 >
-                  {/* Actions column — no heading text */}
+                  {t('managerProfile.actions')}
                 </th>
               </tr>
             </thead>
@@ -99,6 +131,7 @@ const TreasuryPage = () => {
               {data.map((row) => {
                 const isInactive = row.profiles?.is_active === false;
                 const username = row.profiles?.username ?? '';
+                const fullName = row.profiles?.full_name ?? username;
 
                 return (
                   <tr
@@ -150,6 +183,16 @@ const TreasuryPage = () => {
                           }
                         >
                           {t('treasury.withdraw')}
+                        </Button>
+                        <Button
+                          variant={isInactive ? 'secondary' : 'danger'}
+                          className="text-xs px-3 py-1"
+                          disabled={pendingUserId === row.user_id}
+                          onClick={() =>
+                            handleToggleBlock(row.user_id, fullName, !isInactive)
+                          }
+                        >
+                          {isInactive ? t('managerProfile.unblock') : t('managerProfile.block')}
                         </Button>
                       </div>
                     </td>

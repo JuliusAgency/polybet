@@ -32,7 +32,8 @@
     "activity": "פעילות",
     "markets": "שווקים",
     "myBets": "ההימורים שלי",
-    "wallet": "ארנק"
+    "wallet": "ארנק",
+    "stats": "סטטיסטיקה"
   },
   "auth": {
     "signOut": "התנתק",
@@ -194,7 +195,17 @@
     "filterAll": "הכל",
     "searchPlaceholder": "חיפוש שווקים…",
     "volume": "נפח",
-    "closesAt": "נסגר"
+    "closesAt": "נסגר",
+    "source": "מקור",
+    "updatedAt": "עודכן",
+    "probability": "הסתברות",
+    "finalOutcome": "תוצאה סופית",
+    "status": {
+      "open": "פתוח",
+      "closed": "סגור",
+      "resolved": "הוכרע",
+      "archived": "ארכיון"
+    }
   },
   "bet": {
     "open": "פתוח",
@@ -208,7 +219,18 @@
   },
   "reports": {
     "title": "דוחות",
-    "allUsers": "כל המשתמשים"
+    "allUsers": "כל המשתמשים",
+    "groupOpenExposure": "חשיפה פתוחה של הקבוצה",
+    "groupPnl": "רווח/הפסד קבוצה",
+    "groupTurnover": "מחזור קבוצה"
+  },
+  "stats": {
+    "title": "הסטטיסטיקה שלי",
+    "turnover": "מחזור",
+    "openExposure": "חשיפה פתוחה",
+    "netPnl": "רווח/הפסד נקי",
+    "winRate": "אחוז זכייה",
+    "settledBets": "הימורים מוסדרים"
   },
   "userActivity": {
     "title": "יומן פעילות",
@@ -231,7 +253,10 @@
     "totalWon": "סך קבלות",
     "pnl": "רווח/הפסד",
     "markAllSeen": "סמן {{count}} תוצאות כנצפו",
-    "markAllSeenError": "שגיאה בסימון הימורים כנצפו"
+    "markAllSeenError": "שגיאה בסימון הימורים כנצפו",
+    "marketClosedAwaitingResolution": "השוק נסגר וממתין להכרעה סופית",
+    "finalOutcomeWon": "תוצאה סופית: הבחירה שלך ניצחה",
+    "finalOutcomeLost": "תוצאה סופית: הבחירה שלך הפסידה"
   },
   "wallet": {
     "title": "ארנק",
@@ -248,6 +273,12 @@
     "to": "עד תאריך",
     "deposit": "הפקדה",
     "withdrawal": "משיכה",
+    "typeMint": "הנפקה",
+    "typeTransfer": "העברה",
+    "typeBetLock": "נעילת הימור",
+    "typeBetPayout": "תשלום הימור",
+    "typeAdjustment": "התאמה",
+    "betRef": "הימור",
     "noTransactions": "אין תנועות"
   },
   "agentsDashboard": {
@@ -258,7 +289,17 @@
     "currentBalance": "יתרה נוכחית",
     "monthlyPnl": "רווח/הפסד חודשי",
     "statusCol": "סטטוס",
-    "searchPlaceholder": "חיפוש סוכנים…"
+    "searchPlaceholder": "חיפוש סוכנים…",
+    "totalPoints": "סך נקודות במערכת",
+    "openExposure": "חשיפה פתוחה",
+    "systemProfit": "רווח מערכת",
+    "systemCounts": "משתמשים / מנהלים / שווקים",
+    "systemCountsHintAria": "הסבר למונים U, M, A, R, AR",
+    "systemCountsHintLineUsers": "U = סך המשתמשים",
+    "systemCountsHintLineManagers": "M = סך המנהלים",
+    "systemCountsHintLineActive": "A = שווקים פעילים",
+    "systemCountsHintLineResolved": "R = שווקים שהוכרעו",
+    "systemCountsHintLineArchived": "AR = שווקים בארכיון"
   },
   "settlement": {
     "syncMarkets": "סנכרן שווקים",

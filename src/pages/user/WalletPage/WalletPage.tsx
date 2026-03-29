@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/shared/api/supabase';
 import { useAuth } from '@/shared/hooks/useAuth';
@@ -7,6 +8,26 @@ import { useUserBalance } from '@/features/bet';
 import { useUserTransactions } from '@/features/wallet';
 import { Card } from '@/shared/ui/Card';
 import { Input } from '@/shared/ui/Input';
+
+const formatTransactionType = (
+  txType: 'mint' | 'transfer' | 'bet_lock' | 'bet_payout' | 'adjustment',
+  t: TFunction,
+): string => {
+  switch (txType) {
+    case 'mint':
+      return t('wallet.typeMint');
+    case 'transfer':
+      return t('wallet.typeTransfer');
+    case 'bet_lock':
+      return t('wallet.typeBetLock');
+    case 'bet_payout':
+      return t('wallet.typeBetPayout');
+    case 'adjustment':
+      return t('wallet.typeAdjustment');
+    default:
+      return txType;
+  }
+};
 
 const WalletPage = () => {
   const { t, i18n } = useTranslation();
@@ -196,13 +217,22 @@ const WalletPage = () => {
                   >
                     {t('wallet.note')}
                   </th>
+                  <th
+                    className="px-4 py-3 font-medium text-start"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                  >
+                    {t('wallet.betRef')}
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {transactions.map((tx) => {
-                  const isDeposit = tx.type === 'adjustment';
-                  const amountColor = isDeposit ? 'var(--color-win)' : 'var(--color-loss)';
-                  const amountPrefix = isDeposit ? '+' : '';
+                  const amountColor = tx.amount > 0
+                    ? 'var(--color-win)'
+                    : tx.amount < 0
+                      ? 'var(--color-loss)'
+                      : 'var(--color-text-secondary)';
+                  const amountPrefix = tx.amount > 0 ? '+' : '';
 
                   return (
                     <tr
@@ -227,7 +257,7 @@ const WalletPage = () => {
                         className="px-4 py-3"
                         style={{ color: 'var(--color-text-primary)' }}
                       >
-                        {tx.type === 'adjustment' ? t('wallet.deposit') : t('wallet.withdrawal')}
+                        {formatTransactionType(tx.type, t)}
                       </td>
                       <td
                         className="px-4 py-3 font-mono font-semibold"
@@ -246,6 +276,13 @@ const WalletPage = () => {
                         style={{ color: 'var(--color-text-muted)' }}
                       >
                         {tx.note ?? '—'}
+                      </td>
+                      <td
+                        className="px-4 py-3 font-mono text-xs"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                        title={tx.bet_id ?? undefined}
+                      >
+                        {tx.bet_id ? tx.bet_id.slice(0, 8) : '—'}
                       </td>
                     </tr>
                   );

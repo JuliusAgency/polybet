@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAgentStats } from '@/features/admin/agent-stats';
+import { useSystemKpis } from '@/features/stats';
 import type { AgentStatsRow } from '@/features/admin/agent-stats';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
@@ -28,6 +29,7 @@ const AgentsDashboardPage = () => {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   const { agents, isLoading } = useAgentStats({ month, year });
+  const { kpis } = useSystemKpis();
 
   const rawMonths = t('globalLog.months', { returnObjects: true });
   const months: string[] = Array.isArray(rawMonths) ? rawMonths : [];
@@ -87,6 +89,57 @@ const AgentsDashboardPage = () => {
         <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
           {t('agentsDashboard.title')}
         </h1>
+      </div>
+
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-xl border p-4" style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-surface)' }}>
+          <p className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>{t('agentsDashboard.totalPoints')}</p>
+          <p className="text-xl font-bold font-mono" style={{ color: 'var(--color-text-primary)' }}>{kpis.total_points_in_system.toFixed(2)}</p>
+        </div>
+        <div className="rounded-xl border p-4" style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-surface)' }}>
+          <p className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>{t('agentsDashboard.openExposure')}</p>
+          <p className="text-xl font-bold font-mono" style={{ color: 'var(--color-text-primary)' }}>{kpis.open_exposure.toFixed(2)}</p>
+        </div>
+        <div className="rounded-xl border p-4" style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-surface)' }}>
+          <p className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>{t('agentsDashboard.systemProfit')}</p>
+          <p className="text-xl font-bold font-mono" style={{ color: kpis.system_profit >= 0 ? 'var(--color-win)' : 'var(--color-error)' }}>
+            {kpis.system_profit.toFixed(2)}
+          </p>
+        </div>
+        <div
+          className="group relative rounded-xl border p-4"
+          style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-surface)' }}
+        >
+          <span
+            className="absolute right-3 top-3 inline-flex h-5 w-5 items-center justify-center rounded-full border text-[11px] font-semibold"
+            style={{
+              color: 'var(--color-text-secondary)',
+              borderColor: 'var(--color-border)',
+              backgroundColor: 'var(--color-bg-elevated)',
+            }}
+            aria-label={t('agentsDashboard.systemCountsHintAria')}
+          >
+            ?
+          </span>
+          <div
+            className="pointer-events-none absolute -top-2 right-3 z-10 w-56 -translate-y-full rounded-lg border p-2 text-xs opacity-0 shadow-lg transition-opacity group-hover:opacity-100"
+            style={{
+              color: 'var(--color-text-primary)',
+              borderColor: 'var(--color-border)',
+              backgroundColor: 'var(--color-bg-elevated)',
+            }}
+          >
+            <div>{t('agentsDashboard.systemCountsHintLineUsers')}</div>
+            <div>{t('agentsDashboard.systemCountsHintLineManagers')}</div>
+            <div>{t('agentsDashboard.systemCountsHintLineActive')}</div>
+            <div>{t('agentsDashboard.systemCountsHintLineResolved')}</div>
+            <div>{t('agentsDashboard.systemCountsHintLineArchived')}</div>
+          </div>
+          <p className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>{t('agentsDashboard.systemCounts')}</p>
+          <p className="text-sm font-mono" style={{ color: 'var(--color-text-primary)' }}>
+            U:{kpis.total_users} M:{kpis.total_managers} A:{kpis.active_markets} R:{kpis.resolved_markets} AR:{kpis.archived_markets}
+          </p>
+        </div>
       </div>
 
       {/* Filters row */}

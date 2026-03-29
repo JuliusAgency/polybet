@@ -32,7 +32,8 @@
     "activity": "Activity",
     "markets": "Markets",
     "myBets": "My Bets",
-    "wallet": "Wallet"
+    "wallet": "Wallet",
+    "stats": "Stats"
   },
   "auth": {
     "signOut": "Sign Out",
@@ -194,7 +195,17 @@
     "filterAll": "All",
     "searchPlaceholder": "Search markets…",
     "volume": "Vol",
-    "closesAt": "Closes"
+    "closesAt": "Closes",
+    "source": "Source",
+    "updatedAt": "Updated",
+    "probability": "Probability",
+    "finalOutcome": "Final outcome",
+    "status": {
+      "open": "Open",
+      "closed": "Closed",
+      "resolved": "Resolved",
+      "archived": "Archived"
+    }
   },
   "bet": {
     "open": "Open",
@@ -208,7 +219,18 @@
   },
   "reports": {
     "title": "Reports",
-    "allUsers": "All users"
+    "allUsers": "All users",
+    "groupOpenExposure": "Group Open Exposure",
+    "groupPnl": "Group P&L",
+    "groupTurnover": "Group Turnover"
+  },
+  "stats": {
+    "title": "My Stats",
+    "turnover": "Turnover",
+    "openExposure": "Open Exposure",
+    "netPnl": "Net P&L",
+    "winRate": "Win Rate",
+    "settledBets": "Settled Bets"
   },
   "userActivity": {
     "title": "Activity Log",
@@ -231,7 +253,10 @@
     "totalWon": "Total Payout",
     "pnl": "P&L",
     "markAllSeen": "Mark {{count}} result(s) as seen",
-    "markAllSeenError": "Failed to mark bets as seen"
+    "markAllSeenError": "Failed to mark bets as seen",
+    "marketClosedAwaitingResolution": "Market closed, awaiting final resolution",
+    "finalOutcomeWon": "Final outcome: your selection won",
+    "finalOutcomeLost": "Final outcome: your selection lost"
   },
   "wallet": {
     "title": "Wallet",
@@ -248,6 +273,12 @@
     "to": "To",
     "deposit": "Deposit",
     "withdrawal": "Withdrawal",
+    "typeMint": "Mint",
+    "typeTransfer": "Transfer",
+    "typeBetLock": "Bet Lock",
+    "typeBetPayout": "Bet Payout",
+    "typeAdjustment": "Adjustment",
+    "betRef": "Bet",
     "noTransactions": "No transactions"
   },
   "agentsDashboard": {
@@ -258,7 +289,17 @@
     "currentBalance": "Current Balance",
     "monthlyPnl": "Monthly P&L",
     "statusCol": "Status",
-    "searchPlaceholder": "Search agents…"
+    "searchPlaceholder": "Search agents…",
+    "totalPoints": "Total Points in System",
+    "openExposure": "Open Exposure",
+    "systemProfit": "System Profit",
+    "systemCounts": "Users / Managers / Markets",
+    "systemCountsHintAria": "Explain U, M, A, R, AR counters",
+    "systemCountsHintLineUsers": "U = total users",
+    "systemCountsHintLineManagers": "M = total managers",
+    "systemCountsHintLineActive": "A = active markets",
+    "systemCountsHintLineResolved": "R = resolved markets",
+    "systemCountsHintLineArchived": "AR = archived markets"
   },
   "settlement": {
     "syncMarkets": "Sync Markets",

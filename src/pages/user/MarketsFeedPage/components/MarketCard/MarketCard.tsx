@@ -11,6 +11,10 @@ interface MarketCardProps {
 export const MarketCard = ({ market, onOutcomeClick }: MarketCardProps) => {
   const { t } = useTranslation();
   const [hoveredOutcomeId, setHoveredOutcomeId] = useState<string | null>(null);
+  const winnerOutcome = market.winning_outcome_id
+    ? market.market_outcomes.find((outcome) => outcome.id === market.winning_outcome_id) ?? null
+    : null;
+  const statusLabel = t(`markets.status.${market.status}`, { defaultValue: market.status });
 
   return (
     <div
@@ -21,9 +25,10 @@ export const MarketCard = ({ market, onOutcomeClick }: MarketCardProps) => {
       }}
     >
       {/* Category badge */}
-      {market.category && (
-        <div className="mb-2">
-          <Badge variant="default">{market.category}</Badge>
+      {(market.category || market.status) && (
+        <div className="mb-2 flex flex-wrap gap-2">
+          {market.category && <Badge variant="default">{market.category}</Badge>}
+          <Badge variant={market.status === 'resolved' ? 'win' : 'default'}>{statusLabel}</Badge>
         </div>
       )}
 
@@ -37,6 +42,9 @@ export const MarketCard = ({ market, onOutcomeClick }: MarketCardProps) => {
 
       {/* Volume and close date */}
       <div className="mb-2 flex flex-wrap gap-x-4">
+        <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+          {t('markets.source')}: Polymarket
+        </p>
         {market.volume != null && market.volume > 0 && (
           <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
             {t('markets.volume')}: {market.volume.toLocaleString()}
@@ -49,6 +57,15 @@ export const MarketCard = ({ market, onOutcomeClick }: MarketCardProps) => {
               day: 'numeric',
               month: 'short',
               year: 'numeric',
+            })}
+          </p>
+        )}
+        {market.last_synced_at && (
+          <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+            {t('markets.updatedAt')}:{' '}
+            {new Date(market.last_synced_at).toLocaleTimeString(undefined, {
+              hour: '2-digit',
+              minute: '2-digit',
             })}
           </p>
         )}
@@ -73,7 +90,15 @@ export const MarketCard = ({ market, onOutcomeClick }: MarketCardProps) => {
                 color: 'var(--color-text-primary)',
               }}
             >
-              <span style={{ color: 'var(--color-text-secondary)' }}>{outcome.name}</span>
+              <span style={{ color: 'var(--color-text-secondary)' }}>
+                {outcome.name}
+                {winnerOutcome?.id === outcome.id ? ` • ${t('markets.finalOutcome')}` : ''}
+              </span>
+              {outcome.price != null && (
+                <span className="ms-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                  {t('markets.probability')}: {(outcome.price * 100).toFixed(1)}%
+                </span>
+              )}
               <span className="ms-2 font-semibold" style={{ color: 'var(--color-accent)' }}>
                 {outcome.odds.toFixed(2)}
               </span>

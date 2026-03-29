@@ -14,6 +14,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const [role, setRole] = useState<Role | null>(null);
     const [loading, setLoading] = useState(true);
 
+    const clearAuthState = useCallback(() => {
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+        setRole(null);
+    }, []);
+
     const loadProfile = useCallback(async (userId: string) => {
         try {
             const { data, error } = await supabase
@@ -107,7 +114,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
                 (payload) => {
                     const updated = payload.new as { is_active: boolean };
                     if (updated.is_active === false) {
-                        void supabase.auth.signOut();
+                        void clearAuthState();
+                        void supabase.auth.signOut({ scope: 'local' });
                     }
                 },
             )
@@ -116,7 +124,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         return () => {
             void supabase.removeChannel(channel);
         };
-    }, [user]);
+    }, [user, clearAuthState]);
+
+    const forceSignOut = useCallback(async () => {
+        const globalResult = await supabase.auth.signOut({ scope: 'global' });
+        if (!globalResult.error) {
+            clearAuthState();
+            return;
+        }
+
+        const localResult = await supabase.auth.signOut({ scope: 'local' });
+        clearAuthState();
+        if (localResult.error) {
+            throw localResult.error;
+        }
+    }, [clearAuthState]);
 
     const signIn = useCallback(async ({ username, password }: SignInCredentials) => {
         const email = `${username}@polybet.internal`;
@@ -132,15 +154,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
                 .eq('id', currentUser.id)
                 .single();
             if (profileData?.is_active === false) {
-                await supabase.auth.signOut();
+                await forceSignOut();
                 throw new Error('ACCOUNT_BLOCKED');
             }
         }
-    }, []);
+    }, [forceSignOut]);
 
     const signOut = useCallback(async () => {
-        await supabase.auth.signOut();
-    }, []);
+        await forceSignOut();
+    }, [forceSignOut]);
 
     const value = useMemo<AuthContextValue>(
         () => ({ user, session, profile, role, loading, signIn, signOut }),

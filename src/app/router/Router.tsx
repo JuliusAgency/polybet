@@ -3,6 +3,10 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { RoleGuard } from './RoleGuard';
 import { ROUTES } from './routes';
+import UsersManagementPage from '@/pages/manager/UsersManagementPage/UsersManagementPage';
+import UserActivityPage from '@/pages/manager/UserActivityPage/UserActivityPage';
+import TreasuryPage from '@/pages/manager/TreasuryPage/TreasuryPage';
+import ReportsPage from '@/pages/manager/ReportsPage/ReportsPage';
 import {
   AuthLayout,
   SuperAdminLayout,
@@ -21,15 +25,13 @@ const GlobalBetLogPage = lazy(() => import('@/pages/super-admin/GlobalBetLogPage
 const TestLabPage = lazy(() => import('@/pages/super-admin/TestLabPage').then((m) => ({ default: m.TestLabPage })));
 
 // Manager
-const UsersManagementPage = lazy(() => import('@/pages/manager/UsersManagementPage'));
-const UserActivityPage = lazy(() => import('@/pages/manager/UserActivityPage'));
-const TreasuryPage = lazy(() => import('@/pages/manager/TreasuryPage'));
-const ReportsPage = lazy(() => import('@/pages/manager/ReportsPage'));
+// Keep manager pages as eager imports to avoid lazy chunk mismatch in dev navigation.
 
 // User
 const MarketsFeedPage = lazy(() => import('@/pages/user/MarketsFeedPage'));
 const WalletPage = lazy(() => import('@/pages/user/WalletPage'));
 const MyBetsPage = lazy(() => import('@/pages/user/MyBetsPage'));
+const StatsPage = lazy(() => import('@/pages/user/StatsPage'));
 
 const PageFallback = () => {
   const { t } = useTranslation();
@@ -112,6 +114,7 @@ export const Router = () => {
             <Route path="markets" element={<MarketsFeedPage />} />
             <Route path="wallet" element={<WalletPage />} />
             <Route path="my-bets" element={<MyBetsPage />} />
+            <Route path="stats" element={<StatsPage />} />
           </Route>
 
           {/* Catch-all */}

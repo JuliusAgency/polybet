@@ -56,6 +56,22 @@ function historyRowBg(status: MyBet['status']): string | undefined {
   return undefined;
 }
 
+function renderBetMarketMeta(t: (key: string) => string, bet: MyBet): string | null {
+  const market = bet.markets;
+  if (!market) return null;
+
+  if (market.winning_outcome_id) {
+    return market.winning_outcome_id === bet.outcome_id
+      ? t('myBets.finalOutcomeWon')
+      : t('myBets.finalOutcomeLost');
+  }
+
+  if (market.status === 'closed') {
+    return t('myBets.marketClosedAwaitingResolution');
+  }
+
+  return null;
+}
 
 const MyBetsPage = () => {
   const { t, i18n } = useTranslation();
@@ -107,24 +123,6 @@ const MyBetsPage = () => {
         {t('myBets.title')}
       </h1>
 
-      {/* Mark all seen button */}
-      {unseenCount > 0 && (
-        <button
-          onClick={() => markAllSeen()}
-          disabled={isMarking}
-          className="mb-4 px-4 py-2 rounded-md text-sm font-medium transition-colors"
-          style={{
-            backgroundColor: 'var(--color-accent)',
-            color: 'var(--color-text-primary)',
-            opacity: isMarking ? 0.6 : 1,
-            cursor: isMarking ? 'not-allowed' : 'pointer',
-            border: 'none',
-          }}
-        >
-          {t('myBets.markAllSeen', { count: unseenCount })}
-        </button>
-      )}
-
       {/* Tab switcher */}
       <div
         className="mb-6 flex gap-1 rounded-lg p-1 w-fit"
@@ -134,7 +132,7 @@ const MyBetsPage = () => {
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className="rounded-md px-4 py-2 text-sm font-medium transition-colors"
+            className="relative rounded-md px-4 py-2 text-sm font-medium transition-colors"
             style={{
               backgroundColor: activeTab === tab.key ? 'var(--color-accent)' : 'transparent',
               color:
@@ -147,6 +145,20 @@ const MyBetsPage = () => {
             }}
           >
             {tab.label}
+            {tab.key === 'history' && unseenCount > 0 && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '-2px',
+                  insetInlineEnd: '-4px',
+                  width: '7px',
+                  height: '7px',
+                  borderRadius: '50%',
+                  backgroundColor: 'var(--color-loss)',
+                  pointerEvents: 'none',
+                }}
+              />
+            )}
           </button>
         ))}
       </div>
@@ -223,7 +235,12 @@ const MyBetsPage = () => {
                         className="px-4 py-3"
                         style={{ color: 'var(--color-text-primary)' }}
                       >
-                        {bet.markets?.question ?? '—'}
+                        <div>{bet.markets?.question ?? '—'}</div>
+                        {renderBetMarketMeta(t, bet) && (
+                          <div className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+                            {renderBetMarketMeta(t, bet)}
+                          </div>
+                        )}
                       </td>
                       <td
                         className="px-4 py-3"
@@ -258,6 +275,24 @@ const MyBetsPage = () => {
       {/* ── TAB 2: History ── */}
       {!isLoading && activeTab === 'history' && (
         <>
+          {/* Mark all seen button — inside History where the results are */}
+          {unseenCount > 0 && (
+            <button
+              onClick={() => markAllSeen()}
+              disabled={isMarking}
+              className="mb-4 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+              style={{
+                backgroundColor: 'var(--color-accent)',
+                color: 'var(--color-text-primary)',
+                opacity: isMarking ? 0.6 : 1,
+                cursor: isMarking ? 'not-allowed' : 'pointer',
+                border: 'none',
+              }}
+            >
+              {t('myBets.markAllSeen', { count: unseenCount })}
+            </button>
+          )}
+
           {historyBets.length === 0 ? (
             <p style={{ color: 'var(--color-text-secondary)' }}>{t('myBets.noHistory')}</p>
           ) : (
@@ -319,7 +354,14 @@ const MyBetsPage = () => {
                         key={bet.id}
                         style={{
                           borderTop: '1px solid var(--color-border)',
-                          backgroundColor: historyRowBg(bet.status),
+                          backgroundColor: bet.seen_at === null
+                            ? bet.status === 'won'
+                              ? 'rgba(34,197,94,0.18)'
+                              : bet.status === 'lost'
+                                ? 'rgba(239,68,68,0.18)'
+                                : 'rgba(255,255,255,0.05)'
+                            : historyRowBg(bet.status),
+                          borderLeft: bet.seen_at === null ? '3px solid var(--color-accent)' : '3px solid transparent',
                         }}
                       >
                         <td
@@ -332,7 +374,12 @@ const MyBetsPage = () => {
                           className="px-4 py-3"
                           style={{ color: 'var(--color-text-primary)' }}
                         >
-                          {bet.markets?.question ?? '—'}
+                          <div>{bet.markets?.question ?? '—'}</div>
+                          {renderBetMarketMeta(t, bet) && (
+                            <div className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+                              {renderBetMarketMeta(t, bet)}
+                            </div>
+                          )}
                         </td>
                         <td
                           className="px-4 py-3"

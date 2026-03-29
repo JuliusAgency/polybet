@@ -7,6 +7,14 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { authorizeEdgeCall } from '../_shared/edgeAuth.ts';
 import { buildCorsPreflightResponse, jsonWithCors } from '../_shared/cors.ts';
 import { fetchJsonWithRetry } from '../_shared/gammaFetch.ts';
+import { buildArchiveCutoffIso, parseArchiveAfterHours } from '../_shared/marketLifecycle.ts';
+import {
+  buildMarketCreatedDelta,
+  buildMarketResolvedDelta,
+  buildMarketStatusDelta,
+  buildOutcomePriceDeltas,
+  type MarketDataDeltaInsert,
+} from '../_shared/marketDataDelta.ts';
 import { resolveWinnerTokenId } from '../_shared/polymarketWinner.ts';
 import {
   buildCompletedProgressUpdate,
@@ -33,11 +41,13 @@ interface GammaMarket {
   liquidity: string | number;
   image: string | null;
   tokens?: Array<{ token_id: string; winner?: boolean }>;
+  updatedAt?: string | null;
+  resolutionDate?: string | null;
 }
 
 interface SyncRequestBody {
   run_id?: string;
-  mode?: 'full' | 'resolved_only' | 'active_page' | 'backfill';
+  mode?: 'full' | 'resolved_only' | 'active_page' | 'backfill' | 'hot_set';
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -45,6 +55,7 @@ interface SyncRequestBody {
 const GAMMA_API_BASE = 'https://gamma-api.polymarket.com';
 const ACTIVE_MARKETS_URL = `${GAMMA_API_BASE}/markets?active=true&closed=false&limit=100`;
 const RESOLVED_MARKETS_URL = `${GAMMA_API_BASE}/markets?resolved=true&limit=50`;
+const DEFAULT_ARCHIVE_AFTER_HOURS = 168;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -56,6 +67,10 @@ function priceToOdds(price: number): number {
 function parseJsonField<T>(value: string | null | undefined, fallback: T): T {
   if (!value) return fallback;
   try { return JSON.parse(value) as T; } catch { return fallback; }
+}
+
+function buildPolymarketStatusRaw(gm: GammaMarket): string {
+  return `active:${gm.active};closed:${gm.closed};resolved:${gm.resolved}`;
 }
 
 /** Fetch pages from a Gamma API URL (handles offset pagination).
@@ -207,6 +222,21 @@ Deno.serve(async (req: Request) => {
       const autoShowAll: boolean =
         settingRow?.value === true || settingRow?.value === 'true';
 
+      const { data: archiveSettingRow, error: archiveSettingErr } = await supabase
+        .from('system_settings')
+        .select('value')
+        .eq('key', 'archive_after_hours')
+        .maybeSingle();
+
+      if (archiveSettingErr) {
+        stats.errors.push(`Failed to read archive_after_hours setting: ${archiveSettingErr.message}`);
+      }
+
+      const archiveAfterHours = parseArchiveAfterHours(
+        archiveSettingRow?.value,
+        DEFAULT_ARCHIVE_AFTER_HOURS,
+      );
+
       // ── mode: resolved_only — settle open bets for recently resolved markets ─
       if (mode === 'resolved_only') {
         await updateRun({ phase: 'fetching_resolved' });
@@ -235,7 +265,7 @@ Deno.serve(async (req: Request) => {
 
         for (const gm of resolvedMarkets) {
           try {
-            await processResolvedMarket(supabase, gm, autoShowAll, stats);
+            await processResolvedMarket(supabase, gm, autoShowAll, runId, stats);
           } catch (e: unknown) {
             stats.errors.push(`Error processing resolved market ${gm.conditionId}: ${e instanceof Error ? e.message : String(e)}`);
           }
@@ -254,6 +284,7 @@ Deno.serve(async (req: Request) => {
           });
         }
 
+        await archiveResolvedMarkets(supabase, archiveAfterHours, stats);
         await updateRun(buildCompletedProgressUpdate({ processedCount, totalCount, stats }));
         return;
       }
@@ -270,6 +301,7 @@ Deno.serve(async (req: Request) => {
 
         if (betsErr || !Array.isArray(openBetRows)) {
           stats.errors.push(`Failed to fetch open bets: ${betsErr?.message ?? 'unexpected format'}`);
+          await archiveResolvedMarkets(supabase, archiveAfterHours, stats);
           await updateRun(buildCompletedProgressUpdate({ processedCount: 0, totalCount: 0, stats }));
           return;
         }
@@ -277,6 +309,7 @@ Deno.serve(async (req: Request) => {
         const marketIds = [...new Set(openBetRows.map((b) => b.market_id).filter(Boolean) as string[])];
 
         if (marketIds.length === 0) {
+          await archiveResolvedMarkets(supabase, archiveAfterHours, stats);
           await updateRun(buildCompletedProgressUpdate({ processedCount: 0, totalCount: 0, stats }));
           return;
         }
@@ -290,6 +323,7 @@ Deno.serve(async (req: Request) => {
 
         if (marketsErr || !Array.isArray(openMarkets)) {
           stats.errors.push(`Failed to fetch market details: ${marketsErr?.message ?? 'unexpected format'}`);
+          await archiveResolvedMarkets(supabase, archiveAfterHours, stats);
           await updateRun(buildCompletedProgressUpdate({ processedCount: 0, totalCount: 0, stats }));
           return;
         }
@@ -304,7 +338,7 @@ Deno.serve(async (req: Request) => {
           try {
             const gm = await fetchGammaMarketDetails(polymarket_id);
             if (gm?.resolved) {
-              await processResolvedMarket(supabase, gm, autoShowAll, stats);
+              await processResolvedMarket(supabase, gm, autoShowAll, runId, stats);
             }
           } catch (e: unknown) {
             stats.errors.push(
@@ -322,6 +356,96 @@ Deno.serve(async (req: Request) => {
           });
         }
 
+        await archiveResolvedMarkets(supabase, archiveAfterHours, stats);
+        await updateRun(buildCompletedProgressUpdate({ processedCount, totalCount, stats }));
+        return;
+      }
+
+      // ── mode: hot_set — fast refresh of visible + in-play markets every minute ─
+      if (mode === 'hot_set') {
+        await updateRun({ phase: 'syncing_active' });
+
+        const { data: visibleMarkets, error: visibleErr } = await supabase
+          .from('markets')
+          .select('id, polymarket_id')
+          .eq('is_visible', true)
+          .in('status', ['open', 'closed']);
+
+        if (visibleErr) {
+          stats.errors.push(`Failed to fetch visible markets for hot_set: ${visibleErr.message}`);
+        }
+
+        const { data: openBetRows, error: openBetsErr } = await supabase
+          .from('bets')
+          .select('market_id')
+          .eq('status', 'open');
+
+        if (openBetsErr) {
+          stats.errors.push(`Failed to fetch open bets for hot_set: ${openBetsErr.message}`);
+        }
+
+        const openBetMarketIds = [
+          ...new Set((openBetRows ?? []).map((row) => row.market_id).filter(Boolean) as string[]),
+        ];
+
+        let inPlayMarkets: Array<{ id: string; polymarket_id: string }> = [];
+        if (openBetMarketIds.length > 0) {
+          const { data: inPlayRows, error: inPlayErr } = await supabase
+            .from('markets')
+            .select('id, polymarket_id')
+            .in('id', openBetMarketIds)
+            .neq('status', 'resolved');
+
+          if (inPlayErr) {
+            stats.errors.push(`Failed to fetch in-play markets for hot_set: ${inPlayErr.message}`);
+          } else {
+            inPlayMarkets = inPlayRows ?? [];
+          }
+        }
+
+        const uniqueMarkets = [
+          ...new Map(
+            [...(visibleMarkets ?? []), ...inPlayMarkets]
+              .filter((row) => row.polymarket_id)
+              .map((row) => [row.polymarket_id, row]),
+          ).values(),
+        ];
+
+        totalCount = uniqueMarkets.length;
+        await updateRun(buildFetchedProgressUpdate(uniqueMarkets.length, 0));
+
+        for (const marketRow of uniqueMarkets) {
+          try {
+            const gm = await fetchGammaMarketDetails(marketRow.polymarket_id);
+            if (!gm) {
+              stats.errors.push(`Hot-set market details unavailable for ${marketRow.polymarket_id}`);
+            } else if (gm.resolved) {
+              await processResolvedMarket(supabase, gm, autoShowAll, runId, stats);
+            } else {
+              await upsertMarket(supabase, gm, 'open', autoShowAll, runId, stats);
+            }
+          } catch (e: unknown) {
+            stats.errors.push(
+              `Hot-set sync failed for ${marketRow.polymarket_id}: ${e instanceof Error ? e.message : String(e)}`,
+            );
+          }
+
+          processedCount++;
+          await updateRun({
+            ...buildIncrementedProgressUpdate({
+              processedCount,
+              activeCount: totalCount,
+              totalCount,
+            }),
+            markets_synced: stats.markets_synced,
+            outcomes_updated: stats.outcomes_updated,
+            markets_settled: stats.markets_settled,
+            errors: stats.errors,
+            error_message: stats.errors[0] ?? null,
+          });
+        }
+
+        await archiveResolvedMarkets(supabase, archiveAfterHours, stats);
         await updateRun(buildCompletedProgressUpdate({ processedCount, totalCount, stats }));
         return;
       }
@@ -362,7 +486,7 @@ Deno.serve(async (req: Request) => {
 
         for (const gm of activeMarkets) {
           try {
-            await upsertMarket(supabase, gm, 'open', autoShowAll, stats);
+            await upsertMarket(supabase, gm, 'open', autoShowAll, runId, stats);
           } catch (e: unknown) {
             stats.errors.push(`Error upserting active market ${gm.conditionId}: ${e instanceof Error ? e.message : String(e)}`);
           }
@@ -390,6 +514,7 @@ Deno.serve(async (req: Request) => {
           .update({ value: String(nextOffset) })
           .eq('key', 'active_sync_offset');
 
+        await archiveResolvedMarkets(supabase, archiveAfterHours, stats);
         await updateRun(buildCompletedProgressUpdate({ processedCount, totalCount, stats }));
         return;
       }
@@ -444,7 +569,7 @@ Deno.serve(async (req: Request) => {
       // ── 3. Upsert active markets ────────────────────────────────────────────
       for (const gm of activeMarkets) {
         try {
-          await upsertMarket(supabase, gm, 'open', autoShowAll, stats);
+          await upsertMarket(supabase, gm, 'open', autoShowAll, runId, stats);
         } catch (e: unknown) {
           stats.errors.push(`Error upserting active market ${gm.conditionId}: ${e instanceof Error ? e.message : String(e)}`);
         }
@@ -474,7 +599,7 @@ Deno.serve(async (req: Request) => {
 
       for (const gm of resolvedMarkets) {
         try {
-          await processResolvedMarket(supabase, gm, autoShowAll, stats);
+          await processResolvedMarket(supabase, gm, autoShowAll, runId, stats);
         } catch (e: unknown) {
           stats.errors.push(`Error processing resolved market ${gm.conditionId}: ${e instanceof Error ? e.message : String(e)}`);
         }
@@ -493,6 +618,7 @@ Deno.serve(async (req: Request) => {
         });
       }
 
+      await archiveResolvedMarkets(supabase, archiveAfterHours, stats);
       await updateRun(buildCompletedProgressUpdate({
         processedCount,
         totalCount,
@@ -522,6 +648,36 @@ Deno.serve(async (req: Request) => {
   }, 202);
 });
 
+async function archiveResolvedMarkets(
+  supabase: ReturnType<typeof createClient>,
+  archiveAfterHours: number,
+  stats: { errors: string[] },
+) {
+  const cutoffIso = buildArchiveCutoffIso({ archiveAfterHours });
+
+  const { error } = await supabase
+    .from('markets')
+    .update({ status: 'archived' })
+    .eq('status', 'resolved')
+    .lt('resolved_at', cutoffIso);
+
+  if (error) {
+    stats.errors.push(`Failed to archive resolved markets: ${error.message}`);
+  }
+}
+
+async function insertMarketDataDeltas(
+  supabase: ReturnType<typeof createClient>,
+  deltas: MarketDataDeltaInsert[],
+  stats: { errors: string[] },
+) {
+  if (deltas.length === 0) return;
+  const { error } = await supabase.from('market_data_deltas').insert(deltas);
+  if (error) {
+    stats.errors.push(`Failed to insert market data deltas: ${error.message}`);
+  }
+}
+
 // ─── upsertMarket ─────────────────────────────────────────────────────────────
 
 async function upsertMarket(
@@ -529,11 +685,13 @@ async function upsertMarket(
   gm: GammaMarket,
   status: 'open' | 'closed',
   autoShowAll: boolean,
+  runId: string,
   stats: { markets_synced: number; outcomes_updated: number; errors: string[] },
 ): Promise<void> {
+  const changedAt = new Date().toISOString();
   const { data: existing } = await supabase
     .from('markets')
-    .select('id, is_visible')
+    .select('id, is_visible, status')
     .eq('polymarket_id', gm.conditionId)
     .maybeSingle();
 
@@ -549,6 +707,10 @@ async function upsertMarket(
     volume:          parseFloat(String(gm.volume)) || 0,
     image_url:       gm.image ?? null,
     polymarket_slug: gm.slug ?? null,
+    polymarket_status_raw: buildPolymarketStatusRaw(gm),
+    last_synced_at:  changedAt,
+    source_updated_at: gm.updatedAt ?? null,
+    finalized_at: gm.resolved ? (gm.resolutionDate ?? changedAt) : null,
     ...(existing === null ? { is_visible: autoShowAll } : {}),
   };
 
@@ -560,7 +722,40 @@ async function upsertMarket(
   stats.markets_synced++;
 
   const marketId: string = existing?.id ?? await resolveMarketId(supabase, gm.conditionId);
-  await upsertOutcomes(supabase, marketId, gm, stats);
+  const deltas: MarketDataDeltaInsert[] = [];
+
+  if (existing === null) {
+    deltas.push(
+      buildMarketCreatedDelta({
+        marketId,
+        polymarketId: gm.conditionId,
+        runId,
+        changedAt,
+        payload: {
+          status: marketStatus,
+          question: gm.question,
+          close_at: gm.endDate ?? null,
+        },
+      }),
+    );
+  }
+
+  const statusDelta = buildMarketStatusDelta({
+    marketId,
+    polymarketId: gm.conditionId,
+    previousStatus: existing?.status ?? null,
+    nextStatus: marketStatus,
+    runId,
+    changedAt,
+  });
+
+  if (statusDelta) {
+    deltas.push(statusDelta);
+  }
+
+  const outcomeDeltas = await upsertOutcomes(supabase, marketId, gm, runId, stats);
+  deltas.push(...outcomeDeltas);
+  await insertMarketDataDeltas(supabase, deltas, stats);
 }
 
 /** Fetch the internal UUID for a market by polymarket_id. */
@@ -584,15 +779,26 @@ async function upsertOutcomes(
   supabase: ReturnType<typeof createClient>,
   marketId: string,
   gm: GammaMarket,
+  runId: string,
   stats: { outcomes_updated: number; errors: string[] },
-): Promise<void> {
+): Promise<MarketDataDeltaInsert[]> {
+  const changedAt = new Date().toISOString();
   const names      = parseJsonField<string[]>(gm.outcomes, []);
   const prices     = parseJsonField<string[]>(gm.outcomePrices, []);
   const tokenIds   = parseJsonField<string[]>(gm.clobTokenIds, []);
 
   if (names.length === 0) {
     stats.errors.push(`No outcomes for market ${gm.conditionId}`);
-    return;
+    return [];
+  }
+
+  const { data: existingOutcomes, error: existingErr } = await supabase
+    .from('market_outcomes')
+    .select('polymarket_token_id, price')
+    .eq('market_id', marketId);
+
+  if (existingErr) {
+    stats.errors.push(`Failed to load existing outcomes for ${gm.conditionId}: ${existingErr.message}`);
   }
 
   const rows = names.map((name, i) => {
@@ -602,13 +808,14 @@ async function upsertOutcomes(
       market_id:           marketId,
       polymarket_token_id: tokenIds[i] ?? null,
       name,
+      price: price > 0 ? price : 0.5,
       odds,
       effective_odds:      odds,
-      updated_at:          new Date().toISOString(),
+      updated_at:          changedAt,
     };
   }).filter((r) => r.polymarket_token_id !== null);
 
-  if (rows.length === 0) return;
+  if (rows.length === 0) return [];
 
   const { error } = await supabase.from('market_outcomes').upsert(rows, {
     onConflict: 'market_id,polymarket_token_id',
@@ -616,6 +823,24 @@ async function upsertOutcomes(
 
   if (error) throw new Error(`market_outcomes upsert: ${error.message}`);
   stats.outcomes_updated += rows.length;
+
+  const existingByToken = new Map<string, number | null>(
+    (existingOutcomes ?? [])
+      .filter((row) => row.polymarket_token_id)
+      .map((row) => [row.polymarket_token_id as string, row.price as number | null]),
+  );
+
+  return buildOutcomePriceDeltas({
+    marketId,
+    polymarketId: gm.conditionId,
+    runId,
+    changedAt,
+    existingByToken,
+    nextOutcomes: rows.map((row) => ({
+      tokenId: row.polymarket_token_id as string,
+      price: row.price as number,
+    })),
+  });
 }
 
 // ─── processResolvedMarket ────────────────────────────────────────────────────
@@ -624,11 +849,13 @@ async function processResolvedMarket(
   supabase: ReturnType<typeof createClient>,
   gm: GammaMarket,
   autoShowAll: boolean,
+  runId: string,
   stats: { markets_synced: number; outcomes_updated: number; markets_settled: number; errors: string[] },
 ): Promise<void> {
+  const changedAt = new Date().toISOString();
   const { data: existing } = await supabase
     .from('markets')
-    .select('id, status, is_visible')
+    .select('id, status, is_visible, winning_outcome_id')
     .eq('polymarket_id', gm.conditionId)
     .maybeSingle();
 
@@ -643,6 +870,10 @@ async function processResolvedMarket(
     volume:          parseFloat(String(gm.volume)) || 0,
     image_url:       gm.image ?? null,
     polymarket_slug: gm.slug ?? null,
+    polymarket_status_raw: buildPolymarketStatusRaw(gm),
+    last_synced_at:  changedAt,
+    source_updated_at: gm.updatedAt ?? null,
+    finalized_at: gm.resolutionDate ?? changedAt,
     ...(existing === null ? { is_visible: autoShowAll } : {}),
   };
 
@@ -654,7 +885,39 @@ async function processResolvedMarket(
   stats.markets_synced++;
 
   const marketId: string = existing?.id ?? await resolveMarketId(supabase, gm.conditionId);
-  await upsertOutcomes(supabase, marketId, gm, stats);
+  const deltas: MarketDataDeltaInsert[] = [];
+  if (existing === null) {
+    deltas.push(
+      buildMarketCreatedDelta({
+        marketId,
+        polymarketId: gm.conditionId,
+        runId,
+        changedAt,
+        payload: {
+          status: 'closed',
+          question: gm.question,
+          close_at: gm.endDate ?? null,
+        },
+      }),
+    );
+  }
+
+  const statusDelta = buildMarketStatusDelta({
+    marketId,
+    polymarketId: gm.conditionId,
+    previousStatus: existing?.status ?? null,
+    nextStatus: 'closed',
+    runId,
+    changedAt,
+  });
+
+  if (statusDelta) {
+    deltas.push(statusDelta);
+  }
+
+  const outcomeDeltas = await upsertOutcomes(supabase, marketId, gm, runId, stats);
+  deltas.push(...outcomeDeltas);
+  await insertMarketDataDeltas(supabase, deltas, stats);
 
   const winnerTokenId = await resolveWinnerTokenId({
     market: gm,
@@ -685,6 +948,19 @@ async function processResolvedMarket(
     });
 
   if (settleErr) throw new Error(`settle_market RPC failed: ${settleErr.message}`);
+
+  await insertMarketDataDeltas(
+    supabase,
+    [buildMarketResolvedDelta({
+      marketId,
+      polymarketId: gm.conditionId,
+      runId,
+      changedAt,
+      previousWinningOutcomeId: existing?.winning_outcome_id ?? null,
+      winningOutcomeId: winnerOutcome.id,
+    })],
+    stats,
+  );
 
   console.log(`Settled market ${gm.conditionId}:`, settlementResult);
   stats.markets_settled++;

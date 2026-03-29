@@ -61,6 +61,18 @@ export const UserLayout = () => {
               >
                 {t('nav.wallet')}
               </NavLink>
+              <NavLink
+                to={ROUTES.USER.STATS}
+                className={({ isActive }) =>
+                  `px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'bg-gray-700 text-white'
+                      : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                  }`
+                }
+              >
+                {t('nav.stats')}
+              </NavLink>
             </nav>
           </div>
 

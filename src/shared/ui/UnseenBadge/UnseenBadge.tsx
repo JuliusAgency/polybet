@@ -7,25 +7,17 @@ export const UnseenBadge = ({ count }: UnseenBadgeProps) => {
 
   return (
     <span
-      className="animate-pulse"
+      className=""
       style={{
         position: 'absolute',
-        top: '-6px',
-        insetInlineEnd: '-8px',
-        minWidth: '18px',
-        height: '18px',
-        padding: '0 4px',
-        borderRadius: '9px',
+        top: '-2px',
+        insetInlineEnd: '-4px',
+        width: '7px',
+        height: '7px',
+        borderRadius: '50%',
         backgroundColor: 'var(--color-loss)',
-        color: '#fff',
-        fontSize: '11px',
-        fontWeight: 700,
-        lineHeight: '18px',
-        textAlign: 'center',
         pointerEvents: 'none',
       }}
-    >
-      {count > 99 ? '99+' : count}
-    </span>
+    />
   );
 };

@@ -4,7 +4,7 @@
  *         markets, market_outcomes, bets, balance_transactions, system_settings, sync_runs
  */
 
-export type MarketStatus = 'open' | 'closed' | 'resolved';
+export type MarketStatus = 'open' | 'closed' | 'resolved' | 'archived';
 export type BetStatus = 'open' | 'won' | 'lost' | 'cancelled';
 export type TransactionType = 'mint' | 'transfer' | 'bet_lock' | 'bet_payout' | 'adjustment';
 export type SyncRunStatus = 'running' | 'completed' | 'completed_with_warnings' | 'failed';
@@ -49,8 +49,12 @@ export interface DbMarket {
   question: string;
   category: string | null;
   status: MarketStatus;
+  polymarket_status_raw: string | null;
   close_at: string | null;
   resolved_at: string | null;
+  finalized_at: string | null;
+  last_synced_at: string | null;
+  source_updated_at: string | null;
   winning_outcome_id: string | null;
   created_at: string;
 }
@@ -58,7 +62,9 @@ export interface DbMarket {
 export interface DbMarketOutcome {
   id: string;
   market_id: string;
+  polymarket_token_id: string | null;
   name: string;
+  price: number | null;
   odds: number;
   effective_odds: number;
   updated_at: string;
@@ -111,4 +117,46 @@ export interface DbSyncRun {
   started_at: string;
   updated_at: string;
   finished_at: string | null;
+}
+
+export interface DbMarketDataDelta {
+  id: string;
+  market_id: string;
+  outcome_id: string | null;
+  polymarket_id: string;
+  polymarket_token_id: string | null;
+  event_type: 'market_created' | 'status_changed' | 'outcome_price_changed' | 'market_resolved';
+  old_value: string | null;
+  new_value: string | null;
+  run_id: string | null;
+  changed_at: string;
+  created_at: string;
+}
+
+export interface SystemKpi {
+  total_points_in_system: number;
+  open_exposure: number;
+  system_profit: number;
+  active_markets: number;
+  resolved_markets: number;
+  archived_markets: number;
+  total_users: number;
+  total_managers: number;
+}
+
+export interface ManagerGroupStats {
+  manager_id: string;
+  manager_username: string;
+  manager_full_name: string;
+  group_open_exposure: number;
+  group_pnl: number;
+  group_turnover: number;
+}
+
+export interface UserStats {
+  turnover: number;
+  open_exposure: number;
+  net_pnl: number;
+  win_rate: number;
+  settled_bets: number;
 }

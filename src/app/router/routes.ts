@@ -21,6 +21,7 @@ export const ROUTES = {
     MARKETS: '/markets',
     WALLET: '/wallet',
     MY_BETS: '/my-bets',
+    STATS: '/stats',
   },
 } as const;
 

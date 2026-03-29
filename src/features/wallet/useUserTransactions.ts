@@ -6,9 +6,10 @@ import { useAuth } from '@/shared/hooks/useAuth';
 export interface UserTransaction {
   id: string;
   created_at: string;
-  type: 'adjustment' | 'transfer';
+  type: 'mint' | 'transfer' | 'bet_lock' | 'bet_payout' | 'adjustment';
   amount: number;
   balance_after: number;
+  bet_id: string | null;
   note: string | null;
 }
 
@@ -29,9 +30,8 @@ export function useUserTransactions({ startDate, endDate }: UseUserTransactionsP
 
       let query = supabase
         .from('balance_transactions')
-        .select('id, created_at, type, amount, balance_after, note')
+        .select('id, created_at, type, amount, balance_after, bet_id, note')
         .eq('user_id', session.user.id)
-        .in('type', ['adjustment', 'transfer'])
         .order('created_at', { ascending: false });
 
       if (startDate) {

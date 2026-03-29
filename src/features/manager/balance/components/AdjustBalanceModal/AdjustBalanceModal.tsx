@@ -1,9 +1,7 @@
-import { useState, useEffect, useRef, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal } from '@/shared/ui/Modal';
-import { Input } from '@/shared/ui/Input';
-import { Button } from '@/shared/ui/Button';
-import { useManagerAdjustBalance } from '@/features/manager/balance';
+import { Button, Input, Modal } from '@/shared/ui';
+import { useManagerAdjustBalance } from '../../useManagerAdjustBalance';
 
 interface AdjustBalanceModalProps {
   isOpen: boolean;
@@ -21,17 +19,13 @@ export const AdjustBalanceModal = ({
   type,
 }: AdjustBalanceModalProps) => {
   const { t } = useTranslation();
-
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
   const [amountError, setAmountError] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
-
   const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const mutation = useManagerAdjustBalance();
 
-  // Cleanup success timer on unmount
   useEffect(() => {
     return () => {
       if (successTimerRef.current !== null) {
@@ -40,7 +34,8 @@ export const AdjustBalanceModal = ({
     };
   }, []);
 
-  // Reset form when modal is closed
+  // Reset local form state only when modal visibility changes.
+  // Depending on the whole mutation object can cause a render loop.
   useEffect(() => {
     if (!isOpen) {
       setAmount('');
@@ -53,28 +48,28 @@ export const AdjustBalanceModal = ({
         successTimerRef.current = null;
       }
     }
-  }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
-  const validate = (): boolean => {
-    const parsed = parseFloat(amount);
-    if (!amount.trim() || isNaN(parsed) || parsed <= 0) {
+  const validate = () => {
+    const parsed = Number.parseFloat(amount);
+    if (!amount.trim() || Number.isNaN(parsed) || parsed <= 0) {
       setAmountError(t('treasury.amountError'));
       return false;
     }
+
     setAmountError('');
     return true;
   };
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     if (!validate()) return;
-
-    const parsed = parseFloat(amount);
 
     mutation.mutate(
       {
         targetUserId: userId,
-        amount: parsed,
+        amount: Number.parseFloat(amount),
         type,
         note: note.trim(),
       },
@@ -86,7 +81,7 @@ export const AdjustBalanceModal = ({
             onClose();
           }, 2000);
         },
-      }
+      },
     );
   };
 
@@ -101,8 +96,6 @@ export const AdjustBalanceModal = ({
       : null;
 
   const isSubmitting = mutation.isPending;
-
-  // Prevent dismissal while mutation is in-flight to avoid unknown balance state
   const handleClose = isSubmitting ? () => {} : onClose;
 
   return (
@@ -123,8 +116,8 @@ export const AdjustBalanceModal = ({
               min="0.01"
               step="0.01"
               value={amount}
-              onChange={(e) => {
-                setAmount(e.target.value);
+              onChange={(event) => {
+                setAmount(event.target.value);
                 if (amountError) setAmountError('');
               }}
               disabled={isSubmitting}
@@ -134,7 +127,7 @@ export const AdjustBalanceModal = ({
             <Input
               label={t('treasury.note')}
               value={note}
-              onChange={(e) => setNote(e.target.value)}
+              onChange={(event) => setNote(event.target.value)}
               disabled={isSubmitting}
             />
 
@@ -158,7 +151,11 @@ export const AdjustBalanceModal = ({
                 {t('common.cancel')}
               </Button>
               <Button variant="primary" type="submit" disabled={isSubmitting}>
-                {isSubmitting ? t('common.saving') : type === 'deposit' ? t('treasury.deposit') : t('treasury.withdraw')}
+                {isSubmitting
+                  ? t('common.saving')
+                  : type === 'deposit'
+                    ? t('treasury.deposit')
+                    : t('treasury.withdraw')}
               </Button>
             </div>
           </div>
