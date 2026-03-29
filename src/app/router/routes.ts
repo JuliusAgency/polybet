@@ -5,6 +5,7 @@ export const ROUTES = {
     DASHBOARD: '/admin/dashboard',
     MANAGERS: '/admin/managers',
     MANAGER_PROFILE: '/admin/managers/:id',
+    MARKETS: '/admin/markets',
     BET_LOG: '/admin/bets-log',
     TEST_LAB: '/admin/test-lab',
   },
@@ -12,6 +13,7 @@ export const ROUTES = {
   MANAGER: {
     USERS: '/manager/users',
     USER_PROFILE: '/manager/users/:id',
+    MARKETS: '/manager/markets',
     TREASURY: '/manager/treasury',
     REPORTS: '/manager/reports',
     ACTIVITY: '/manager/activity',

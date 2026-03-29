@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { RoleGuard } from './RoleGuard';
 import { ROUTES } from './routes';
 import UsersManagementPage from '@/pages/manager/UsersManagementPage/UsersManagementPage';
+import ManagerMarketsPage from '@/pages/manager/MarketsPage/MarketsPage';
 import UserActivityPage from '@/pages/manager/UserActivityPage/UserActivityPage';
 import TreasuryPage from '@/pages/manager/TreasuryPage/TreasuryPage';
 import ReportsPage from '@/pages/manager/ReportsPage/ReportsPage';
@@ -21,6 +22,7 @@ const SignInPage = lazy(() => import('@/pages/auth/SignInPage'));
 const AgentsDashboardPage = lazy(() => import('@/pages/super-admin/AgentsDashboardPage'));
 const ManagersManagementPage = lazy(() => import('@/pages/super-admin/ManagersManagementPage'));
 const ManagerProfilePage = lazy(() => import('@/pages/super-admin/ManagerProfilePage'));
+const AdminMarketsPage = lazy(() => import('@/pages/super-admin/MarketsPage'));
 const GlobalBetLogPage = lazy(() => import('@/pages/super-admin/GlobalBetLogPage'));
 const TestLabPage = lazy(() => import('@/pages/super-admin/TestLabPage').then((m) => ({ default: m.TestLabPage })));
 
@@ -80,6 +82,7 @@ export const Router = () => {
             <Route path="dashboard" element={<AgentsDashboardPage />} />
             <Route path="managers" element={<ManagersManagementPage />} />
             <Route path="managers/:id" element={<ManagerProfilePage />} />
+            <Route path="markets" element={<AdminMarketsPage />} />
             <Route path="bets-log" element={<GlobalBetLogPage />} />
             <Route path="test-lab" element={<TestLabPage />} />
             <Route path="*" element={<Navigate to={ROUTES.ADMIN.DASHBOARD} replace />} />
@@ -95,6 +98,7 @@ export const Router = () => {
             }
           >
             <Route index element={<Navigate to={ROUTES.MANAGER.USERS} replace />} />
+            <Route path="markets" element={<ManagerMarketsPage />} />
             <Route path="users" element={<UsersManagementPage />} />
             <Route path="users/:id" element={<UserActivityPage />} />
             <Route path="treasury" element={<TreasuryPage />} />

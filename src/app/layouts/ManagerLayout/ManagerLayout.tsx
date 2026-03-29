@@ -21,6 +21,18 @@ export const ManagerLayout = () => {
 
         <nav className="flex-1 px-4 py-6 space-y-1">
           <NavLink
+            to={ROUTES.MANAGER.MARKETS}
+            className={({ isActive }) =>
+              `block px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                isActive
+                  ? 'bg-gray-700 text-white'
+                  : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+              }`
+            }
+          >
+            {t('nav.markets')}
+          </NavLink>
+          <NavLink
             to={ROUTES.MANAGER.USERS}
             className={({ isActive }) =>
               `block px-3 py-2 rounded-md text-sm font-medium transition-colors ${
