@@ -28,6 +28,13 @@ test('manager profile page separates manager identity from managed users and exp
   assert.doesNotMatch(pageSource, /\{manager && \([\s\S]*<table className="w-full text-sm">[\s\S]*managerProfile\.managedUsersSectionTitle/s);
 });
 
+test('manager profile bet limit handlers do not rethrow mutation errors after showing feedback', () => {
+  assert.match(pageSource, /showTransientFeedback\(setActionFeedback,\s*t\('managerProfile\.managerLimitUpdatedSuccess'\)\)/);
+  assert.match(pageSource, /showTransientFeedback\(setActionFeedback,\s*t\('managerProfile\.userLimitUpdatedSuccess'\)\)/);
+  assert.doesNotMatch(pageSource, /managerLimit(?:Updated|Cleared)Success'\)\);[\s\S]*throw err;/);
+  assert.doesNotMatch(pageSource, /userLimit(?:Updated|Cleared)Success'\)\);[\s\S]*throw err;/);
+});
+
 test('manager profile translations define the split IA and effective limit copy in English and Hebrew', () => {
   for (const source of [enSource, heSource]) {
     assert.match(source, /"managerSectionTitle"\s*:/);

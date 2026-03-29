@@ -511,7 +511,6 @@ export const ManagerProfilePage = () => {
         err instanceof Error ? err.message : t('common.unknownError'),
         true,
       );
-      throw err;
     } finally {
       setPendingLimitTarget(null);
     }
@@ -530,7 +529,6 @@ export const ManagerProfilePage = () => {
         err instanceof Error ? err.message : t('common.unknownError'),
         true,
       );
-      throw err;
     } finally {
       setPendingLimitTarget(null);
     }
@@ -547,7 +545,6 @@ export const ManagerProfilePage = () => {
         err instanceof Error ? err.message : t('common.unknownError'),
         true,
       );
-      throw err;
     } finally {
       setPendingLimitTarget(null);
     }
@@ -564,7 +561,6 @@ export const ManagerProfilePage = () => {
         err instanceof Error ? err.message : t('common.unknownError'),
         true,
       );
-      throw err;
     } finally {
       setPendingLimitTarget(null);
     }
