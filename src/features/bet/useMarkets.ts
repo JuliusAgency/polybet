@@ -8,6 +8,7 @@ export interface MarketOutcome {
   price: number | null;
   odds: number;
   effective_odds: number;
+  updated_at: string;
   polymarket_token_id: string | null;
 }
 
@@ -34,7 +35,7 @@ export function useMarkets() {
       const { data, error } = await supabase
         .from('markets')
         .select(
-          'id, polymarket_id, question, status, winning_outcome_id, category, image_url, close_at, last_synced_at, volume, market_outcomes!market_outcomes_market_id_fkey(id, name, price, odds, effective_odds, polymarket_token_id)',
+          'id, polymarket_id, question, status, winning_outcome_id, category, image_url, close_at, last_synced_at, volume, market_outcomes!market_outcomes_market_id_fkey(id, name, price, odds, effective_odds, updated_at, polymarket_token_id)',
         )
         .in('status', ['open', 'closed', 'resolved'])
         .eq('is_visible', true)
