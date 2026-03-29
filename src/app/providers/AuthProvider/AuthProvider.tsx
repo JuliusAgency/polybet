@@ -25,6 +25,13 @@ interface LoadedProfileHandlers {
     setRole: (role: Role | null) => void;
 }
 
+interface BootstrapAuthHandlers extends LoadedProfileHandlers {
+    setSession: (session: AuthContextValue['session']) => void;
+    setUser: (user: AuthContextValue['user']) => void;
+    setLoading: (loading: boolean) => void;
+    resetForceSignOut: () => void;
+}
+
 interface ForceSignOutController {
     forceSignOut: () => Promise<void>;
     resetForceSignOut: () => void;
@@ -117,6 +124,29 @@ export const loadProfileFromSupabase = async (
     }
 };
 
+export const bootstrapAuthState = async (
+    client: Pick<SupabaseClientLike, 'auth' | 'from'>,
+    handlers: BootstrapAuthHandlers
+) => {
+    try {
+        const {
+            data: { session: currentSession },
+        } = await client.auth.getSession();
+
+        handlers.setSession(currentSession);
+        handlers.setUser(currentSession?.user ?? null);
+
+        if (currentSession?.user) {
+            handlers.resetForceSignOut();
+            await loadProfileFromSupabase(client, currentSession.user.id, handlers);
+        }
+    } catch (error) {
+        console.error('[Auth] Failed to get initial session:', error);
+    } finally {
+        handlers.setLoading(false);
+    }
+};
+
 export const AuthProvider = ({ children }: AuthProviderProps) => {
     const [user, setUser] = useState<AuthContextValue['user']>(null);
     const [session, setSession] = useState<AuthContextValue['session']>(null);
@@ -146,62 +176,88 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     );
 
     useEffect(() => {
+        void (async () => {
+            const supabase = await getSupabase();
+            await bootstrapAuthState(supabase, {
+                forceSignOut,
+                resetForceSignOut,
+                setLoading,
+                setProfile,
+                setRole,
+                setSession,
+                setUser,
+            });
+        })();
+    }, [forceSignOut, resetForceSignOut]);
+
+    // Force-logout when is_active is set to false while user is in session
+    useEffect(() => {
+        if (!user) return;
+
+        let channel: unknown;
+        let active = true;
+
+        void (async () => {
+            const supabase = await getSupabase();
+            if (!active) return;
+
+            channel = supabase
+                .channel(`profile-block-${user.id}`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'UPDATE',
+                        schema: 'public',
+                        table: 'profiles',
+                        filter: `id=eq.${user.id}`,
+                    },
+                    (payload) => {
+                        const updated = payload.new as { is_active: boolean };
+                        if (updated.is_active === false) {
+                            void forceSignOut();
+                        }
+                    },
+                )
+                .subscribe();
+        })();
+
+        return () => {
+            active = false;
+            if (channel) {
+                void (async () => {
+                    const supabase = await getSupabase();
+                    await supabase.removeChannel(channel);
+                })();
+            }
+        };
+    }, [forceSignOut, user]);
+
+    useEffect(() => {
         let active = true;
         let subscription: { unsubscribe: () => void } | null = null;
 
-        const getInitialSession = async () => {
-            try {
-                const supabase = await getSupabase();
-                if (!active) return;
+        void (async () => {
+            const supabase = await getSupabase();
+            if (!active) return;
 
-                const {
-                    data: { session: currentSession },
-                } = await supabase.auth.getSession();
+            const {
+                data: { subscription: authSubscription },
+            } = supabase.auth.onAuthStateChange((_event, newSession) => {
+                setSession(newSession);
+                setUser(newSession?.user ?? null);
 
-                setSession(currentSession);
-                setUser(currentSession?.user ?? null);
-
-                if (currentSession?.user) {
+                if (newSession?.user) {
                     resetForceSignOut();
-                    await loadProfile(currentSession.user.id);
-                }
-            } catch (error) {
-                console.error('[Auth] Failed to get initial session:', error);
-            } finally {
-                if (active) {
+                    loadProfile(newSession.user.id).finally(() => setLoading(false));
+                } else {
+                    resetForceSignOut();
+                    setProfile(null);
+                    setRole(null);
                     setLoading(false);
                 }
-            }
-        };
+            });
 
-        void getInitialSession();
-
-        void (async () => {
-            try {
-                const supabase = await getSupabase();
-                if (!active) return;
-
-                const {
-                    data: { subscription: authSubscription },
-                } = supabase.auth.onAuthStateChange((_event, newSession) => {
-                    setSession(newSession);
-                    setUser(newSession?.user ?? null);
-
-                    if (newSession?.user) {
-                        resetForceSignOut();
-                        loadProfile(newSession.user.id).finally(() => setLoading(false));
-                    } else {
-                        resetForceSignOut();
-                        setProfile(null);
-                        setRole(null);
-                        setLoading(false);
-                    }
-                });
-
-                subscription = authSubscription;
-            } catch (error) {
-                console.error('[Auth] Failed to subscribe to auth state:', error);
-            }
+            subscription = authSubscription;
         })();
 
         return () => {
@@ -209,50 +265,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             subscription?.unsubscribe();
         };
     }, [loadProfile, resetForceSignOut]);
-
-    // Force-logout when is_active is set to false while user is in session
-    useEffect(() => {
-        if (!user) return;
-
-        let active = true;
-        let channel: unknown;
-        let supabase: SupabaseClientLike | null = null;
-
-        void (async () => {
-            try {
-                supabase = await getSupabase();
-                if (!active) return;
-
-                channel = supabase
-                    .channel(`profile-block-${user.id}`)
-                    .on(
-                        'postgres_changes',
-                        {
-                            event: 'UPDATE',
-                            schema: 'public',
-                            table: 'profiles',
-                            filter: `id=eq.${user.id}`,
-                        },
-                        (payload) => {
-                            const updated = payload.new as { is_active: boolean };
-                            if (updated.is_active === false) {
-                                void forceSignOut();
-                            }
-                        },
-                    )
-                    .subscribe();
-            } catch (error) {
-                console.error('[Auth] Failed to subscribe to profile revocation channel:', error);
-            }
-        })();
-
-        return () => {
-            active = false;
-            if (channel && supabase) {
-                void supabase.removeChannel(channel);
-            }
-        };
-    }, [forceSignOut, user]);
 
     const signIn = useCallback(async ({ username, password }: SignInCredentials) => {
         const email = `${username}@polybet.internal`;
