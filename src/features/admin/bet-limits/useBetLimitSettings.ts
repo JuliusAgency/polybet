@@ -19,6 +19,7 @@ interface ManagerLimitRow {
 }
 
 interface ManagerUserLinkRow {
+  manager_id?: string;
   user_id: string;
 }
 
@@ -194,6 +195,7 @@ const fetchBetLimitSettings = async (managerId: string): Promise<BetLimitSetting
 
   const links = (linkData as ManagerUserLinkRow[] | null) ?? [];
   const userIds = links.map((link) => link.user_id);
+  const managerFloorByUserId = new Map<string, number | null>();
 
   let users: UserBetLimitRecord[] = [];
 
@@ -213,6 +215,51 @@ const fetchBetLimitSettings = async (managerId: string): Promise<BetLimitSetting
         maxBetLimit: normalizePositiveLimit(user.max_bet_limit),
       }))
       .sort((left, right) => left.userId.localeCompare(right.userId));
+
+    const { data: allLinkData, error: allLinkError } = await supabase
+      .from('manager_user_links')
+      .select('user_id, manager_id')
+      .in('user_id', userIds);
+
+    if (allLinkError) throw new Error(allLinkError.message);
+
+    const allLinks = (allLinkData as ManagerUserLinkRow[] | null) ?? [];
+    const linkedManagerIds = Array.from(
+      new Set(
+        allLinks
+          .map((link) => link.manager_id)
+          .filter((linkedManagerId): linkedManagerId is string => !!linkedManagerId),
+      ),
+    );
+
+    if (linkedManagerIds.length > 0) {
+      const { data: linkedManagerData, error: linkedManagerError } = await supabase
+        .from('managers')
+        .select('id, max_bet_limit')
+        .in('id', linkedManagerIds);
+
+      if (linkedManagerError) throw new Error(linkedManagerError.message);
+
+      const managerLimitById = new Map<string, number | null>(
+        ((linkedManagerData as ManagerLimitRow[] | null) ?? []).map((linkedManager) => [
+          linkedManager.id,
+          normalizePositiveLimit(linkedManager.max_bet_limit),
+        ]),
+      );
+
+      for (const link of allLinks) {
+        if (!link.manager_id) continue;
+
+        const managerLimit = managerLimitById.get(link.manager_id) ?? null;
+        if (managerLimit == null) continue;
+
+        const currentFloor = managerFloorByUserId.get(link.user_id) ?? null;
+        managerFloorByUserId.set(
+          link.user_id,
+          currentFloor == null ? managerLimit : Math.min(currentFloor, managerLimit),
+        );
+      }
+    }
   }
 
   return {
@@ -228,7 +275,11 @@ const fetchBetLimitSettings = async (managerId: string): Promise<BetLimitSetting
         ? deriveManagerEffectiveLimit(manager.managerId, manager.maxBetLimit, globalMaxBetLimit)
         : null,
       users: users.map((user) =>
-        deriveUserEffectiveLimit(user, manager?.maxBetLimit ?? null, globalMaxBetLimit),
+        deriveUserEffectiveLimit(
+          user,
+          managerFloorByUserId.get(user.userId) ?? null,
+          globalMaxBetLimit,
+        ),
       ),
     },
   };
