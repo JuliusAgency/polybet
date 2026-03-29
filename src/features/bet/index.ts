@@ -9,3 +9,6 @@ export type { PlaceBetInput } from './usePlaceBet';
 
 export { useMyBets } from './useMyBets';
 export type { MyBet } from './useMyBets';
+
+export { useBetResultNotifications } from './useBetResultNotifications';
+export { useUnseenBetsCount } from './useUnseenBetsCount';
