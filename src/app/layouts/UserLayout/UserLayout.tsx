@@ -3,12 +3,19 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { ROUTES } from '@/app/router/routes';
 import { LanguageSwitcher } from '@/shared/ui/LanguageSwitcher';
+import { UnseenBadge } from '@/shared/ui/UnseenBadge';
 import { useUserBalance } from '@/features/bet';
+import { useBetResultNotifications } from '@/features/bet/useBetResultNotifications';
+import { useUnseenBetsCount } from '@/features/bet/useUnseenBetsCount';
 
 export const UserLayout = () => {
   const { t } = useTranslation();
   const { profile, signOut } = useAuth();
   const { data: balance } = useUserBalance();
+
+  // Mount globally so notifications fire on any page
+  useBetResultNotifications();
+  const unseenCount = useUnseenBetsCount();
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 flex flex-col">
@@ -34,7 +41,7 @@ export const UserLayout = () => {
               <NavLink
                 to={ROUTES.USER.MY_BETS}
                 className={({ isActive }) =>
-                  `px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  `relative px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                     isActive
                       ? 'bg-gray-700 text-white'
                       : 'text-gray-400 hover:bg-gray-800 hover:text-white'
@@ -42,6 +49,7 @@ export const UserLayout = () => {
                 }
               >
                 {t('nav.myBets')}
+                <UnseenBadge count={unseenCount} />
               </NavLink>
               <NavLink
                 to={ROUTES.USER.WALLET}
@@ -58,7 +66,7 @@ export const UserLayout = () => {
             </nav>
           </div>
 
-          {/* Right: balance placeholder + sign out */}
+          {/* Right: balance + sign out */}
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-400">
               {profile?.username ?? ''}
