@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/shared/api/supabase';
 import { useAuth } from '@/shared/hooks/useAuth';
 import type { MyBet } from './useMyBets';
@@ -8,6 +9,7 @@ import type { MyBet } from './useMyBets';
 export function useBetResultNotifications() {
   const { session } = useAuth();
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const userId = session?.user.id;
   // Tracks bet IDs already settled before this session — no toast for those
   const seenIds = useRef<Set<string>>(new Set());
@@ -17,6 +19,9 @@ export function useBetResultNotifications() {
 
   useEffect(() => {
     isMounted.current = true;
+    // Reset on user change (e.g. sign-out + sign-in without page reload)
+    seenIds.current = new Set();
+    initialized.current = false;
 
     if (!userId) return;
 
@@ -52,11 +57,14 @@ export function useBetResultNotifications() {
           }
 
           seenIds.current.add(newRow.id);
+          // Also invalidate the unseen count so the badge updates immediately
+          void queryClient.invalidateQueries({ queryKey: ['user', 'unseen-bets-count', userId] });
 
           // stake and potential_payout are already in the payload — only need
           // the join columns (market question, outcome name) from a second fetch
-          const stake = newRow.stake.toFixed(2);
-          const payout = newRow.potential_payout.toFixed(2);
+          // Defensive null-coalescing: realtime payloads are untyped at runtime
+          const stake = (newRow.stake ?? 0).toFixed(2);
+          const payout = (newRow.potential_payout ?? 0).toFixed(2);
           const status = newRow.status;
 
           void supabase
@@ -89,5 +97,5 @@ export function useBetResultNotifications() {
       void supabase.removeChannel(channel);
       initialized.current = false;
     };
-  }, [userId, t]);
+  }, [userId, t, queryClient]);
 }
