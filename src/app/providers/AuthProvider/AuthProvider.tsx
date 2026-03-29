@@ -222,7 +222,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
                         table: 'profiles',
                         filter: `id=eq.${user.id}`,
                     },
-                    (payload) => {
+                    (payload: { new: { is_active: boolean } }) => {
                         const updated = payload.new as { is_active: boolean };
                         if (updated.is_active === false) {
                             void forceSignOut();
@@ -253,7 +253,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
             const {
                 data: { subscription: authSubscription },
-            } = supabase.auth.onAuthStateChange((_event, newSession) => {
+            } = supabase.auth.onAuthStateChange((_event: string, newSession: AuthContextValue['session']) => {
                 setSession(newSession);
                 setUser(newSession?.user ?? null);
 
