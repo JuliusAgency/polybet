@@ -230,7 +230,8 @@
     "totalWagered": "Total Wagered",
     "totalWon": "Total Payout",
     "pnl": "P&L",
-    "markAllSeen": "Mark {{count}} result(s) as seen"
+    "markAllSeen": "Mark {{count}} result(s) as seen",
+    "markAllSeenError": "Failed to mark bets as seen"
   },
   "wallet": {
     "title": "Wallet",

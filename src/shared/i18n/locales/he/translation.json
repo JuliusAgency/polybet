@@ -230,7 +230,8 @@
     "totalWagered": "סך ההימורים",
     "totalWon": "סך קבלות",
     "pnl": "רווח/הפסד",
-    "markAllSeen": "סמן {{count}} תוצאות כנצפו"
+    "markAllSeen": "סמן {{count}} תוצאות כנצפו",
+    "markAllSeenError": "שגיאה בסימון הימורים כנצפו"
   },
   "wallet": {
     "title": "ארנק",

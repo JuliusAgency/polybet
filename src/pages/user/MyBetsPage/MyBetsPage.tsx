@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { useMyBets, useUnseenBetsCount, type MyBet } from '@/features/bet';
 import { Badge } from '@/shared/ui/Badge';
 import { supabase } from '@/shared/api/supabase';
@@ -74,6 +75,10 @@ const MyBetsPage = () => {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['user', 'unseen-bets-count', session?.user.id] });
       void queryClient.invalidateQueries({ queryKey: ['user', 'bets', session?.user.id] });
+      setActiveTab('history');
+    },
+    onError: () => {
+      toast.error(t('myBets.markAllSeenError'));
     },
   });
 
