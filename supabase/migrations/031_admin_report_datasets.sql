@@ -135,6 +135,15 @@ SET search_path = public
 AS $$
   WITH _guard AS (
     SELECT admin_require_super_admin()
+  ),
+  manager_linked_users AS (
+    SELECT DISTINCT mul.user_id
+    FROM manager_user_links mul
+  ),
+  manager_linked_bets AS (
+    SELECT DISTINCT b.id, b.user_id, b.stake, b.potential_payout, b.status, b.placed_at, b.settled_at
+    FROM bets b
+    JOIN manager_linked_users mlu ON mlu.user_id = b.user_id
   )
   SELECT jsonb_build_object(
     'summary', jsonb_build_object(
@@ -144,33 +153,30 @@ AS $$
         WHERE m.role = 'manager'
       ), 0),
       'group_turnover', COALESCE((
-        SELECT SUM(b.stake)
-        FROM bets b
-        JOIN manager_user_links mul ON mul.user_id = b.user_id
-        WHERE (p_started_at IS NULL OR b.placed_at >= p_started_at)
-          AND (p_ended_at IS NULL OR b.placed_at <= p_ended_at)
+        SELECT SUM(mlb.stake)
+        FROM manager_linked_bets mlb
+        WHERE (p_started_at IS NULL OR mlb.placed_at >= p_started_at)
+          AND (p_ended_at IS NULL OR mlb.placed_at <= p_ended_at)
       ), 0),
       'group_pnl', COALESCE((
         SELECT SUM(
           CASE
-            WHEN b.status = 'won' THEN b.potential_payout - b.stake
-            WHEN b.status = 'lost' THEN -b.stake
+            WHEN mlb.status = 'won' THEN mlb.potential_payout - mlb.stake
+            WHEN mlb.status = 'lost' THEN -mlb.stake
             ELSE 0
           END
         )
-        FROM bets b
-        JOIN manager_user_links mul ON mul.user_id = b.user_id
-        WHERE b.settled_at IS NOT NULL
-          AND (p_started_at IS NULL OR b.settled_at >= p_started_at)
-          AND (p_ended_at IS NULL OR b.settled_at <= p_ended_at)
+        FROM manager_linked_bets mlb
+        WHERE mlb.settled_at IS NOT NULL
+          AND (p_started_at IS NULL OR mlb.settled_at >= p_started_at)
+          AND (p_ended_at IS NULL OR mlb.settled_at <= p_ended_at)
       ), 0),
       'open_exposure', COALESCE((
-        SELECT SUM(b.stake)
-        FROM bets b
-        JOIN manager_user_links mul ON mul.user_id = b.user_id
-        WHERE b.status = 'open'
-          AND (p_started_at IS NULL OR b.placed_at >= p_started_at)
-          AND (p_ended_at IS NULL OR b.placed_at <= p_ended_at)
+        SELECT SUM(mlb.stake)
+        FROM manager_linked_bets mlb
+        WHERE mlb.status = 'open'
+          AND (p_started_at IS NULL OR mlb.placed_at >= p_started_at)
+          AND (p_ended_at IS NULL OR mlb.placed_at <= p_ended_at)
       ), 0)
     ),
     'rows', COALESCE((

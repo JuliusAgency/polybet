@@ -57,3 +57,39 @@ test('admin report datasets migration keeps dataset output deterministic and fil
   assert.match(sql, /p_started_at IS NULL OR [^\n]+ >= p_started_at/i);
   assert.match(sql, /p_ended_at IS NULL OR [^\n]+ <= p_ended_at/i);
 });
+
+test('managers performance summary uses a dedupe-safe manager-linked population', () => {
+  const sql = readFileSync(migrationFile, 'utf8');
+  const managersPerformanceMatch = sql.match(
+    /CREATE OR REPLACE FUNCTION admin_build_managers_performance_report_dataset[\s\S]*?\$\$;/i,
+  );
+
+  assert.ok(managersPerformanceMatch, 'managers performance helper definition should exist');
+
+  const managersPerformanceSql = managersPerformanceMatch[0];
+
+  assert.match(
+    managersPerformanceSql,
+    /manager_linked_users AS \(\s*SELECT DISTINCT mul\.user_id/i,
+  );
+  assert.match(
+    managersPerformanceSql,
+    /manager_linked_bets AS \(\s*SELECT DISTINCT b\.id,\s*b\.user_id/i,
+  );
+  assert.match(
+    managersPerformanceSql,
+    /FROM bets b\s+JOIN manager_linked_users mlu ON mlu\.user_id = b\.user_id/i,
+  );
+  assert.doesNotMatch(
+    managersPerformanceSql,
+    /'group_turnover'[\s\S]*?JOIN manager_user_links mul ON mul\.user_id = b\.user_id/i,
+  );
+  assert.doesNotMatch(
+    managersPerformanceSql,
+    /'group_pnl'[\s\S]*?JOIN manager_user_links mul ON mul\.user_id = b\.user_id/i,
+  );
+  assert.doesNotMatch(
+    managersPerformanceSql,
+    /'open_exposure'[\s\S]*?JOIN manager_user_links mul ON mul\.user_id = b\.user_id/i,
+  );
+});
