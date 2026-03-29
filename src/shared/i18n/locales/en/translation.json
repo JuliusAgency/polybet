@@ -195,10 +195,13 @@
     "filterAll": "All",
     "searchPlaceholder": "Search markets…",
     "volume": "Vol",
+    "marketId": "ID",
+    "polymarketId": "Polymarket ID",
     "closesAt": "Closes",
     "source": "Source",
     "updatedAt": "Updated",
     "probability": "Probability",
+    "effectiveOdds": "Effective",
     "finalOutcome": "Final outcome",
     "status": {
       "open": "Open",

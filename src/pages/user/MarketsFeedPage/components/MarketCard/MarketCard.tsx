@@ -54,10 +54,10 @@ export const MarketCard = ({
       {/* Summary row */}
       <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1">
         <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-          ID: {market.id}
+          {t('markets.marketId')}: {market.id}
         </p>
         <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-          Polymarket: {market.polymarket_id}
+          {t('markets.polymarketId')}: {market.polymarket_id}
         </p>
         <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
           {t('markets.source')}: Polymarket
@@ -100,7 +100,7 @@ export const MarketCard = ({
               </span>
               {effectiveOddsChanged && (
                 <span className="ms-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-                  Eff: {outcome.effective_odds.toFixed(2)}
+                  {t('markets.effectiveOdds')}: {outcome.effective_odds.toFixed(2)}
                 </span>
               )}
               <span className="ms-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
