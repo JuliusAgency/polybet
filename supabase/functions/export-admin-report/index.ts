@@ -133,8 +133,20 @@ export async function handleExportAdminReportRequest(req: Request): Promise<Resp
     );
   }
 
-  const document = buildReportDocument(dataset);
-  const pdfBytes = renderTextPdf(document.lines);
+  let document: ReturnType<typeof buildReportDocument>;
+  let pdfBytes: Uint8Array;
+  try {
+    document = buildReportDocument(dataset);
+    pdfBytes = renderTextPdf(document.lines);
+  } catch (error) {
+    return jsonWithCors(
+      {
+        error: 'pdf_render_failed',
+        details: error instanceof Error ? error.message : String(error),
+      },
+      500,
+    );
+  }
 
   try {
     await logAdminReportExport(authResult.adminClient, authResult.callerId, payload.report_type);

@@ -22,4 +22,5 @@ test('export admin report edge function exposes the required surface', () => {
   assert.match(indexSource, /application\/pdf/);
   assert.match(indexSource, /content-disposition/i);
   assert.match(indexSource, /admin_action_logs/);
+  assert.match(indexSource, /pdf_render_failed/);
 });
