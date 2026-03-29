@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useMyBets, type MyBet } from '@/features/bet';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMyBets, useUnseenBetsCount, type MyBet } from '@/features/bet';
 import { Badge } from '@/shared/ui/Badge';
+import { supabase } from '@/shared/api/supabase';
+import { useAuth } from '@/shared/hooks/useAuth';
 
 const CopyIdCell = ({ id }: { id: string }) => {
   const [copied, setCopied] = useState(false);
@@ -59,6 +62,21 @@ const MyBetsPage = () => {
   const [activeTab, setActiveTab] = useState<Tab>('open');
   const { data: bets, isLoading } = useMyBets();
 
+  const { session } = useAuth();
+  const queryClient = useQueryClient();
+  const unseenCount = useUnseenBetsCount();
+
+  const { mutate: markAllSeen, isPending: isMarking } = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.rpc('mark_bets_seen');
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['user', 'unseen-bets-count', session?.user.id] });
+      void queryClient.invalidateQueries({ queryKey: ['user', 'bets', session?.user.id] });
+    },
+  });
+
   const tabs: { key: Tab; label: string }[] = [
     { key: 'open', label: t('myBets.openTab') },
     { key: 'history', label: t('myBets.historyTab') },
@@ -83,6 +101,24 @@ const MyBetsPage = () => {
       >
         {t('myBets.title')}
       </h1>
+
+      {/* Mark all seen button */}
+      {unseenCount > 0 && (
+        <button
+          onClick={() => markAllSeen()}
+          disabled={isMarking}
+          className="mb-4 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+          style={{
+            backgroundColor: 'var(--color-accent)',
+            color: 'var(--color-text-primary)',
+            opacity: isMarking ? 0.6 : 1,
+            cursor: isMarking ? 'not-allowed' : 'pointer',
+            border: 'none',
+          }}
+        >
+          {t('myBets.markAllSeen', { count: unseenCount })}
+        </button>
+      )}
 
       {/* Tab switcher */}
       <div
