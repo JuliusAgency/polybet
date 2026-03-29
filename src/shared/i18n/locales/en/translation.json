@@ -228,7 +228,20 @@
   },
   "reports": {
     "title": "Reports",
-    "allUsers": "All users"
+    "allUsers": "All users",
+    "exportTitle": "PDF Export",
+    "reportType": "Report Type",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "exportPdf": "Export PDF",
+    "userIdPlaceholder": "User ID (UUID)",
+    "types": {
+      "system_summary": "System Summary",
+      "managers_performance": "Managers Performance",
+      "manager_detailed": "Manager Detailed",
+      "user_statement": "User Statement",
+      "audit_actions": "Audit Actions"
+    }
   },
   "userActivity": {
     "title": "Activity Log",

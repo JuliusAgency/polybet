@@ -228,7 +228,20 @@
   },
   "reports": {
     "title": "דוחות",
-    "allUsers": "כל המשתמשים"
+    "allUsers": "כל המשתמשים",
+    "exportTitle": "ייצוא PDF",
+    "reportType": "סוג דוח",
+    "startDate": "תאריך התחלה",
+    "endDate": "תאריך סיום",
+    "exportPdf": "ייצא PDF",
+    "userIdPlaceholder": "מזהה משתמש (UUID)",
+    "types": {
+      "system_summary": "סיכום מערכת",
+      "managers_performance": "ביצועי מנהלים",
+      "manager_detailed": "דוח מנהל מפורט",
+      "user_statement": "דוח משתמש",
+      "audit_actions": "יומן פעולות"
+    }
   },
   "userActivity": {
     "title": "יומן פעילות",
