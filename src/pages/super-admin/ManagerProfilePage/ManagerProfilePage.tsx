@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +10,13 @@ import { Input } from '@/shared/ui/Input';
 import { useAdjustBalance, useAdjustManagerBalance } from '@/features/admin/adjust-balance';
 import { useToggleUserBlock, useResetPassword } from '@/features/admin/manage-user';
 import { useManagerUsers, useManagerActionLogs } from '@/features/admin/manager-users';
+import {
+  useBetLimitSettings,
+  useSetManagerBetLimit,
+  useSetUserBetLimit,
+  type BetLimitSource,
+  type ManagerBetLimitSource,
+} from '@/features/admin/bet-limits';
 import type { DbProfile } from '@/shared/types/database';
 import { formatInitiatorName } from '@/shared/utils';
 
@@ -39,7 +46,52 @@ const fetchManagerProfile = async (managerId: string): Promise<DbProfile | null>
   return data as DbProfile;
 };
 
-// ── Modal: Deposit / Withdrawal ──────────────────────────────────────────────
+const formatAmount = (value: number | null | undefined) => (value != null ? value.toFixed(2) : '—');
+const formatDraftValue = (value: number | null | undefined) => (value != null ? String(value) : '');
+const formatLimitValue = (value: number | null | undefined, noLimitLabel: string) =>
+  value != null ? value.toFixed(2) : noLimitLabel;
+
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
+type LimitSource = BetLimitSource | ManagerBetLimitSource;
+
+type LimitActionTarget =
+  | { scope: 'manager'; id: string }
+  | { scope: 'user'; id: string }
+  | null;
+
+const getLimitSourceLabel = (source: LimitSource, t: TranslateFn) => {
+  switch (source) {
+    case 'user':
+      return t('managerProfile.limitSourceUser');
+    case 'manager':
+      return t('managerProfile.limitSourceManager');
+    case 'global':
+      return t('managerProfile.limitSourceGlobal');
+    default:
+      return t('managerProfile.limitSourceNone');
+  }
+};
+
+const getLimitSourceVariant = (source: LimitSource) => {
+  switch (source) {
+    case 'user':
+    case 'manager':
+      return 'pending' as const;
+    case 'global':
+      return 'open' as const;
+    default:
+      return 'default' as const;
+  }
+};
+
+const showTransientFeedback = (
+  setFeedback: Dispatch<SetStateAction<{ message: string; isError: boolean } | null>>,
+  message: string,
+  isError = false,
+) => {
+  setFeedback({ message, isError });
+  window.setTimeout(() => setFeedback(null), 3000);
+};
 
 interface AdjustModalProps {
   isOpen: boolean;
@@ -68,6 +120,7 @@ const AdjustBalanceModal = ({ isOpen, onClose, type, targetUser, onSuccess }: Ad
       setErrorMsg(t('managerProfile.amountError'));
       return;
     }
+
     try {
       if (isManager) {
         await adjustManagerBalance.mutateAsync({
@@ -84,6 +137,7 @@ const AdjustBalanceModal = ({ isOpen, onClose, type, targetUser, onSuccess }: Ad
           note,
         });
       }
+
       onSuccess();
       setAmount('');
       setNote('');
@@ -96,7 +150,7 @@ const AdjustBalanceModal = ({ isOpen, onClose, type, targetUser, onSuccess }: Ad
   const title = type === 'deposit' ? t('managerProfile.deposit') : t('managerProfile.withdraw');
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`${title} — ${targetUser.username}`}>
+    <Modal isOpen={isOpen} onClose={onClose} title={`${title} - ${targetUser.username}`}>
       <div className="flex flex-col gap-4">
         <Input
           label={t('managerProfile.amountLabel')}
@@ -122,11 +176,7 @@ const AdjustBalanceModal = ({ isOpen, onClose, type, targetUser, onSuccess }: Ad
           <Button variant="secondary" onClick={onClose}>
             {t('common.cancel')}
           </Button>
-          <Button
-            variant="primary"
-            onClick={handleSubmit}
-            disabled={isPending}
-          >
+          <Button variant="primary" onClick={handleSubmit} disabled={isPending}>
             {isPending ? t('common.processing') : title}
           </Button>
         </div>
@@ -134,8 +184,6 @@ const AdjustBalanceModal = ({ isOpen, onClose, type, targetUser, onSuccess }: Ad
     </Modal>
   );
 };
-
-// ── Modal: Reset Password ─────────────────────────────────────────────────────
 
 interface ResetPasswordModalProps {
   isOpen: boolean;
@@ -157,6 +205,7 @@ const ResetPasswordModal = ({ isOpen, onClose, targetUser, onSuccess }: ResetPas
       setErrorMsg(t('managerProfile.passwordError'));
       return;
     }
+
     try {
       await resetPassword.mutateAsync({
         targetUserId: targetUser.id,
@@ -171,7 +220,11 @@ const ResetPasswordModal = ({ isOpen, onClose, targetUser, onSuccess }: ResetPas
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`${t('managerProfile.resetPwd')} — ${targetUser.username}`}>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={`${t('managerProfile.resetPwd')} - ${targetUser.username}`}
+    >
       <div className="flex flex-col gap-4">
         <Input
           label={t('managerProfile.newPassword')}
@@ -189,11 +242,7 @@ const ResetPasswordModal = ({ isOpen, onClose, targetUser, onSuccess }: ResetPas
           <Button variant="secondary" onClick={onClose}>
             {t('common.cancel')}
           </Button>
-          <Button
-            variant="primary"
-            onClick={handleSubmit}
-            disabled={resetPassword.isPending}
-          >
+          <Button variant="primary" onClick={handleSubmit} disabled={resetPassword.isPending}>
             {resetPassword.isPending ? t('common.saving') : t('managerProfile.reset')}
           </Button>
         </div>
@@ -202,7 +251,117 @@ const ResetPasswordModal = ({ isOpen, onClose, targetUser, onSuccess }: ResetPas
   );
 };
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
+interface BetLimitControlsProps {
+  labelContext: string;
+  explicitLimit: number | null;
+  effectiveLimit: number | null;
+  source: LimitSource;
+  pending: boolean;
+  compact?: boolean;
+  showHelp?: boolean;
+  onSet: (value: number) => Promise<void>;
+  onClear: () => Promise<void>;
+}
+
+const BetLimitControls = ({
+  labelContext,
+  explicitLimit,
+  effectiveLimit,
+  source,
+  pending,
+  compact = false,
+  showHelp = false,
+  onSet,
+  onClear,
+}: BetLimitControlsProps) => {
+  const { t } = useTranslation();
+  const noLimitLabel = t('managerProfile.noLimit');
+  const [draft, setDraft] = useState(formatDraftValue(explicitLimit));
+  const [errorMsg, setErrorMsg] = useState('');
+
+  useEffect(() => {
+    setDraft(formatDraftValue(explicitLimit));
+  }, [explicitLimit]);
+
+  const handleSet = async () => {
+    setErrorMsg('');
+    const parsed = Number(draft);
+    if (draft.trim() === '' || !Number.isFinite(parsed) || parsed <= 0) {
+      setErrorMsg(t('managerProfile.limitAmountError'));
+      return;
+    }
+
+    await onSet(parsed);
+  };
+
+  const handleClear = async () => {
+    setErrorMsg('');
+    await onClear();
+  };
+
+  const effectiveLabel = formatLimitValue(effectiveLimit, noLimitLabel);
+  const currentSettingLabel = t('managerProfile.currentSetting', {
+    value: formatLimitValue(explicitLimit, noLimitLabel),
+  });
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <span
+          className="text-xs font-medium uppercase tracking-[0.14em]"
+          style={{ color: 'var(--color-text-muted)' }}
+        >
+          {t('managerProfile.effectiveBetLimit')}
+        </span>
+        <span className="font-mono text-sm" style={{ color: 'var(--color-text-primary)' }}>
+          {effectiveLabel}
+        </span>
+        <Badge variant={getLimitSourceVariant(source)}>{getLimitSourceLabel(source, t)}</Badge>
+      </div>
+
+      {showHelp && (
+        <p
+          className="text-xs"
+          title={t('managerProfile.effectiveBetLimitHelp')}
+          style={{ color: 'var(--color-text-secondary)' }}
+        >
+          {t('managerProfile.effectiveBetLimitHelp')}
+        </p>
+      )}
+
+      {!showHelp && (
+        <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+          {currentSettingLabel}
+        </p>
+      )}
+
+      <div className={compact ? 'flex flex-col gap-2' : 'flex flex-col gap-3 sm:flex-row sm:items-end'}>
+        <div className={compact ? 'min-w-[11rem]' : 'min-w-[14rem] flex-1'}>
+          <Input
+            label={compact ? undefined : t('managerProfile.limitInputLabel')}
+            aria-label={`${t('managerProfile.limitInputLabel')} ${labelContext}`}
+            hint={compact ? undefined : currentSettingLabel}
+            type="number"
+            min="0.01"
+            step="0.01"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder="0.00"
+            error={errorMsg || undefined}
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="primary" onClick={handleSet} disabled={pending}>
+            {pending ? t('common.processing') : t('managerProfile.setLimit')}
+          </Button>
+          <Button variant="secondary" onClick={handleClear} disabled={pending || explicitLimit == null}>
+            {t('managerProfile.clearLimit')}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 type ModalState =
   | { kind: 'deposit'; user: DbProfile }
@@ -217,15 +376,15 @@ export const ManagerProfilePage = () => {
   const { id: managerId = '' } = useParams<{ id: string }>();
   const usersQueryKey = ['admin', 'manager-users', managerId];
   const managerQueryKey = ['admin', 'manager', managerId];
+  const managerBalanceQueryKey = ['admin', 'manager-balance', managerId];
   const queryClient = useQueryClient();
 
   const [modal, setModal] = useState<ModalState>(null);
   const [actionFeedback, setActionFeedback] = useState<{ message: string; isError: boolean } | null>(null);
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
   const [managerActionPending, setManagerActionPending] = useState(false);
+  const [pendingLimitTarget, setPendingLimitTarget] = useState<LimitActionTarget>(null);
   const [logFilter, setLogFilter] = useState<LogFilter>('all');
-
-  const managerBalanceQueryKey = ['admin', 'manager-balance', managerId];
 
   const { data: manager, isLoading: managerLoading } = useQuery({
     queryKey: managerQueryKey,
@@ -240,20 +399,45 @@ export const ManagerProfilePage = () => {
   });
 
   const { data: users, isLoading: usersLoading, error: usersError } = useManagerUsers(managerId);
+  const { data: betLimitSettings, isLoading: betLimitLoading } = useBetLimitSettings(managerId);
 
-  const userIds = users ? users.map((u) => u.profile.id) : [];
+  const setManagerBetLimit = useSetManagerBetLimit();
+  const setUserBetLimit = useSetUserBetLimit();
+
+  const managedUsers = users ?? [];
+  const userIds = managedUsers.map((user) => user.profile.id);
   const managerAndUserIds = manager ? [manager.id, ...userIds] : userIds;
   const { data: actionLogs } = useManagerActionLogs(managerAndUserIds);
 
+  const explicitUserLimitById = useMemo(
+    () =>
+      new Map((betLimitSettings?.users ?? []).map((userLimit) => [userLimit.userId, userLimit.maxBetLimit])),
+    [betLimitSettings?.users],
+  );
+
+  const effectiveUserLimitById = useMemo(
+    () =>
+      new Map(
+        (betLimitSettings?.effective.users ?? []).map((userLimit) => [userLimit.userId, userLimit]),
+      ),
+    [betLimitSettings?.effective.users],
+  );
+
   const filteredLogs = useMemo(() => {
     if (!actionLogs) return [];
-    if (logFilter === 'financial') return actionLogs.filter((l) => FINANCIAL_ACTIONS.has(l.action));
-    if (logFilter === 'account') return actionLogs.filter((l) => ACCOUNT_ACTIONS.has(l.action));
+    if (logFilter === 'financial') return actionLogs.filter((log) => FINANCIAL_ACTIONS.has(log.action));
+    if (logFilter === 'account') return actionLogs.filter((log) => ACCOUNT_ACTIONS.has(log.action));
     return actionLogs;
   }, [actionLogs, logFilter]);
 
-  const invalidateActionLog = () =>
-    queryClient.invalidateQueries({ queryKey: ACTION_LOG_QUERY_KEY });
+  const invalidateActionLog = () => queryClient.invalidateQueries({ queryKey: ACTION_LOG_QUERY_KEY });
+
+  const invalidateManagerPageData = () => {
+    queryClient.invalidateQueries({ queryKey: usersQueryKey });
+    queryClient.invalidateQueries({ queryKey: managerQueryKey });
+    queryClient.invalidateQueries({ queryKey: managerBalanceQueryKey });
+    invalidateActionLog();
+  };
 
   const toggleBlock = useToggleUserBlock();
 
@@ -269,21 +453,19 @@ export const ManagerProfilePage = () => {
       await toggleBlock.mutateAsync({ targetUserId: user.id });
       queryClient.invalidateQueries({ queryKey: usersQueryKey });
       invalidateActionLog();
-      setActionFeedback({
-        message: user.is_active
-          ? t('managerProfile.userBlockedSuccess')
-          : t('managerProfile.userUnblockedSuccess'),
-        isError: false,
-      });
+      showTransientFeedback(
+        setActionFeedback,
+        user.is_active ? t('managerProfile.userBlockedSuccess') : t('managerProfile.userUnblockedSuccess'),
+      );
     } catch (err) {
-      setActionFeedback({
-        message: err instanceof Error ? err.message : t('common.unknownError'),
-        isError: true,
-      });
+      showTransientFeedback(
+        setActionFeedback,
+        err instanceof Error ? err.message : t('common.unknownError'),
+        true,
+      );
     } finally {
       setPendingUserId(null);
     }
-    setTimeout(() => setActionFeedback(null), 3000);
   };
 
   const handleToggleManagerBlock = async () => {
@@ -299,24 +481,99 @@ export const ManagerProfilePage = () => {
       await toggleBlock.mutateAsync({ targetUserId: manager.id });
       queryClient.invalidateQueries({ queryKey: managerQueryKey });
       invalidateActionLog();
-      setActionFeedback({
-        message: manager.is_active
+      showTransientFeedback(
+        setActionFeedback,
+        manager.is_active
           ? t('managerProfile.managerBlockedSuccess')
           : t('managerProfile.managerUnblockedSuccess'),
-        isError: false,
-      });
+      );
     } catch (err) {
-      setActionFeedback({
-        message: err instanceof Error ? err.message : t('common.unknownError'),
-        isError: true,
-      });
+      showTransientFeedback(
+        setActionFeedback,
+        err instanceof Error ? err.message : t('common.unknownError'),
+        true,
+      );
     } finally {
       setManagerActionPending(false);
     }
-    setTimeout(() => setActionFeedback(null), 3000);
+  };
+
+  const handleSetManagerLimit = async (value: number) => {
+    if (!managerId) return;
+
+    setPendingLimitTarget({ scope: 'manager', id: managerId });
+    try {
+      await setManagerBetLimit.mutateAsync({ managerId, maxBetLimit: value });
+      showTransientFeedback(setActionFeedback, t('managerProfile.managerLimitUpdatedSuccess'));
+    } catch (err) {
+      showTransientFeedback(
+        setActionFeedback,
+        err instanceof Error ? err.message : t('common.unknownError'),
+        true,
+      );
+      throw err;
+    } finally {
+      setPendingLimitTarget(null);
+    }
+  };
+
+  const handleClearManagerLimit = async () => {
+    if (!managerId) return;
+
+    setPendingLimitTarget({ scope: 'manager', id: managerId });
+    try {
+      await setManagerBetLimit.mutateAsync({ managerId, maxBetLimit: null });
+      showTransientFeedback(setActionFeedback, t('managerProfile.managerLimitClearedSuccess'));
+    } catch (err) {
+      showTransientFeedback(
+        setActionFeedback,
+        err instanceof Error ? err.message : t('common.unknownError'),
+        true,
+      );
+      throw err;
+    } finally {
+      setPendingLimitTarget(null);
+    }
+  };
+
+  const handleSetUserLimit = async (userId: string, value: number) => {
+    setPendingLimitTarget({ scope: 'user', id: userId });
+    try {
+      await setUserBetLimit.mutateAsync({ userId, maxBetLimit: value });
+      showTransientFeedback(setActionFeedback, t('managerProfile.userLimitUpdatedSuccess'));
+    } catch (err) {
+      showTransientFeedback(
+        setActionFeedback,
+        err instanceof Error ? err.message : t('common.unknownError'),
+        true,
+      );
+      throw err;
+    } finally {
+      setPendingLimitTarget(null);
+    }
+  };
+
+  const handleClearUserLimit = async (userId: string) => {
+    setPendingLimitTarget({ scope: 'user', id: userId });
+    try {
+      await setUserBetLimit.mutateAsync({ userId, maxBetLimit: null });
+      showTransientFeedback(setActionFeedback, t('managerProfile.userLimitClearedSuccess'));
+    } catch (err) {
+      showTransientFeedback(
+        setActionFeedback,
+        err instanceof Error ? err.message : t('common.unknownError'),
+        true,
+      );
+      throw err;
+    } finally {
+      setPendingLimitTarget(null);
+    }
   };
 
   const isLoading = managerLoading || usersLoading;
+  const managerEffectiveLimit = betLimitSettings?.effective.manager?.effectiveMaxBetLimit ?? null;
+  const managerLimitSource = betLimitSettings?.effective.manager?.source ?? null;
+  const managerExplicitLimit = betLimitSettings?.manager?.maxBetLimit ?? null;
 
   const logFilterLabels: Record<LogFilter, string> = {
     all: t('common.all'),
@@ -325,11 +582,7 @@ export const ManagerProfilePage = () => {
   };
 
   return (
-    <div
-      className="min-h-screen p-6"
-      style={{ backgroundColor: 'var(--color-bg-base)' }}
-    >
-      {/* Header */}
+    <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--color-bg-base)' }}>
       <div className="mb-6">
         {managerLoading ? (
           <div className="h-8 w-48 rounded" style={{ backgroundColor: 'var(--color-bg-elevated)' }} />
@@ -343,8 +596,6 @@ export const ManagerProfilePage = () => {
         </p>
       </div>
 
-
-      {/* Feedback banner */}
       {actionFeedback && (
         <div
           className="mb-4 rounded-lg px-4 py-3 text-sm"
@@ -360,9 +611,7 @@ export const ManagerProfilePage = () => {
         </div>
       )}
 
-      {isLoading && (
-        <p style={{ color: 'var(--color-text-secondary)' }}>{t('common.loading')}</p>
-      )}
+      {isLoading && <p style={{ color: 'var(--color-text-secondary)' }}>{t('common.loading')}</p>}
 
       {usersError && (
         <p style={{ color: 'var(--color-loss)' }}>
@@ -370,7 +619,164 @@ export const ManagerProfilePage = () => {
         </p>
       )}
 
-      {users && (
+      {manager && (
+        <section className="mb-8">
+          <div className="mb-3 flex flex-wrap items-center gap-3">
+            <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+              {t('managerProfile.managerSectionTitle')}
+            </h2>
+            <Badge variant="pending">{t('managerProfile.managerRoleBadge')}</Badge>
+          </div>
+
+          <div
+            className="rounded-xl border p-5"
+            style={{
+              backgroundColor: 'var(--color-bg-surface)',
+              borderColor: 'var(--color-border)',
+            }}
+          >
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-lg border p-4" style={{ borderColor: 'var(--color-border)' }}>
+                  <p
+                    className="text-xs font-medium uppercase tracking-[0.14em]"
+                    style={{ color: 'var(--color-text-muted)' }}
+                  >
+                    {t('managerProfile.username')}
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className="text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                      @{manager.username}
+                    </span>
+                    <Badge variant="pending">{t('managerProfile.managerRoleBadge')}</Badge>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border p-4" style={{ borderColor: 'var(--color-border)' }}>
+                  <p
+                    className="text-xs font-medium uppercase tracking-[0.14em]"
+                    style={{ color: 'var(--color-text-muted)' }}
+                  >
+                    {t('managerProfile.fullName')}
+                  </p>
+                  <p className="mt-2 text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                    {manager.full_name}
+                  </p>
+                </div>
+
+                <div className="rounded-lg border p-4" style={{ borderColor: 'var(--color-border)' }}>
+                  <p
+                    className="text-xs font-medium uppercase tracking-[0.14em]"
+                    style={{ color: 'var(--color-text-muted)' }}
+                  >
+                    {t('managerProfile.available')}
+                  </p>
+                  <p className="mt-2 font-mono text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                    {formatAmount(managerBalance)}
+                  </p>
+                </div>
+
+                <div className="rounded-lg border p-4" style={{ borderColor: 'var(--color-border)' }}>
+                  <p
+                    className="text-xs font-medium uppercase tracking-[0.14em]"
+                    style={{ color: 'var(--color-text-muted)' }}
+                  >
+                    {t('managerProfile.status')}
+                  </p>
+                  <div className="mt-2">
+                    <Badge variant={manager.is_active ? 'win' : 'loss'}>
+                      {manager.is_active ? t('common.active') : t('common.blocked')}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-4">
+                <div className="rounded-lg border p-4" style={{ borderColor: 'var(--color-border)' }}>
+                  {betLimitLoading ? (
+                    <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                      {t('common.loading')}
+                    </p>
+                  ) : (
+                    <BetLimitControls
+                      labelContext={manager.username}
+                      explicitLimit={managerExplicitLimit}
+                      effectiveLimit={managerEffectiveLimit}
+                      source={managerLimitSource}
+                      pending={pendingLimitTarget?.scope === 'manager' && pendingLimitTarget.id === manager.id}
+                      showHelp
+                      onSet={handleSetManagerLimit}
+                      onClear={handleClearManagerLimit}
+                    />
+                  )}
+                </div>
+
+                <div className="rounded-lg border p-4" style={{ borderColor: 'var(--color-border)' }}>
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                      {t('managerProfile.managerActions')}
+                    </h3>
+                    <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                      {t('managerProfile.account')}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="primary"
+                      className="text-xs px-2 py-1"
+                      onClick={() => setModal({ kind: 'deposit', user: manager })}
+                    >
+                      {t('managerProfile.deposit')}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      className="text-xs px-2 py-1"
+                      onClick={() => setModal({ kind: 'withdrawal', user: manager })}
+                    >
+                      {t('managerProfile.withdraw')}
+                    </Button>
+                    <Button
+                      variant={manager.is_active ? 'danger' : 'secondary'}
+                      className="text-xs px-2 py-1"
+                      onClick={handleToggleManagerBlock}
+                      disabled={managerActionPending}
+                    >
+                      {manager.is_active ? t('managerProfile.block') : t('managerProfile.unblock')}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      className="text-xs px-2 py-1"
+                      onClick={() => setModal({ kind: 'resetPassword', user: manager })}
+                    >
+                      {t('managerProfile.resetPwd')}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      <section>
+        <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                {t('managerProfile.managedUsersSectionTitle')}
+              </h2>
+              <Badge variant="default">{t('managerProfile.userRoleBadge')}</Badge>
+            </div>
+            <p
+              className="mt-1 text-xs"
+              title={t('managerProfile.effectiveBetLimitHelp')}
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
+              {t('managerProfile.effectiveBetLimitHelp')}
+            </p>
+          </div>
+        </div>
+
         <div
           className="overflow-x-auto rounded-xl border"
           style={{
@@ -380,106 +786,36 @@ export const ManagerProfilePage = () => {
         >
           <table className="w-full text-sm">
             <thead>
-              <tr
-                className="border-b text-start"
-                style={{ borderColor: 'var(--color-border)' }}
-              >
+              <tr className="border-b text-start" style={{ borderColor: 'var(--color-border)' }}>
                 {[
                   t('managerProfile.username'),
                   t('managerProfile.fullName'),
                   t('managerProfile.available'),
                   t('managerProfile.inPlay'),
+                  t('managerProfile.effectiveBetLimit'),
                   t('managerProfile.status'),
                   t('managerProfile.actions'),
-                ].map((h) => (
+                ].map((heading) => (
                   <th
-                    key={h}
+                    key={heading}
                     className="whitespace-nowrap px-4 py-3 font-medium text-start"
                     style={{ color: 'var(--color-text-secondary)' }}
+                    title={
+                      heading === t('managerProfile.effectiveBetLimit')
+                        ? t('managerProfile.effectiveBetLimitHelp')
+                        : undefined
+                    }
                   >
-                    {h}
+                    {heading}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {manager && (
-                <>
-                  <tr style={{ backgroundColor: 'color-mix(in srgb, var(--color-accent) 8%, transparent)' }}>
-                    <td className="px-4 py-3" style={{ color: 'var(--color-text-primary)' }}>
-                      @{manager.username}{' '}
-                      <span
-                        className="ms-1 rounded px-1 py-0.5 text-xs font-medium"
-                        style={{
-                          backgroundColor: 'color-mix(in srgb, var(--color-accent) 20%, transparent)',
-                          color: 'var(--color-accent)',
-                        }}
-                      >
-                        {t('managerProfile.managerActions').split(' ')[0]}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3" style={{ color: 'var(--color-text-secondary)' }}>
-                      {manager.full_name}
-                    </td>
-                    <td className="px-4 py-3 font-mono" style={{ color: 'var(--color-text-primary)' }}>
-                      {managerBalance != null ? managerBalance.toFixed(2) : '—'}
-                    </td>
-                    <td className="px-4 py-3 font-mono" style={{ color: 'var(--color-text-secondary)' }}>
-                      —
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge variant={manager.is_active ? 'win' : 'loss'}>
-                        {manager.is_active ? t('common.active') : t('common.blocked')}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          variant="primary"
-                          className="text-xs px-2 py-1"
-                          onClick={() => setModal({ kind: 'deposit', user: manager })}
-                        >
-                          {t('managerProfile.deposit')}
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          className="text-xs px-2 py-1"
-                          onClick={() => setModal({ kind: 'withdrawal', user: manager })}
-                        >
-                          {t('managerProfile.withdraw')}
-                        </Button>
-                        <Button
-                          variant={manager.is_active ? 'danger' : 'secondary'}
-                          className="text-xs px-2 py-1"
-                          onClick={handleToggleManagerBlock}
-                          disabled={managerActionPending}
-                        >
-                          {manager.is_active ? t('managerProfile.block') : t('managerProfile.unblock')}
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          className="text-xs px-2 py-1"
-                          onClick={() => setModal({ kind: 'resetPassword', user: manager })}
-                        >
-                          {t('managerProfile.resetPwd')}
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                  {users.length > 0 && (
-                    <tr>
-                      <td
-                        colSpan={6}
-                        style={{ height: '2px', backgroundColor: 'var(--color-border)', padding: 0 }}
-                      />
-                    </tr>
-                  )}
-                </>
-              )}
-              {users.length === 0 && (
+              {managedUsers.length === 0 && (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={7}
                     className="px-4 py-6 text-center"
                     style={{ color: 'var(--color-text-secondary)' }}
                   >
@@ -487,81 +823,101 @@ export const ManagerProfilePage = () => {
                   </td>
                 </tr>
               )}
-              {users.map(({ profile, balance }) => (
-                <tr
-                  key={profile.id}
-                  className="border-b last:border-0"
-                  style={{ borderColor: 'var(--color-border)' }}
-                >
-                  <td className="px-4 py-3" style={{ color: 'var(--color-text-primary)' }}>
-                    @{profile.username}
-                  </td>
-                  <td className="px-4 py-3" style={{ color: 'var(--color-text-secondary)' }}>
-                    {profile.full_name}
-                  </td>
-                  <td className="px-4 py-3 font-mono" style={{ color: 'var(--color-text-primary)' }}>
-                    {balance.available.toFixed(2)}
-                  </td>
-                  <td className="px-4 py-3 font-mono" style={{ color: 'var(--color-text-secondary)' }}>
-                    {balance.in_play.toFixed(2)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge variant={profile.is_active ? 'win' : 'loss'}>
-                      {profile.is_active ? t('common.active') : t('common.blocked')}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        variant="primary"
-                        className="text-xs px-2 py-1"
-                        onClick={() => setModal({ kind: 'deposit', user: profile })}
-                      >
-                        {t('managerProfile.deposit')}
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        className="text-xs px-2 py-1"
-                        onClick={() => setModal({ kind: 'withdrawal', user: profile })}
-                      >
-                        {t('managerProfile.withdraw')}
-                      </Button>
-                      <Button
-                        variant={profile.is_active ? 'danger' : 'secondary'}
-                        className="text-xs px-2 py-1"
-                        onClick={() => handleToggleBlock(profile)}
-                        disabled={pendingUserId === profile.id}
-                      >
-                        {profile.is_active ? t('managerProfile.block') : t('managerProfile.unblock')}
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        className="text-xs px-2 py-1"
-                        onClick={() => setModal({ kind: 'resetPassword', user: profile })}
-                      >
-                        {t('managerProfile.resetPwd')}
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+
+              {managedUsers.map(({ profile, balance }) => {
+                const effectiveLimit = effectiveUserLimitById.get(profile.id);
+                const explicitLimit = explicitUserLimitById.get(profile.id) ?? null;
+
+                return (
+                  <tr
+                    key={profile.id}
+                    className="border-b last:border-0 align-top"
+                    style={{ borderColor: 'var(--color-border)' }}
+                  >
+                    <td className="px-4 py-3" style={{ color: 'var(--color-text-primary)' }}>
+                      <div className="flex flex-col gap-2">
+                        <span>@{profile.username}</span>
+                        <Badge variant="default">{t('managerProfile.userRoleBadge')}</Badge>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3" style={{ color: 'var(--color-text-secondary)' }}>
+                      {profile.full_name}
+                    </td>
+                    <td className="px-4 py-3 font-mono" style={{ color: 'var(--color-text-primary)' }}>
+                      {balance.available.toFixed(2)}
+                    </td>
+                    <td className="px-4 py-3 font-mono" style={{ color: 'var(--color-text-secondary)' }}>
+                      {balance.in_play.toFixed(2)}
+                    </td>
+                    <td className="px-4 py-3">
+                      {betLimitLoading ? (
+                        <span style={{ color: 'var(--color-text-secondary)' }}>{t('common.loading')}</span>
+                      ) : (
+                        <BetLimitControls
+                          labelContext={profile.username}
+                          explicitLimit={explicitLimit}
+                          effectiveLimit={effectiveLimit?.effectiveMaxBetLimit ?? null}
+                          source={effectiveLimit?.source ?? null}
+                          pending={pendingLimitTarget?.scope === 'user' && pendingLimitTarget.id === profile.id}
+                          compact
+                          onSet={(value) => handleSetUserLimit(profile.id, value)}
+                          onClear={() => handleClearUserLimit(profile.id)}
+                        />
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge variant={profile.is_active ? 'win' : 'loss'}>
+                        {profile.is_active ? t('common.active') : t('common.blocked')}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          variant="primary"
+                          className="text-xs px-2 py-1"
+                          onClick={() => setModal({ kind: 'deposit', user: profile })}
+                        >
+                          {t('managerProfile.deposit')}
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          className="text-xs px-2 py-1"
+                          onClick={() => setModal({ kind: 'withdrawal', user: profile })}
+                        >
+                          {t('managerProfile.withdraw')}
+                        </Button>
+                        <Button
+                          variant={profile.is_active ? 'danger' : 'secondary'}
+                          className="text-xs px-2 py-1"
+                          onClick={() => handleToggleBlock(profile)}
+                          disabled={pendingUserId === profile.id}
+                        >
+                          {profile.is_active ? t('managerProfile.block') : t('managerProfile.unblock')}
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          className="text-xs px-2 py-1"
+                          onClick={() => setModal({ kind: 'resetPassword', user: profile })}
+                        >
+                          {t('managerProfile.resetPwd')}
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
-      )}
+      </section>
 
-      {/* Modals */}
       {modal?.kind === 'deposit' && (
         <AdjustBalanceModal
           isOpen
           onClose={() => setModal(null)}
           type="deposit"
           targetUser={modal.user}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: usersQueryKey });
-            queryClient.invalidateQueries({ queryKey: managerQueryKey });
-            invalidateActionLog();
-          }}
+          onSuccess={invalidateManagerPageData}
         />
       )}
       {modal?.kind === 'withdrawal' && (
@@ -570,11 +926,7 @@ export const ManagerProfilePage = () => {
           onClose={() => setModal(null)}
           type="withdrawal"
           targetUser={modal.user}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: usersQueryKey });
-            queryClient.invalidateQueries({ queryKey: managerQueryKey });
-            invalidateActionLog();
-          }}
+          onSuccess={invalidateManagerPageData}
         />
       )}
       {modal?.kind === 'resetPassword' && (
@@ -586,37 +938,28 @@ export const ManagerProfilePage = () => {
         />
       )}
 
-      {/* Action Log */}
       {actionLogs && (
         <div className="mt-8">
           <div className="mb-3 flex items-center justify-between gap-4">
-            <h2
-              className="text-lg font-semibold"
-              style={{ color: 'var(--color-text-primary)' }}
-            >
+            <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
               {t('managerProfile.actionLog')}
             </h2>
             <div
-              className="flex rounded-lg border overflow-hidden text-sm"
+              className="flex overflow-hidden rounded-lg border text-sm"
               style={{ borderColor: 'var(--color-border)' }}
             >
-              {(['all', 'financial', 'account'] as LogFilter[]).map((f) => (
+              {(['all', 'financial', 'account'] as LogFilter[]).map((filterName) => (
                 <button
-                  key={f}
-                  onClick={() => setLogFilter(f)}
+                  key={filterName}
+                  onClick={() => setLogFilter(filterName)}
                   className="px-3 py-1.5 capitalize transition-colors"
                   style={{
                     backgroundColor:
-                      logFilter === f
-                        ? 'var(--color-accent)'
-                        : 'var(--color-bg-surface)',
-                    color:
-                      logFilter === f
-                        ? '#fff'
-                        : 'var(--color-text-secondary)',
+                      logFilter === filterName ? 'var(--color-accent)' : 'var(--color-bg-surface)',
+                    color: logFilter === filterName ? '#fff' : 'var(--color-text-secondary)',
                   }}
                 >
-                  {logFilterLabels[f]}
+                  {logFilterLabels[filterName]}
                 </button>
               ))}
             </div>
@@ -631,10 +974,7 @@ export const ManagerProfilePage = () => {
           >
             <table className="w-full text-sm">
               <thead>
-                <tr
-                  className="border-b text-start"
-                  style={{ borderColor: 'var(--color-border)' }}
-                >
+                <tr className="border-b text-start" style={{ borderColor: 'var(--color-border)' }}>
                   {[
                     t('managerProfile.dateCol'),
                     t('managerProfile.actionCol'),
@@ -642,13 +982,13 @@ export const ManagerProfilePage = () => {
                     t('managerProfile.available'),
                     t('managerProfile.noteCol'),
                     t('managerProfile.byCol'),
-                  ].map((h) => (
+                  ].map((heading) => (
                     <th
-                      key={h}
+                      key={heading}
                       className="whitespace-nowrap px-4 py-3 font-medium text-start"
                       style={{ color: 'var(--color-text-secondary)' }}
                     >
-                      {h}
+                      {heading}
                     </th>
                   ))}
                 </tr>
@@ -693,10 +1033,7 @@ export const ManagerProfilePage = () => {
                     <td className="px-4 py-3" style={{ color: 'var(--color-text-primary)' }}>
                       @{log.target_username}
                     </td>
-                    <td
-                      className="px-4 py-3 font-mono"
-                      style={{ color: 'var(--color-text-primary)' }}
-                    >
+                    <td className="px-4 py-3 font-mono" style={{ color: 'var(--color-text-primary)' }}>
                       {log.amount != null ? log.amount.toFixed(2) : '—'}
                     </td>
                     <td className="px-4 py-3" style={{ color: 'var(--color-text-secondary)' }}>
