@@ -22,39 +22,42 @@ DECLARE
     ),
     0
   );
+  v_user_limit numeric;
+  v_manager_limit numeric;
 BEGIN
-  RETURN QUERY
-  SELECT
-    CASE
-      WHEN NULLIF(GREATEST(COALESCE(p.max_bet_limit, 0), 0), 0) IS NOT NULL
-        THEN NULLIF(GREATEST(COALESCE(p.max_bet_limit, 0), 0), 0)
-      WHEN NULLIF(GREATEST(COALESCE(m.max_bet_limit, 0), 0), 0) IS NOT NULL
-        THEN NULLIF(GREATEST(COALESCE(m.max_bet_limit, 0), 0), 0)
-      WHEN GREATEST(v_global_limit, 0) > 0
-        THEN GREATEST(v_global_limit, 0)
-      ELSE NULL
-    END AS effective_limit,
-    CASE
-      WHEN NULLIF(GREATEST(COALESCE(p.max_bet_limit, 0), 0), 0) IS NOT NULL
-        THEN 'user'::text
-      WHEN NULLIF(GREATEST(COALESCE(m.max_bet_limit, 0), 0), 0) IS NOT NULL
-        THEN 'manager'::text
-      WHEN GREATEST(v_global_limit, 0) > 0
-        THEN 'global'::text
-      ELSE 'none'::text
-    END AS source
+  SELECT NULLIF(GREATEST(COALESCE(p.max_bet_limit, 0), 0), 0)
+  INTO v_user_limit
   FROM profiles p
-  LEFT JOIN manager_user_links mul ON mul.user_id = p.id
-  LEFT JOIN managers m ON m.id = mul.manager_id
-  WHERE p.id = p_user_id
-  LIMIT 1;
+  WHERE p.id = p_user_id;
 
   IF NOT FOUND THEN
     RETURN QUERY
     SELECT
       CASE WHEN GREATEST(v_global_limit, 0) > 0 THEN GREATEST(v_global_limit, 0) ELSE NULL END,
       CASE WHEN GREATEST(v_global_limit, 0) > 0 THEN 'global'::text ELSE 'none'::text END;
+    RETURN;
   END IF;
+
+  SELECT MIN(NULLIF(GREATEST(COALESCE(m.max_bet_limit, 0), 0), 0))
+  INTO v_manager_limit
+  FROM manager_user_links mul
+  JOIN managers m ON m.id = mul.manager_id
+  WHERE mul.user_id = p_user_id;
+
+  RETURN QUERY
+  SELECT
+    CASE
+      WHEN v_user_limit IS NOT NULL THEN v_user_limit
+      WHEN v_manager_limit IS NOT NULL THEN v_manager_limit
+      WHEN GREATEST(v_global_limit, 0) > 0 THEN GREATEST(v_global_limit, 0)
+      ELSE NULL
+    END AS effective_limit,
+    CASE
+      WHEN v_user_limit IS NOT NULL THEN 'user'::text
+      WHEN v_manager_limit IS NOT NULL THEN 'manager'::text
+      WHEN GREATEST(v_global_limit, 0) > 0 THEN 'global'::text
+      ELSE 'none'::text
+    END AS source;
 END;
 $$;
 
@@ -72,14 +75,13 @@ DECLARE
   v_bet_id        uuid;
   v_balance_after numeric;
   v_effective_limit numeric;
-  v_limit_source  text;
 BEGIN
   IF v_user_id IS NULL THEN
     RAISE EXCEPTION 'Authentication required';
   END IF;
 
-  SELECT effective_limit, source
-  INTO v_effective_limit, v_limit_source
+  SELECT effective_limit
+  INTO v_effective_limit
   FROM resolve_effective_max_bet_limit(v_user_id);
 
   IF v_effective_limit IS NOT NULL AND p_stake > v_effective_limit THEN

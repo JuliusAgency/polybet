@@ -11,21 +11,29 @@ test('bet limit hierarchy migration exists', () => {
 
 test('bet limit hierarchy migration seeds global bet limits and resolves precedence', () => {
   const sql = readFileSync(migrationFile, 'utf8');
+  const resolverMatch = sql.match(
+    /CREATE OR REPLACE FUNCTION resolve_effective_max_bet_limit[\s\S]*?\$\$;/i,
+  );
+
+  assert.ok(resolverMatch, 'resolver function definition should exist');
+
+  const resolverSql = resolverMatch[0];
 
   assert.match(sql, /ALTER TABLE profiles ADD COLUMN IF NOT EXISTS max_bet_limit numeric;/i);
   assert.match(sql, /INSERT INTO system_settings\s*\(key,\s*value\)\s*VALUES\s*\(\s*'bet_limits'/i);
   assert.match(sql, /jsonb_build_object\s*\(\s*'global_max_bet'/i);
-  assert.match(sql, /CREATE OR REPLACE FUNCTION resolve_effective_max_bet_limit\s*\(\s*p_user_id uuid\s*\)/i);
-  assert.match(sql, /RETURNS TABLE\s*\(\s*effective_limit numeric,\s*source text\s*\)/i);
-  assert.match(sql, /p\.max_bet_limit/i);
-  assert.match(sql, /m\.max_bet_limit/i);
+  assert.match(resolverSql, /CREATE OR REPLACE FUNCTION resolve_effective_max_bet_limit\s*\(\s*p_user_id uuid\s*\)/i);
+  assert.match(resolverSql, /RETURNS TABLE\s*\(\s*effective_limit numeric,\s*source text\s*\)/i);
+  assert.match(resolverSql, /p\.max_bet_limit/i);
+  assert.match(resolverSql, /manager_user_links/i);
+  assert.match(resolverSql, /MIN\s*\(\s*NULLIF\s*\(\s*GREATEST\s*\(\s*COALESCE\s*\(\s*m\.max_bet_limit,\s*0\s*\),\s*0\s*\),\s*0\s*\)\s*\)/i);
   assert.match(sql, /system_settings/i);
   assert.match(sql, /COALESCE\s*\(\s*\(\s*SELECT\s*\(\s*value\s*->>\s*'global_max_bet'\s*\)::numeric/i);
-  assert.match(sql, /NULLIF\s*\(\s*GREATEST\s*\(\s*COALESCE\s*\(\s*p\.max_bet_limit,\s*0\s*\),\s*0\s*\),\s*0\s*\)/i);
-  assert.match(sql, /NULLIF\s*\(\s*GREATEST\s*\(\s*COALESCE\s*\(\s*m\.max_bet_limit,\s*0\s*\),\s*0\s*\),\s*0\s*\)/i);
-  assert.match(sql, /'user'::text/i);
-  assert.match(sql, /'manager'::text/i);
-  assert.match(sql, /'global'::text/i);
+  assert.match(resolverSql, /NULLIF\s*\(\s*GREATEST\s*\(\s*COALESCE\s*\(\s*p\.max_bet_limit,\s*0\s*\),\s*0\s*\),\s*0\s*\)/i);
+  assert.match(resolverSql, /'user'::text/i);
+  assert.match(resolverSql, /'manager'::text/i);
+  assert.match(resolverSql, /'global'::text/i);
+  assert.doesNotMatch(resolverSql, /LIMIT\s+1/i);
 });
 
 test('bet limit hierarchy migration wires effective limit enforcement into place_bet', () => {
