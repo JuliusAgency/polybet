@@ -12,7 +12,7 @@ type SupabaseClientLike = {
         getSession: (...args: any[]) => Promise<any>;
         onAuthStateChange: (...args: any[]) => any;
         signInWithPassword: (...args: any[]) => Promise<any>;
-        signOut: (...args: any[]) => Promise<void>;
+        signOut: (...args: any[]) => Promise<{ error?: { message?: string } | null } | void>;
         getUser: (...args: any[]) => Promise<any>;
     };
     channel: (...args: any[]) => any;
@@ -37,6 +37,10 @@ interface ForceSignOutController {
     resetForceSignOut: () => void;
 }
 
+interface SignOutResponse {
+    error?: { message?: string } | null;
+}
+
 let supabasePromise: Promise<SupabaseClientLike> | null = null;
 
 const getSupabase = async (): Promise<SupabaseClientLike> => {
@@ -49,7 +53,7 @@ const getSupabase = async (): Promise<SupabaseClientLike> => {
     return supabasePromise;
 };
 
-export const createForceSignOut = (signOut: () => Promise<void>): ForceSignOutController => {
+export const createForceSignOut = (signOut: () => Promise<SignOutResponse | void>): ForceSignOutController => {
     let hasForcedSignOut = false;
     let signOutInFlight = false;
 
@@ -58,11 +62,18 @@ export const createForceSignOut = (signOut: () => Promise<void>): ForceSignOutCo
             return;
         }
 
-        hasForcedSignOut = true;
         signOutInFlight = true;
 
         try {
-            await signOut();
+            const response = await signOut();
+            if (response && response.error) {
+                console.error('[Auth] Failed to force sign out:', response.error);
+                return;
+            }
+
+            hasForcedSignOut = true;
+        } catch (error) {
+            console.error('[Auth] Failed to force sign out:', error);
         } finally {
             signOutInFlight = false;
         }
@@ -158,7 +169,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         () =>
             createForceSignOut(async () => {
                 const supabase = await getSupabase();
-                await supabase.auth.signOut();
+                return supabase.auth.signOut();
             }),
         []
     );

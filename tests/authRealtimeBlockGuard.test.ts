@@ -90,3 +90,29 @@ test('blocked profile on initial bootstrap signs out once and does not hydrate p
   assert.equal(profileCalls, 0);
   assert.equal(roleCalls, 0);
 });
+
+test('forceSignOut retries after a failed signOut response', async () => {
+  const errors: unknown[] = [];
+  const originalConsoleError = console.error;
+  console.error = (...args: unknown[]) => {
+    errors.push(args);
+  };
+
+  let attempts = 0;
+  const revocation = createForceSignOut(async () => {
+    attempts += 1;
+    return attempts === 1
+      ? { error: { message: 'boom' } }
+      : { error: null };
+  });
+
+  try {
+    await revocation.forceSignOut();
+    await revocation.forceSignOut();
+
+    assert.equal(attempts, 2);
+    assert.equal(errors.length, 1);
+  } finally {
+    console.error = originalConsoleError;
+  }
+});
