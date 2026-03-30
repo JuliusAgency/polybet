@@ -25,9 +25,24 @@ export function useSystemKpis() {
         .select('*')
         .single();
 
-      if (error) throw new Error(error.message);
+      if (error) {
+        // Prod/local DB can be behind migrations and miss this view.
+        // Keep the dashboard usable with zeros until migrations are applied.
+        const missingKpisView =
+          error.code === 'PGRST205' ||
+          error.code === '42P01' ||
+          /system_kpis/i.test(error.message);
+
+        if (missingKpisView) {
+          return FALLBACK_KPIS;
+        }
+
+        throw new Error(error.message);
+      }
+
       return (data ?? FALLBACK_KPIS) as SystemKpi;
     },
+    retry: false,
   });
 
   useEffect(() => {
