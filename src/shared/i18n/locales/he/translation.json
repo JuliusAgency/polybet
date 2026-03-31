@@ -256,18 +256,28 @@
     "groupOpenExposure": "חשיפה פתוחה של הקבוצה",
     "groupPnl": "רווח/הפסד קבוצה",
     "groupTurnover": "מחזור קבוצה",
-    "exportTitle": "ייצוא PDF",
+    "exportTitle": "יצוא PDF",
     "reportType": "סוג דוח",
     "startDate": "תאריך התחלה",
     "endDate": "תאריך סיום",
-    "exportPdf": "ייצא PDF",
+    "exportPdf": "יצא PDF",
     "userIdPlaceholder": "מזהה משתמש (UUID)",
     "types": {
-      "system_summary": "סיכום מערכת",
-      "managers_performance": "ביצועי מנהלים",
-      "manager_detailed": "דוח מנהל מפורט",
-      "user_statement": "דוח משתמש",
-      "audit_actions": "יומן פעולות"
+      "managers_log": "יומן פעולות",
+      "bets_log": "יומן כללי",
+      "system_dashboard": "לוח קכרה"
+    },
+    "periods": {
+      "thisWeek": "השבוע",
+      "thisMonth": "החודש",
+      "thisQuarter": "הרבעון",
+      "thisYear": "השנה",
+      "custom": "מותאם אישית"
+    },
+    "descriptions": {
+      "managers_log": "רשומות יומן פעולות מנהלים",
+      "bets_log": "כל ההימורים שהוצבו",
+      "system_dashboard": "מדדי מערכת וספירות"
     }
   },
   "stats": {
@@ -341,7 +351,7 @@
     "noTransactions": "אין תנועות"
   },
   "agentsDashboard": {
-    "title": "לוח סוכנים",
+    "title": "לוח בקרה",
     "agentCol": "סוכן",
     "monthlyDeposits": "הפקדות חודשיות",
     "monthlyWithdrawals": "משיכות חודשיות",

@@ -5,7 +5,6 @@ import { Badge } from '@/shared/ui/Badge';
 import { useManagers } from '@/features/admin/managers';
 import { useBetLog } from '@/features/admin/bet-log';
 import type { BetStatus } from '@/features/admin/bet-log';
-import { useExportAdminReport, type AdminReportType } from '@/features/admin/reports';
 import { FinancialTransactionsTable } from '@/widgets/FinancialTransactionsTable';
 import type { DbSyncRun } from '@/shared/types/database';
 import { SyncMarketsModal } from './components/SyncMarketsModal';
@@ -33,14 +32,8 @@ const GlobalBetLogPage = () => {
   // Filters for bet-log tab
   const [betManagerId, setBetManagerId] = useState<string>('');
   const [betStatus, setBetStatus] = useState<string>('');
-  const [reportType, setReportType] = useState<AdminReportType>('system_summary');
-  const [reportStartedAt, setReportStartedAt] = useState<string>('');
-  const [reportEndedAt, setReportEndedAt] = useState<string>('');
-  const [reportManagerId, setReportManagerId] = useState<string>('');
-  const [reportUserId, setReportUserId] = useState<string>('');
 
   const { data: managers } = useManagers();
-  const exportReport = useExportAdminReport();
 
   const currentYear = new Date().getFullYear();
   const yearOptions = [currentYear - 1, currentYear, currentYear + 1];
@@ -86,21 +79,6 @@ const GlobalBetLogPage = () => {
     if (status === 'lost') return 'loss' as const;
     if (status === 'open') return 'open' as const;
     return 'default' as const;
-  };
-
-  const reportNeedsManager = reportType === 'manager_detailed';
-  const reportNeedsUser = reportType === 'user_statement';
-
-  const handleExportReport = () => {
-    exportReport.mutate({
-      report_type: reportType,
-      filters: {
-        started_at: reportStartedAt || undefined,
-        ended_at: reportEndedAt || undefined,
-        manager_id: reportManagerId || undefined,
-        user_id: reportUserId || undefined,
-      },
-    });
   };
 
   return (
@@ -168,114 +146,6 @@ const GlobalBetLogPage = () => {
             {tab.label}
           </button>
         ))}
-      </div>
-
-      <div
-        className="mb-6 rounded-xl border p-4"
-        style={{
-          backgroundColor: 'var(--color-bg-surface)',
-          borderColor: 'var(--color-border)',
-        }}
-      >
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-            {t('reports.exportTitle')}
-          </h2>
-          {exportReport.isError && (
-            <span className="text-xs" style={{ color: 'var(--color-loss)' }}>
-              {(exportReport.error as Error)?.message ?? t('common.unknownError')}
-            </span>
-          )}
-        </div>
-
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-              {t('reports.reportType')}
-            </label>
-            <select
-              aria-label="report_type"
-              value={reportType}
-              onChange={(e) => setReportType(e.target.value as AdminReportType)}
-              className="rounded-lg border px-3 py-2 text-sm outline-none"
-              style={selectStyle}
-            >
-              <option value="system_summary">{t('reports.types.system_summary')}</option>
-              <option value="managers_performance">{t('reports.types.managers_performance')}</option>
-              <option value="manager_detailed">{t('reports.types.manager_detailed')}</option>
-              <option value="user_statement">{t('reports.types.user_statement')}</option>
-              <option value="audit_actions">{t('reports.types.audit_actions')}</option>
-            </select>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-              {t('reports.startDate')}
-            </label>
-            <input
-              type="date"
-              value={reportStartedAt}
-              onChange={(e) => setReportStartedAt(e.target.value)}
-              className="rounded-lg border px-3 py-2 text-sm outline-none"
-              style={selectStyle}
-            />
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-              {t('reports.endDate')}
-            </label>
-            <input
-              type="date"
-              value={reportEndedAt}
-              onChange={(e) => setReportEndedAt(e.target.value)}
-              className="rounded-lg border px-3 py-2 text-sm outline-none"
-              style={selectStyle}
-            />
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-              {t('globalLog.manager')}
-            </label>
-            <select
-              value={reportManagerId}
-              onChange={(e) => setReportManagerId(e.target.value)}
-              className="rounded-lg border px-3 py-2 text-sm outline-none"
-              style={selectStyle}
-              disabled={!reportNeedsManager && !reportNeedsUser}
-            >
-              <option value="">{t('globalLog.allManagers')}</option>
-              {managers?.map(({ profile }) => (
-                <option key={profile.id} value={profile.id}>
-                  {profile.full_name} (@{profile.username})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-              {t('globalLog.user')}
-            </label>
-            <input
-              value={reportUserId}
-              onChange={(e) => setReportUserId(e.target.value)}
-              placeholder={t('reports.userIdPlaceholder')}
-              className="rounded-lg border px-3 py-2 text-sm outline-none"
-              style={selectStyle}
-              disabled={!reportNeedsUser}
-            />
-          </div>
-
-          <Button
-            variant="primary"
-            onClick={handleExportReport}
-            disabled={exportReport.isPending}
-          >
-            {exportReport.isPending ? t('common.processing') : t('reports.exportPdf')}
-          </Button>
-        </div>
       </div>
 
       {/* Tab content */}

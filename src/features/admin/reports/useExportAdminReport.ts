@@ -1,41 +1,33 @@
 import { useMutation } from '@tanstack/react-query';
 import { invokeSupabaseFunction } from '@/shared/api/supabase';
 
-export type AdminReportType =
-  | 'system_summary'
-  | 'managers_performance'
-  | 'manager_detailed'
-  | 'user_statement'
-  | 'audit_actions';
+export type AdminReportType = 'managers_log' | 'bets_log' | 'system_dashboard';
 
 export interface AdminReportFilters {
   started_at?: string;
-  ended_at?: string;
-  manager_id?: string;
-  user_id?: string;
+  ended_at?:   string;
 }
 
 interface ExportPayload {
   report_type: AdminReportType;
-  filters?: AdminReportFilters;
+  filters?:    AdminReportFilters;
 }
 
 function normalizePdfBytes(data: unknown): Blob {
-  if (data instanceof Blob) return data;
+  if (data instanceof Blob)        return data;
   if (data instanceof ArrayBuffer) return new Blob([data], { type: 'application/pdf' });
   if (data instanceof Uint8Array) {
     const copy = new Uint8Array(data.byteLength);
     copy.set(data);
     return new Blob([copy.buffer], { type: 'application/pdf' });
   }
-
   throw new Error('Unexpected PDF response payload');
 }
 
 function triggerDownload(blob: Blob, fileName: string) {
-  const url = URL.createObjectURL(blob);
+  const url    = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
-  anchor.href = url;
+  anchor.href     = url;
   anchor.download = fileName;
   document.body.appendChild(anchor);
   anchor.click();
@@ -48,10 +40,7 @@ export function useExportAdminReport() {
     mutationFn: async ({ report_type, filters }: ExportPayload) => {
       const { data, error } = await invokeSupabaseFunction<unknown>('export-admin-report', {
         method: 'POST',
-        body: {
-          report_type,
-          filters: filters ?? {},
-        },
+        body: { report_type, filters: filters ?? {} },
       });
 
       if (error) {

@@ -22,6 +22,7 @@ const AgentsDashboardPage = lazy(() => import('@/pages/super-admin/AgentsDashboa
 const ManagersManagementPage = lazy(() => import('@/pages/super-admin/ManagersManagementPage'));
 const ManagerProfilePage = lazy(() => import('@/pages/super-admin/ManagerProfilePage'));
 const GlobalBetLogPage = lazy(() => import('@/pages/super-admin/GlobalBetLogPage'));
+const AdminReportsPage = lazy(() => import('@/pages/super-admin/ReportsPage'));
 const TestLabPage = lazy(() => import('@/pages/super-admin/TestLabPage').then((m) => ({ default: m.TestLabPage })));
 
 // Manager
@@ -81,6 +82,7 @@ export const Router = () => {
             <Route path="managers" element={<ManagersManagementPage />} />
             <Route path="managers/:id" element={<ManagerProfilePage />} />
             <Route path="bets-log" element={<GlobalBetLogPage />} />
+            <Route path="reports" element={<AdminReportsPage />} />
             <Route path="test-lab" element={<TestLabPage />} />
             <Route path="*" element={<Navigate to={ROUTES.ADMIN.DASHBOARD} replace />} />
           </Route>

@@ -263,11 +263,21 @@
     "exportPdf": "Export PDF",
     "userIdPlaceholder": "User ID (UUID)",
     "types": {
-      "system_summary": "System Summary",
-      "managers_performance": "Managers Performance",
-      "manager_detailed": "Manager Detailed",
-      "user_statement": "User Statement",
-      "audit_actions": "Audit Actions"
+      "managers_log": "Actions Log",
+      "bets_log": "General Log",
+      "system_dashboard": "System Dashboard"
+    },
+    "periods": {
+      "thisWeek": "This Week",
+      "thisMonth": "This Month",
+      "thisQuarter": "This Quarter",
+      "thisYear": "This Year",
+      "custom": "Custom"
+    },
+    "descriptions": {
+      "managers_log": "Admin action log entries",
+      "bets_log": "All placed bets",
+      "system_dashboard": "System KPIs and counts"
     }
   },
   "stats": {
@@ -341,7 +351,7 @@
     "noTransactions": "No transactions"
   },
   "agentsDashboard": {
-    "title": "Agents Dashboard",
+    "title": "Dashboard",
     "agentCol": "Agent",
     "monthlyDeposits": "Monthly Deposits",
     "monthlyWithdrawals": "Monthly Withdrawals",

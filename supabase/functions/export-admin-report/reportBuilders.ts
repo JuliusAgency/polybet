@@ -1,18 +1,14 @@
 export const SUPPORTED_REPORT_TYPES = [
-  'system_summary',
-  'managers_performance',
-  'manager_detailed',
-  'user_statement',
-  'audit_actions',
+  'managers_log',
+  'bets_log',
+  'system_dashboard',
 ] as const;
 
 export type SupportedReportType = (typeof SUPPORTED_REPORT_TYPES)[number];
 
 export interface ExportFilters {
   started_at: string | null;
-  ended_at: string | null;
-  manager_id: string | null;
-  user_id: string | null;
+  ended_at:   string | null;
 }
 
 export interface ExportRequestPayload {
@@ -20,217 +16,64 @@ export interface ExportRequestPayload {
   filters?: Partial<ExportFilters> | null;
 }
 
-export interface ReportDataset {
-  report_type: string;
-  generated_at?: string | null;
-  filters?: Partial<ExportFilters> | null;
-  data?: unknown;
+export interface KpiRow {
+  label: string;
+  value: string;
 }
 
-export interface BuiltReportDocument {
-  title: string;
+export interface TableSection {
+  columns: string[];
+  rows:    string[][];
+}
+
+export interface ReportDocument {
+  title:    string;
   filename: string;
-  lines: string[];
+  period:   string;
+  type:     SupportedReportType;
+  kpis?:    KpiRow[];
+  table?:   TableSection;
+}
+
+export interface ReportDataset {
+  report_type:   string;
+  generated_at?: string | null;
+  filters?:      Partial<ExportFilters> | null;
+  data?:         unknown;
 }
 
 const REPORT_TITLES: Record<SupportedReportType, string> = {
-  system_summary: 'System Summary Report',
-  managers_performance: 'Managers Performance Report',
-  manager_detailed: 'Manager Detailed Report',
-  user_statement: 'User Statement Report',
-  audit_actions: 'Audit Actions Report',
+  managers_log:     'יומן פעולות',
+  bets_log:         'יומן כללי',
+  system_dashboard: 'לוח קכרה',
 };
-
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function normalizeNullableString(value: unknown): string | null {
-  if (value == null) {
-    return null;
-  }
-
-  if (typeof value !== 'string') {
-    throw new Error('filters must use string values');
-  }
-
+  if (value == null) return null;
+  if (typeof value !== 'string') throw new Error('filters must use string values');
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
 }
 
 function normalizeIsoDate(value: unknown, fieldName: 'started_at' | 'ended_at'): string | null {
   const normalized = normalizeNullableString(value);
-  if (!normalized) {
-    return null;
-  }
-
+  if (!normalized) return null;
   const parsed = new Date(normalized);
   if (Number.isNaN(parsed.getTime())) {
     throw new Error(`${fieldName} must be a valid ISO-8601 datetime`);
   }
-
   return parsed.toISOString();
-}
-
-function normalizeUuid(value: unknown, fieldName: 'manager_id' | 'user_id'): string | null {
-  const normalized = normalizeNullableString(value);
-  if (!normalized) {
-    return null;
-  }
-
-  if (!UUID_PATTERN.test(normalized)) {
-    throw new Error(`${fieldName} must be a valid UUID`);
-  }
-
-  return normalized;
-}
-
-function formatDisplayTimestamp(value: string | null | undefined): string {
-  if (!value) {
-    return 'n/a';
-  }
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-
-  return parsed.toISOString();
-}
-
-function formatScalar(value: unknown): string {
-  if (value == null) {
-    return 'null';
-  }
-
-  if (typeof value === 'string') {
-    return value;
-  }
-
-  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
-    return String(value);
-  }
-
-  return stableStringify(value);
-}
-
-function stableStringify(value: unknown): string {
-  if (value == null) {
-    return 'null';
-  }
-
-  if (typeof value === 'string') {
-    return JSON.stringify(value);
-  }
-
-  if (typeof value === 'number' || typeof value === 'boolean') {
-    return JSON.stringify(value);
-  }
-
-  if (Array.isArray(value)) {
-    return `[${value.map((entry) => stableStringify(entry)).join(', ')}]`;
-  }
-
-  if (isRecord(value)) {
-    const entries = Object.keys(value)
-      .sort()
-      .map((key) => `${JSON.stringify(key)}: ${stableStringify(value[key])}`);
-
-    return `{${entries.join(', ')}}`;
-  }
-
-  return JSON.stringify(String(value));
-}
-
-function sanitizeFilenameSegment(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 60) || 'report';
-}
-
-function wrapLine(value: string, width = 92): string[] {
-  if (value.length <= width) {
-    return [value];
-  }
-
-  const lines: string[] = [];
-  let remaining = value;
-
-  while (remaining.length > width) {
-    let splitAt = remaining.lastIndexOf(' ', width);
-    if (splitAt <= 0) {
-      splitAt = width;
-    }
-
-    lines.push(remaining.slice(0, splitAt).trimEnd());
-    remaining = remaining.slice(splitAt).trimStart();
-  }
-
-  if (remaining.length > 0) {
-    lines.push(remaining);
-  }
-
-  return lines;
-}
-
-function pushWrapped(lines: string[], value: string, width = 92) {
-  for (const line of wrapLine(value, width)) {
-    lines.push(line);
-  }
-}
-
-function appendSection(lines: string[], label: string, value: unknown, depth = 0) {
-  const indent = '  '.repeat(depth);
-
-  if (Array.isArray(value)) {
-    lines.push(`${indent}${label}:`);
-
-    if (value.length === 0) {
-      lines.push(`${indent}  (empty)`);
-      return;
-    }
-
-    value.forEach((entry, index) => {
-      if (isRecord(entry) || Array.isArray(entry)) {
-        appendSection(lines, `Item ${index + 1}`, entry, depth + 1);
-        return;
-      }
-
-      pushWrapped(lines, `${indent}  - ${formatScalar(entry)}`);
-    });
-    return;
-  }
-
-  if (isRecord(value)) {
-    lines.push(`${indent}${label}:`);
-    const keys = Object.keys(value).sort();
-
-    if (keys.length === 0) {
-      lines.push(`${indent}  (empty)`);
-      return;
-    }
-
-    for (const key of keys) {
-      appendSection(lines, key, value[key], depth + 1);
-    }
-    return;
-  }
-
-  pushWrapped(lines, `${indent}${label}: ${formatScalar(value)}`);
 }
 
 export function validateExportRequest(body: unknown): {
   report_type: SupportedReportType;
   filters: ExportFilters;
 } {
-  if (!isRecord(body)) {
-    throw new Error('Request body must be a JSON object');
-  }
+  if (!isRecord(body)) throw new Error('Request body must be a JSON object');
 
   if (!SUPPORTED_REPORT_TYPES.includes(body.report_type as SupportedReportType)) {
     throw new Error(`report_type must be one of: ${SUPPORTED_REPORT_TYPES.join(', ')}`);
@@ -243,9 +86,7 @@ export function validateExportRequest(body: unknown): {
 
   const filters: ExportFilters = {
     started_at: normalizeIsoDate(rawFilters?.started_at, 'started_at'),
-    ended_at: normalizeIsoDate(rawFilters?.ended_at, 'ended_at'),
-    manager_id: normalizeUuid(rawFilters?.manager_id, 'manager_id'),
-    user_id: normalizeUuid(rawFilters?.user_id, 'user_id'),
+    ended_at:   normalizeIsoDate(rawFilters?.ended_at,   'ended_at'),
   };
 
   if (
@@ -256,48 +97,118 @@ export function validateExportRequest(body: unknown): {
     throw new Error('started_at must be before or equal to ended_at');
   }
 
-  if (body.report_type === 'manager_detailed' && !filters.manager_id) {
-    throw new Error('filters.manager_id is required for manager_detailed');
-  }
+  return { report_type: body.report_type as SupportedReportType, filters };
+}
 
-  if (body.report_type === 'user_statement' && !filters.user_id) {
-    throw new Error('filters.user_id is required for user_statement');
-  }
+function formatDate(iso: string): string {
+  return new Date(iso).toISOString().slice(0, 10);
+}
+
+function formatNum(value: unknown): string {
+  if (typeof value === 'number') return value.toFixed(2);
+  if (typeof value === 'string') return value;
+  return String(value ?? '—');
+}
+
+function safePeriod(filters: Partial<ExportFilters> | null | undefined): string {
+  const start = filters?.started_at ? formatDate(filters.started_at) : null;
+  const end   = filters?.ended_at   ? formatDate(filters.ended_at)   : null;
+  if (start && end) return `${start} – ${end}`;
+  if (start) return `from ${start}`;
+  if (end)   return `to ${end}`;
+  return 'All time';
+}
+
+function buildManagersLogDocument(dataset: ReportDataset): ReportDocument {
+  const data    = isRecord(dataset.data) ? dataset.data : {};
+  const rawRows = Array.isArray(data['rows']) ? data['rows'] : [];
+
+  const rows: string[][] = rawRows.map((row) => {
+    if (!isRecord(row)) return ['', '', '', '', ''];
+    return [
+      row['created_at'] ? formatDate(String(row['created_at'])) : '—',
+      String(row['action']          ?? '—'),
+      String(row['target_username'] ?? '—'),
+      String(row['actor_username']  ?? '—'),
+      String(row['actor_role']      ?? '—'),
+    ];
+  });
 
   return {
-    report_type: body.report_type as SupportedReportType,
-    filters,
+    title:    REPORT_TITLES.managers_log,
+    type:     'managers_log',
+    period:   safePeriod(dataset.filters),
+    filename: `managers-log-${new Date().toISOString().slice(0, 10)}.pdf`,
+    table: {
+      columns: ['Date', 'Action', 'Target', 'Actor', 'Role'],
+      rows,
+    },
   };
 }
 
-export function buildReportDocument(dataset: ReportDataset): BuiltReportDocument {
-  const normalizedReportType = SUPPORTED_REPORT_TYPES.includes(dataset.report_type as SupportedReportType)
-    ? (dataset.report_type as SupportedReportType)
-    : 'system_summary';
-  const title = REPORT_TITLES[normalizedReportType];
-  const generatedAt = formatDisplayTimestamp(dataset.generated_at ?? null);
-  const filters = dataset.filters ?? {};
-  const timestampSegment = generatedAt.replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
-  const lines: string[] = [
-    title,
-    '',
-    `Report Type: ${dataset.report_type}`,
-    `Generated At: ${generatedAt}`,
-    '',
-    'Filters:',
-    `  started_at: ${formatDisplayTimestamp(filters.started_at ?? null)}`,
-    `  ended_at: ${formatDisplayTimestamp(filters.ended_at ?? null)}`,
-    `  manager_id: ${filters.manager_id ?? 'n/a'}`,
-    `  user_id: ${filters.user_id ?? 'n/a'}`,
-    '',
-    'Dataset:',
-  ];
+function buildBetsLogDocument(dataset: ReportDataset): ReportDocument {
+  const data    = isRecord(dataset.data) ? dataset.data : {};
+  const rawRows = Array.isArray(data['rows']) ? data['rows'] : [];
 
-  appendSection(lines, 'data', dataset.data ?? null, 1);
+  const rows: string[][] = rawRows.map((row) => {
+    if (!isRecord(row)) return ['', '', '', '', '', '', '', ''];
+    const market = String(row['market_description'] ?? '—');
+    return [
+      row['placed_at'] ? formatDate(String(row['placed_at'])) : '—',
+      String(row['user_username']    ?? '—'),
+      String(row['manager_username'] ?? '—'),
+      market.length > 35 ? `${market.slice(0, 35)}…` : market,
+      formatNum(row['stake']),
+      formatNum(row['locked_odds']),
+      formatNum(row['potential_payout']),
+      String(row['status'] ?? '—'),
+    ];
+  });
 
   return {
-    title,
-    filename: `${sanitizeFilenameSegment(dataset.report_type)}-${sanitizeFilenameSegment(timestampSegment)}.pdf`,
-    lines,
+    title:    REPORT_TITLES.bets_log,
+    type:     'bets_log',
+    period:   safePeriod(dataset.filters),
+    filename: `bets-log-${new Date().toISOString().slice(0, 10)}.pdf`,
+    table: {
+      columns: ['Date', 'User', 'Manager', 'Market', 'Stake', 'Odds', 'Payout', 'Status'],
+      rows,
+    },
   };
+}
+
+function buildSystemDashboardDocument(dataset: ReportDataset): ReportDocument {
+  const data   = isRecord(dataset.data) ? dataset.data : {};
+  const kpis   = isRecord(data['kpis'])   ? data['kpis']   : {};
+  const counts = isRecord(data['counts']) ? data['counts'] : {};
+
+  return {
+    title:    REPORT_TITLES.system_dashboard,
+    type:     'system_dashboard',
+    period:   safePeriod(dataset.filters),
+    filename: `system-dashboard-${new Date().toISOString().slice(0, 10)}.pdf`,
+    kpis: [
+      { label: 'סך נקודות במערכת', value: formatNum(kpis['total_system_points']) },
+      { label: 'חשיפה פתוחה',      value: formatNum(kpis['open_exposure'])       },
+      { label: 'רווח מערכת',        value: formatNum(kpis['system_profit'])       },
+    ],
+    table: {
+      columns: ['Category', 'Count'],
+      rows: [
+        ['Users',    String(counts['users']    ?? '0')],
+        ['Managers', String(counts['managers'] ?? '0')],
+        ['Markets',  String(counts['markets']  ?? '0')],
+      ],
+    },
+  };
+}
+
+export function buildReportDocument(dataset: ReportDataset): ReportDocument {
+  switch (dataset.report_type) {
+    case 'managers_log':     return buildManagersLogDocument(dataset);
+    case 'bets_log':         return buildBetsLogDocument(dataset);
+    case 'system_dashboard': return buildSystemDashboardDocument(dataset);
+    default:
+      throw new Error(`Unsupported report_type: ${dataset.report_type}`);
+  }
 }
