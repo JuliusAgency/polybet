@@ -362,6 +362,8 @@
     "totalPoints": "Total Points in System",
     "openExposure": "Open Exposure",
     "systemProfit": "System Profit",
+    "totalCollected": "Collected from losers:",
+    "totalPaidOut": "Paid out to winners:",
     "systemCounts": "Users / Managers / Markets",
     "systemCountsHintAria": "Explain U, M, A, R, AR counters",
     "systemCountsHintLineUsers": "U = total users",

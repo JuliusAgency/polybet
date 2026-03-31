@@ -1,3 +1,4 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { authorizeEdgeCall } from '../_shared/edgeAuth.ts';
 import { buildCorsPreflightResponse, jsonWithCors, withCorsHeaders } from '../_shared/cors.ts';
 import { buildReportDocument, type ReportDataset, validateExportRequest } from './reportBuilders.ts';
@@ -37,11 +38,22 @@ function mapRpcErrorToStatus(error: SupabaseError): number {
   return 500;
 }
 
+// Uses caller's JWT so auth.uid() works correctly inside SECURITY DEFINER SQL functions.
+// adminClient (service role) sets auth.uid() = NULL, breaking is_super_admin() checks.
+function createCallerRpcClient(authHeader: string) {
+  return createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+    { global: { headers: { Authorization: authHeader } } },
+  );
+}
+
 async function fetchReportDataset(
-  adminClient: SupabaseAdminClient,
+  authHeader: string,
   payload: ReturnType<typeof validateExportRequest>,
 ): Promise<ReportDataset> {
-  const { data, error } = await adminClient.rpc('admin_get_report_dataset', {
+  const callerClient = createCallerRpcClient(authHeader);
+  const { data, error } = await callerClient.rpc('admin_get_report_dataset', {
     p_report_type: payload.report_type,
     p_started_at:  payload.filters.started_at,
     p_ended_at:    payload.filters.ended_at,
@@ -89,9 +101,11 @@ export async function handleExportAdminReportRequest(req: Request): Promise<Resp
   if (!authResult.ok)       return jsonWithCors(authResult.body, authResult.status);
   if (!authResult.callerId) return jsonWithCors({ error: 'Unauthorized' }, 401);
 
+  const authHeader = req.headers.get('Authorization') ?? '';
+
   let dataset: ReportDataset;
   try {
-    dataset = await fetchReportDataset(authResult.adminClient, payload);
+    dataset = await fetchReportDataset(authHeader, payload);
   } catch (error) {
     return jsonWithCors(
       { error: 'report_fetch_failed', details: error instanceof Error ? error.message : String(error) },

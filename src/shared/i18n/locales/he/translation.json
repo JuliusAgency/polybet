@@ -362,6 +362,8 @@
     "totalPoints": "סך נקודות במערכת",
     "openExposure": "חשיפה פתוחה",
     "systemProfit": "רווח מערכת",
+    "totalCollected": "גבייה מהפסדנים:",
+    "totalPaidOut": "תשלום לזוכים:",
     "systemCounts": "משתמשים / מנהלים / שווקים",
     "systemCountsHintAria": "הסבר למונים U, M, A, R, AR",
     "systemCountsHintLineUsers": "U = סך המשתמשים",

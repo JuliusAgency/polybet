@@ -374,6 +374,9 @@ verify_jwt = false
 [functions.settle-markets]
 verify_jwt = false
 
+[functions.export-admin-report]
+verify_jwt = false
+
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 

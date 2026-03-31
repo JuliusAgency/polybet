@@ -2,18 +2,17 @@ import { PDFDocument, rgb, type PDFPage, type PDFFont } from 'npm:pdf-lib@1.17.1
 import fontkit from 'npm:@pdf-lib/fontkit@1.1.1';
 import type { ReportDocument, KpiRow } from './reportBuilders.ts';
 
-// NotoSansHebrew Regular TTF — supports Hebrew Unicode glyphs
-const HEBREW_FONT_URL =
-  'https://github.com/google/fonts/raw/main/ofl/notosanshebrew/static/NotoSansHebrew-Regular.ttf';
+import { NOTO_SANS_HEBREW_B64 } from './hebrewFontB64.ts';
 
 // Module-level cache: reused across requests within same Deno instance
 let _fontCache: ArrayBuffer | null = null;
 
-async function loadHebrewFont(): Promise<ArrayBuffer> {
+function loadHebrewFont(): ArrayBuffer {
   if (_fontCache) return _fontCache;
-  const res = await fetch(HEBREW_FONT_URL);
-  if (!res.ok) throw new Error(`Failed to fetch Hebrew font: HTTP ${res.status}`);
-  _fontCache = await res.arrayBuffer();
+  const binary = atob(NOTO_SANS_HEBREW_B64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  _fontCache = bytes.buffer as ArrayBuffer;
   return _fontCache;
 }
 
@@ -161,7 +160,7 @@ export async function renderTablePdf(doc: ReportDocument): Promise<Uint8Array> {
   // deno-lint-ignore no-explicit-any
   pdfDoc.registerFontkit(fontkit as any);
 
-  const fontBytes = await loadHebrewFont();
+  const fontBytes = loadHebrewFont();
   const font      = await pdfDoc.embedFont(fontBytes);
 
   const pages: PDFPage[] = [];
