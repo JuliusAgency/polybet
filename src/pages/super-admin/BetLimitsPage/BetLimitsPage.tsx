@@ -171,7 +171,7 @@ export const BetLimitsPage = () => {
                       ?
                     </span>
                     <span
-                      className="pointer-events-none absolute -top-2 start-0 z-10 w-64 -translate-y-full rounded-lg border p-2 text-xs font-normal opacity-0 shadow-lg transition-opacity group-hover:opacity-100"
+                      className="pointer-events-none absolute start-0 top-full z-10 mt-1 w-64 rounded-lg border p-2 text-xs font-normal opacity-0 shadow-lg transition-opacity group-hover:opacity-100"
                       style={{
                         color: 'var(--color-text-primary)',
                         borderColor: 'var(--color-border)',
