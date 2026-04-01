@@ -78,6 +78,18 @@ export const SuperAdminLayout = () => {
           >
             {t('nav.testLab')}
           </NavLink>
+          <NavLink
+            to={ROUTES.ADMIN.LIMITS}
+            className={({ isActive }) =>
+              `block px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                isActive
+                  ? 'bg-gray-700 text-white'
+                  : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+              }`
+            }
+          >
+            {t('nav.betLimits')}
+          </NavLink>
         </nav>
 
         <div className="px-4 py-4 border-t border-gray-800 flex flex-col gap-3">

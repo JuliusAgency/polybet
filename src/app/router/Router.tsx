@@ -24,6 +24,7 @@ const ManagerProfilePage = lazy(() => import('@/pages/super-admin/ManagerProfile
 const GlobalBetLogPage = lazy(() => import('@/pages/super-admin/GlobalBetLogPage'));
 const AdminReportsPage = lazy(() => import('@/pages/super-admin/ReportsPage'));
 const TestLabPage = lazy(() => import('@/pages/super-admin/TestLabPage').then((m) => ({ default: m.TestLabPage })));
+const BetLimitsPage = lazy(() => import('@/pages/super-admin/BetLimitsPage').then((m) => ({ default: m.BetLimitsPage })));
 
 // Manager
 // Keep manager pages as eager imports to avoid lazy chunk mismatch in dev navigation.
@@ -84,6 +85,7 @@ export const Router = () => {
             <Route path="bets-log" element={<GlobalBetLogPage />} />
             <Route path="reports" element={<AdminReportsPage />} />
             <Route path="test-lab" element={<TestLabPage />} />
+            <Route path="limits" element={<BetLimitsPage />} />
             <Route path="*" element={<Navigate to={ROUTES.ADMIN.DASHBOARD} replace />} />
           </Route>
 
