@@ -203,26 +203,31 @@ export const BetLimitsPage = () => {
                 </tr>
               )}
               {filteredManagers.map((manager) => {
-                const open = isExpanded(manager.managerId, manager._hasUserMatch);
+                const hasUsers = manager.users.length > 0;
+                const open = hasUsers && isExpanded(manager.managerId, manager._hasUserMatch);
                 return (
                   <>
                     {/* Manager row */}
                     <tr
                       key={manager.managerId}
-                      className="cursor-pointer border-b transition-colors"
-                      style={{ borderColor: 'var(--color-border)' }}
-                      onClick={() => toggle(manager.managerId)}
-                      onMouseEnter={(e) =>
-                        ((e.currentTarget as HTMLTableRowElement).style.backgroundColor =
-                          'var(--color-hover)')
-                      }
+                      className="border-b transition-colors"
+                      style={{
+                        borderColor: 'var(--color-border)',
+                        cursor: hasUsers ? 'pointer' : 'default',
+                      }}
+                      onClick={() => hasUsers && toggle(manager.managerId)}
+                      onMouseEnter={(e) => {
+                        if (hasUsers)
+                          (e.currentTarget as HTMLTableRowElement).style.backgroundColor =
+                            'var(--color-hover)';
+                      }}
                       onMouseLeave={(e) =>
                         ((e.currentTarget as HTMLTableRowElement).style.backgroundColor = '')
                       }
                     >
                       <td className="px-4 py-3" style={{ color: 'var(--color-text-primary)' }}>
                         <span className="me-2 text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                          {open ? '▼' : '▶'}
+                          {hasUsers ? (open ? '▼' : '▶') : <span className="inline-block w-3" />}
                         </span>
                         <span className="font-medium">@{manager.username}</span>
                         {manager.fullName && (
@@ -250,7 +255,7 @@ export const BetLimitsPage = () => {
                         className="px-4 py-3 font-mono text-xs"
                         style={{ color: 'var(--color-text-secondary)' }}
                       >
-                        {manager.users.length}
+                        {hasUsers ? manager.users.length : <span style={{ color: 'var(--color-text-muted)' }}>—</span>}
                       </td>
                     </tr>
 
