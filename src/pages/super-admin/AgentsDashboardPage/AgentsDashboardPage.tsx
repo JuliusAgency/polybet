@@ -107,7 +107,7 @@ const AgentsDashboardPage = () => {
           </p>
           <div className="mt-2 space-y-0.5">
             <p className="text-xs font-mono" style={{ color: 'var(--color-win)' }}>
-              ↑ {t('agentsDashboard.totalCollected')} {kpis.total_collected_from_losers.toFixed(2)}
+              ↑ {t('agentsDashboard.totalCollected')} {kpis.total_stakes_collected.toFixed(2)}
             </p>
             <p className="text-xs font-mono" style={{ color: 'var(--color-error)' }}>
               ↓ {t('agentsDashboard.totalPaidOut')} {kpis.total_payouts_to_winners.toFixed(2)}

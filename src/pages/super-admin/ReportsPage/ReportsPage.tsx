@@ -61,7 +61,7 @@ const REPORTS: { type: AdminReportType; titleKey: string; descKey: string }[] = 
 const PERIOD_PRESETS: PeriodPreset[] = ['thisWeek', 'thisMonth', 'thisQuarter', 'thisYear', 'custom'];
 
 const AdminReportsPage = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [preset, setPreset]           = useState<PeriodPreset>('thisMonth');
   const [customStart, setCustomStart] = useState('');
   const [customEnd,   setCustomEnd]   = useState('');
@@ -78,7 +78,7 @@ const AdminReportsPage = () => {
   };
 
   const handleExport = (reportType: AdminReportType) => {
-    exportReport.mutate({ report_type: reportType, filters: getFilters() });
+    exportReport.mutate({ report_type: reportType, filters: getFilters(), locale: i18n.language });
   };
 
   return (

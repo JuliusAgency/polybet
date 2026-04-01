@@ -11,6 +11,7 @@ export interface AdminReportFilters {
 interface ExportPayload {
   report_type: AdminReportType;
   filters?:    AdminReportFilters;
+  locale?:     string;
 }
 
 function normalizePdfBytes(data: unknown): Blob {
@@ -37,10 +38,10 @@ function triggerDownload(blob: Blob, fileName: string) {
 
 export function useExportAdminReport() {
   return useMutation({
-    mutationFn: async ({ report_type, filters }: ExportPayload) => {
+    mutationFn: async ({ report_type, filters, locale }: ExportPayload) => {
       const { data, error } = await invokeSupabaseFunction<unknown>('export-admin-report', {
         method: 'POST',
-        body: { report_type, filters: filters ?? {} },
+        body: { report_type, filters: filters ?? {}, locale: locale ?? 'en' },
       });
 
       if (error) {

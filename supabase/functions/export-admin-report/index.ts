@@ -116,7 +116,7 @@ export async function handleExportAdminReportRequest(req: Request): Promise<Resp
   }
 
   try {
-    const document = buildReportDocument(dataset);
+    const document = buildReportDocument(dataset, payload.locale);
     const pdfBytes = await renderTablePdf(document);
 
     try {

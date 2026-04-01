@@ -8,7 +8,7 @@ const FALLBACK_KPIS: SystemKpi = {
   open_exposure: 0,
   system_profit: 0,
   total_payouts_to_winners: 0,
-  total_collected_from_losers: 0,
+  total_stakes_collected: 0,
   active_markets: 0,
   resolved_markets: 0,
   archived_markets: 0,

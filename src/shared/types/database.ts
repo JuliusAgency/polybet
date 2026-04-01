@@ -138,7 +138,7 @@ export interface SystemKpi {
   open_exposure: number;
   system_profit: number;
   total_payouts_to_winners: number;
-  total_collected_from_losers: number;
+  total_stakes_collected: number;
   active_markets: number;
   resolved_markets: number;
   archived_markets: number;
