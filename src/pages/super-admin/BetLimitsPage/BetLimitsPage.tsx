@@ -157,7 +157,30 @@ export const BetLimitsPage = () => {
                   className="px-4 py-3 font-medium text-start"
                   style={{ color: 'var(--color-text-secondary)' }}
                 >
-                  {t('betLimits.effectiveLimit')}
+                  <span className="group relative inline-flex items-center gap-1">
+                    {t('betLimits.effectiveLimit')}
+                    <span
+                      className="inline-flex h-4 w-4 items-center justify-center rounded-full border text-[10px] font-semibold"
+                      style={{
+                        color: 'var(--color-text-secondary)',
+                        borderColor: 'var(--color-border)',
+                        backgroundColor: 'var(--color-bg-elevated)',
+                        cursor: 'default',
+                      }}
+                    >
+                      ?
+                    </span>
+                    <span
+                      className="pointer-events-none absolute -top-2 start-0 z-10 w-64 -translate-y-full rounded-lg border p-2 text-xs font-normal opacity-0 shadow-lg transition-opacity group-hover:opacity-100"
+                      style={{
+                        color: 'var(--color-text-primary)',
+                        borderColor: 'var(--color-border)',
+                        backgroundColor: 'var(--color-bg-elevated)',
+                      }}
+                    >
+                      {t('betLimits.effectiveLimitHint')}
+                    </span>
+                  </span>
                 </th>
                 <th
                   className="px-4 py-3 font-medium text-start"

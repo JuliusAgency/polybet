@@ -430,7 +430,8 @@
     "sourcePersonal": "personal",
     "sourceManager": "manager",
     "sourceGlobal": "global",
-    "noManagers": "No managers found"
+    "noManagers": "No managers found",
+    "effectiveLimitHint": "The limit that actually applies. Inherits down the hierarchy: personal override → manager limit → global limit."
   },
   "testLab": {
     "title": "Test Lab",

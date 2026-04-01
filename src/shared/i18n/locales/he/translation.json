@@ -430,7 +430,8 @@
     "sourcePersonal": "אישי",
     "sourceManager": "מנהל",
     "sourceGlobal": "גלובלי",
-    "noManagers": "לא נמצאו מנהלים"
+    "noManagers": "לא נמצאו מנהלים",
+    "effectiveLimitHint": "המגבלה שחלה בפועל. יורשת בהיררכיה: עקיפה אישית → מגבלת מנהל → מגבלה גלובלית."
   },
   "testLab": {
     "title": "מעבדת בדיקות",
