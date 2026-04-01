@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+import { useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -12,9 +12,6 @@ import { useToggleUserBlock, useResetPassword } from '@/features/admin/manage-us
 import { useManagerUsers, useManagerActionLogs } from '@/features/admin/manager-users';
 import {
   useBetLimitSettings,
-  useSetManagerBetLimit,
-  type BetLimitSource,
-  type ManagerBetLimitSource,
 } from '@/features/admin/bet-limits';
 import { EffectiveLimitBadge } from '@/pages/super-admin/BetLimitsPage/components/EffectiveLimitBadge';
 import type { DbProfile } from '@/shared/types/database';
@@ -47,42 +44,6 @@ const fetchManagerProfile = async (managerId: string): Promise<DbProfile | null>
 };
 
 const formatAmount = (value: number | null | undefined) => (value != null ? value.toFixed(2) : '—');
-const formatDraftValue = (value: number | null | undefined) => (value != null ? String(value) : '');
-const formatLimitValue = (value: number | null | undefined, noLimitLabel: string) =>
-  value != null ? value.toFixed(2) : noLimitLabel;
-
-type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
-type LimitSource = BetLimitSource | ManagerBetLimitSource;
-
-type LimitActionTarget =
-  | { scope: 'manager'; id: string }
-  | { scope: 'user'; id: string }
-  | null;
-
-const getLimitSourceLabel = (source: LimitSource, t: TranslateFn) => {
-  switch (source) {
-    case 'user':
-      return t('managerProfile.limitSourceUser');
-    case 'manager':
-      return t('managerProfile.limitSourceManager');
-    case 'global':
-      return t('managerProfile.limitSourceGlobal');
-    default:
-      return t('managerProfile.limitSourceNone');
-  }
-};
-
-const getLimitSourceVariant = (source: LimitSource) => {
-  switch (source) {
-    case 'user':
-    case 'manager':
-      return 'pending' as const;
-    case 'global':
-      return 'open' as const;
-    default:
-      return 'default' as const;
-  }
-};
 
 const showTransientFeedback = (
   setFeedback: Dispatch<SetStateAction<{ message: string; isError: boolean } | null>>,
@@ -251,117 +212,6 @@ const ResetPasswordModal = ({ isOpen, onClose, targetUser, onSuccess }: ResetPas
   );
 };
 
-interface BetLimitControlsProps {
-  labelContext: string;
-  explicitLimit: number | null;
-  effectiveLimit: number | null;
-  source: LimitSource;
-  pending: boolean;
-  compact?: boolean;
-  showHelp?: boolean;
-  onSet: (value: number) => Promise<void>;
-  onClear: () => Promise<void>;
-}
-
-const BetLimitControls = ({
-  labelContext,
-  explicitLimit,
-  effectiveLimit,
-  source,
-  pending,
-  compact = false,
-  showHelp = false,
-  onSet,
-  onClear,
-}: BetLimitControlsProps) => {
-  const { t } = useTranslation();
-  const noLimitLabel = t('managerProfile.noLimit');
-  const [draft, setDraft] = useState(formatDraftValue(explicitLimit));
-  const [errorMsg, setErrorMsg] = useState('');
-
-  useEffect(() => {
-    setDraft(formatDraftValue(explicitLimit));
-  }, [explicitLimit]);
-
-  const handleSet = async () => {
-    setErrorMsg('');
-    const parsed = Number(draft);
-    if (draft.trim() === '' || !Number.isFinite(parsed) || parsed <= 0) {
-      setErrorMsg(t('managerProfile.limitAmountError'));
-      return;
-    }
-
-    await onSet(parsed);
-  };
-
-  const handleClear = async () => {
-    setErrorMsg('');
-    await onClear();
-  };
-
-  const effectiveLabel = formatLimitValue(effectiveLimit, noLimitLabel);
-  const currentSettingLabel = t('managerProfile.currentSetting', {
-    value: formatLimitValue(explicitLimit, noLimitLabel),
-  });
-
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <span
-          className="text-xs font-medium uppercase tracking-[0.14em]"
-          style={{ color: 'var(--color-text-muted)' }}
-        >
-          {t('managerProfile.effectiveBetLimit')}
-        </span>
-        <span className="font-mono text-sm" style={{ color: 'var(--color-text-primary)' }}>
-          {effectiveLabel}
-        </span>
-        <Badge variant={getLimitSourceVariant(source)}>{getLimitSourceLabel(source, t)}</Badge>
-      </div>
-
-      {showHelp && (
-        <p
-          className="text-xs"
-          title={t('managerProfile.effectiveBetLimitHelp')}
-          style={{ color: 'var(--color-text-secondary)' }}
-        >
-          {t('managerProfile.effectiveBetLimitHelp')}
-        </p>
-      )}
-
-      {!showHelp && (
-        <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-          {currentSettingLabel}
-        </p>
-      )}
-
-      <div className={compact ? 'flex flex-col gap-2' : 'flex flex-col gap-3 sm:flex-row sm:items-end'}>
-        <div className={compact ? 'min-w-[11rem]' : 'min-w-[14rem] flex-1'}>
-          <Input
-            label={compact ? undefined : t('managerProfile.limitInputLabel')}
-            aria-label={`${t('managerProfile.limitInputLabel')} ${labelContext}`}
-            hint={compact ? undefined : currentSettingLabel}
-            type="number"
-            min="0.01"
-            step="0.01"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder="0.00"
-            error={errorMsg || undefined}
-          />
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="primary" onClick={handleSet} disabled={pending}>
-            {pending ? t('common.processing') : t('managerProfile.setLimit')}
-          </Button>
-          <Button variant="secondary" onClick={handleClear} disabled={pending || explicitLimit == null}>
-            {t('managerProfile.clearLimit')}
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 type ModalState =
   | { kind: 'deposit'; user: DbProfile }
@@ -383,7 +233,6 @@ export const ManagerProfilePage = () => {
   const [actionFeedback, setActionFeedback] = useState<{ message: string; isError: boolean } | null>(null);
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
   const [managerActionPending, setManagerActionPending] = useState(false);
-  const [pendingLimitTarget, setPendingLimitTarget] = useState<LimitActionTarget>(null);
   const [logFilter, setLogFilter] = useState<LogFilter>('all');
 
   const { data: manager, isLoading: managerLoading } = useQuery({
@@ -401,7 +250,6 @@ export const ManagerProfilePage = () => {
   const { data: users, isLoading: usersLoading, error: usersError } = useManagerUsers(managerId);
   const { data: betLimitSettings, isLoading: betLimitLoading } = useBetLimitSettings(managerId);
 
-  const setManagerBetLimit = useSetManagerBetLimit();
 
   const managedUsers = users ?? [];
   const userIds = managedUsers.map((user) => user.profile.id);
@@ -491,47 +339,9 @@ export const ManagerProfilePage = () => {
     }
   };
 
-  const handleSetManagerLimit = async (value: number) => {
-    if (!managerId) return;
-
-    setPendingLimitTarget({ scope: 'manager', id: managerId });
-    try {
-      await setManagerBetLimit.mutateAsync({ managerId, maxBetLimit: value });
-      showTransientFeedback(setActionFeedback, t('managerProfile.managerLimitUpdatedSuccess'));
-    } catch (err) {
-      showTransientFeedback(
-        setActionFeedback,
-        err instanceof Error ? err.message : t('common.unknownError'),
-        true,
-      );
-    } finally {
-      setPendingLimitTarget(null);
-    }
-  };
-
-  const handleClearManagerLimit = async () => {
-    if (!managerId) return;
-
-    setPendingLimitTarget({ scope: 'manager', id: managerId });
-    try {
-      await setManagerBetLimit.mutateAsync({ managerId, maxBetLimit: null });
-      showTransientFeedback(setActionFeedback, t('managerProfile.managerLimitClearedSuccess'));
-    } catch (err) {
-      showTransientFeedback(
-        setActionFeedback,
-        err instanceof Error ? err.message : t('common.unknownError'),
-        true,
-      );
-    } finally {
-      setPendingLimitTarget(null);
-    }
-  };
-
-
   const isLoading = managerLoading || usersLoading;
   const managerEffectiveLimit = betLimitSettings?.effective.manager?.effectiveMaxBetLimit ?? null;
   const managerLimitSource = betLimitSettings?.effective.manager?.source ?? null;
-  const managerExplicitLimit = betLimitSettings?.manager?.maxBetLimit ?? null;
 
   const logFilterLabels: Record<LogFilter, string> = {
     all: t('common.all'),
@@ -656,16 +466,18 @@ export const ManagerProfilePage = () => {
                       {t('common.loading')}
                     </p>
                   ) : (
-                    <BetLimitControls
-                      labelContext={manager.username}
-                      explicitLimit={managerExplicitLimit}
-                      effectiveLimit={managerEffectiveLimit}
-                      source={managerLimitSource}
-                      pending={pendingLimitTarget?.scope === 'manager' && pendingLimitTarget.id === manager.id}
-                      showHelp
-                      onSet={handleSetManagerLimit}
-                      onClear={handleClearManagerLimit}
-                    />
+                    <div className="flex flex-col gap-1">
+                      <span
+                        className="text-xs font-medium uppercase tracking-[0.14em]"
+                        style={{ color: 'var(--color-text-muted)' }}
+                      >
+                        {t('managerProfile.effectiveBetLimit')}
+                      </span>
+                      <EffectiveLimitBadge
+                        limit={managerEffectiveLimit}
+                        source={managerLimitSource === 'manager' ? 'manager' : managerLimitSource === 'global' ? 'global' : null}
+                      />
+                    </div>
                   )}
                 </div>
 
