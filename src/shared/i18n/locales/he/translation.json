@@ -239,6 +239,13 @@
     "probability": "הסתברות",
     "effectiveOdds": "יחס אפקטיבי",
     "finalOutcome": "תוצאה סופית",
+    "activeBets_one": "הימור {{count}}",
+    "activeBets_other": "{{count}} הימורים",
+    "noActiveBets": "אין הימורים פעילים",
+    "totalLocked": "סך חסום",
+    "afterBet": "לאחר הימור",
+    "afterBetAvailable": "זמין",
+    "afterBetInPlay": "בהשמה",
     "status": {
       "open": "פתוח",
       "closed": "סגור",

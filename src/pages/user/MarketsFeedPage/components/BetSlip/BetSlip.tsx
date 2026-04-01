@@ -11,6 +11,7 @@ interface BetSlipProps {
   market: Market;
   outcome: MarketOutcome;
   availableBalance: number;
+  inPlay: number;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -19,6 +20,7 @@ export const BetSlip = ({
   market,
   outcome,
   availableBalance,
+  inPlay,
   onClose,
   onSuccess,
 }: BetSlipProps) => {
@@ -32,6 +34,8 @@ export const BetSlip = ({
   const isValidStake = !isNaN(stake) && stake > 0;
   const isInsufficient = isValidStake && stake > availableBalance;
   const potentialPayout = isValidStake && !isInsufficient ? stake * outcome.effective_odds : null;
+  const projectedAvailable = isValidStake && !isInsufficient ? availableBalance - stake : null;
+  const projectedInPlay = isValidStake && !isInsufficient ? inPlay + stake : null;
 
   const handleAllIn = () => {
     setAmount(availableBalance.toFixed(2));
@@ -109,6 +113,36 @@ export const BetSlip = ({
             {t('markets.allIn')}
           </Button>
         </div>
+
+        {/* Balance preview after bet */}
+        {projectedAvailable !== null && projectedInPlay !== null && (
+          <div
+            className="rounded-lg p-3"
+            style={{ backgroundColor: 'var(--color-bg-base)' }}
+          >
+            <p className="mb-2 text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+              {t('markets.afterBet')}
+            </p>
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between text-xs">
+                <span style={{ color: 'var(--color-text-secondary)' }}>{t('markets.afterBetAvailable')}</span>
+                <span className="font-mono" style={{ color: 'var(--color-text-muted)' }}>
+                  {availableBalance.toFixed(2)}
+                  {' → '}
+                  <span style={{ color: 'var(--color-text-primary)' }}>{projectedAvailable.toFixed(2)}</span>
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span style={{ color: 'var(--color-text-secondary)' }}>{t('markets.afterBetInPlay')}</span>
+                <span className="font-mono" style={{ color: 'var(--color-text-muted)' }}>
+                  {inPlay.toFixed(2)}
+                  {' → '}
+                  <span style={{ color: 'var(--color-accent)' }}>{projectedInPlay.toFixed(2)}</span>
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Potential payout */}
         {potentialPayout !== null && (

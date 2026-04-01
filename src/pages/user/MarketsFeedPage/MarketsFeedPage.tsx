@@ -1,9 +1,11 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useMarkets, useUserBalance } from '@/features/bet';
+import { useMarkets, useUserBalance, useMyBets } from '@/features/bet';
 import type { Market, MarketOutcome } from '@/features/bet';
 import { BetSlip } from './components/BetSlip';
 import { MarketCard } from './components/MarketCard';
+import { BalanceWidget } from './components/BalanceWidget';
+import { ActiveBetsDrawer } from './components/ActiveBetsDrawer';
 
 interface SelectedBet {
   market: Market;
@@ -14,6 +16,8 @@ const MarketsFeedPage = () => {
   const { t } = useTranslation();
   const { data: markets, isLoading, isError, error } = useMarkets();
   const { data: balance } = useUserBalance();
+  const { data: bets } = useMyBets();
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const [selectedBet, setSelectedBet] = useState<SelectedBet | null>(null);
   const [showSuccessBanner, setShowSuccessBanner] = useState(false);
@@ -41,6 +45,8 @@ const MarketsFeedPage = () => {
   };
 
   const availableBalance = balance?.available ?? 0;
+  const inPlay = balance?.in_play ?? 0;
+  const openBetsCount = (bets ?? []).filter((b) => b.status === 'open').length;
 
   // Derive unique categories from loaded markets
   const categories = useMemo(() => {
@@ -72,6 +78,15 @@ const MarketsFeedPage = () => {
       >
         {t('markets.title')}
       </h1>
+
+      {/* Balance widget */}
+      <BalanceWidget
+        available={availableBalance}
+        inPlay={inPlay}
+        openBetsCount={openBetsCount}
+        isLoading={!balance}
+        onOpenDrawer={() => setIsDrawerOpen(true)}
+      />
 
       {/* Success banner */}
       {showSuccessBanner && (
@@ -197,10 +212,16 @@ const MarketsFeedPage = () => {
           market={selectedBet.market}
           outcome={selectedBet.outcome}
           availableBalance={availableBalance}
+          inPlay={inPlay}
           onClose={() => setSelectedBet(null)}
           onSuccess={handleBetSuccess}
         />
       )}
+      {/* Active bets drawer */}
+      <ActiveBetsDrawer
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+      />
     </div>
   );
 };

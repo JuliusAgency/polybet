@@ -239,6 +239,13 @@
     "probability": "Probability",
     "effectiveOdds": "Effective",
     "finalOutcome": "Final outcome",
+    "activeBets_one": "{{count}} bet",
+    "activeBets_other": "{{count}} bets",
+    "noActiveBets": "No active bets",
+    "totalLocked": "Total locked",
+    "afterBet": "After bet",
+    "afterBetAvailable": "Available",
+    "afterBetInPlay": "In play",
     "status": {
       "open": "Open",
       "closed": "Closed",
