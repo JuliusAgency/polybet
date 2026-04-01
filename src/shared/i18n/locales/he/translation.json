@@ -26,6 +26,7 @@
     "managers": "מנהלים",
     "betLog": "יומן כללי",
     "testLab": "מעבדת בדיקות",
+    "betLimits": "מגבלות הימור",
     "users": "משתמשים",
     "treasury": "קופה",
     "reports": "דוחות",
@@ -411,6 +412,25 @@
       "completed_with_warnings": "הושלם עם אזהרות",
       "failed": "נכשל"
     }
+  },
+  "betLimits": {
+    "title": "מגבלות הימור",
+    "globalLimitCard": "מגבלת הימור גלובלית",
+    "noLimit": "ללא מגבלה",
+    "save": "שמור",
+    "reset": "אפס",
+    "searchPlaceholder": "חפש מנהלים או משתמשים…",
+    "clearSearch": "נקה",
+    "managerCol": "מנהל",
+    "managerLimit": "מגבלת מנהל",
+    "effectiveLimit": "מגבלה אפקטיבית",
+    "usersCount": "משתמשים",
+    "userCol": "משתמש",
+    "userLimit": "מגבלת משתמש",
+    "sourcePersonal": "אישי",
+    "sourceManager": "מנהל",
+    "sourceGlobal": "גלובלי",
+    "noManagers": "לא נמצאו מנהלים"
   },
   "testLab": {
     "title": "מעבדת בדיקות",

@@ -26,6 +26,7 @@
     "managers": "Managers",
     "betLog": "General Log",
     "testLab": "Test Lab",
+    "betLimits": "Bet Limits",
     "users": "Users",
     "treasury": "Treasury",
     "reports": "Reports",
@@ -411,6 +412,25 @@
       "completed_with_warnings": "Completed with warnings",
       "failed": "Failed"
     }
+  },
+  "betLimits": {
+    "title": "Bet Limits",
+    "globalLimitCard": "Global Bet Limit",
+    "noLimit": "No limit",
+    "save": "Save",
+    "reset": "Reset",
+    "searchPlaceholder": "Search managers or users…",
+    "clearSearch": "Clear",
+    "managerCol": "Manager",
+    "managerLimit": "Manager Limit",
+    "effectiveLimit": "Effective Limit",
+    "usersCount": "Users",
+    "userCol": "User",
+    "userLimit": "User Limit",
+    "sourcePersonal": "personal",
+    "sourceManager": "manager",
+    "sourceGlobal": "global",
+    "noManagers": "No managers found"
   },
   "testLab": {
     "title": "Test Lab",
