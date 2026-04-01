@@ -8,6 +8,7 @@ export const ROUTES = {
     BET_LOG: '/admin/bets-log',
     REPORTS: '/admin/reports',
     TEST_LAB: '/admin/test-lab',
+    LIMITS: '/admin/limits',
   },
 
   MANAGER: {
