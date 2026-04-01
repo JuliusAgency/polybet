@@ -13,10 +13,10 @@ import { useManagerUsers, useManagerActionLogs } from '@/features/admin/manager-
 import {
   useBetLimitSettings,
   useSetManagerBetLimit,
-  useSetUserBetLimit,
   type BetLimitSource,
   type ManagerBetLimitSource,
 } from '@/features/admin/bet-limits';
+import { EffectiveLimitBadge } from '@/pages/super-admin/BetLimitsPage/components/EffectiveLimitBadge';
 import type { DbProfile } from '@/shared/types/database';
 import { formatInitiatorName } from '@/shared/utils';
 
@@ -402,18 +402,11 @@ export const ManagerProfilePage = () => {
   const { data: betLimitSettings, isLoading: betLimitLoading } = useBetLimitSettings(managerId);
 
   const setManagerBetLimit = useSetManagerBetLimit();
-  const setUserBetLimit = useSetUserBetLimit();
 
   const managedUsers = users ?? [];
   const userIds = managedUsers.map((user) => user.profile.id);
   const managerAndUserIds = manager ? [manager.id, ...userIds] : userIds;
   const { data: actionLogs } = useManagerActionLogs(managerAndUserIds);
-
-  const explicitUserLimitById = useMemo(
-    () =>
-      new Map((betLimitSettings?.users ?? []).map((userLimit) => [userLimit.userId, userLimit.maxBetLimit])),
-    [betLimitSettings?.users],
-  );
 
   const effectiveUserLimitById = useMemo(
     () =>
@@ -534,37 +527,6 @@ export const ManagerProfilePage = () => {
     }
   };
 
-  const handleSetUserLimit = async (userId: string, value: number) => {
-    setPendingLimitTarget({ scope: 'user', id: userId });
-    try {
-      await setUserBetLimit.mutateAsync({ userId, maxBetLimit: value });
-      showTransientFeedback(setActionFeedback, t('managerProfile.userLimitUpdatedSuccess'));
-    } catch (err) {
-      showTransientFeedback(
-        setActionFeedback,
-        err instanceof Error ? err.message : t('common.unknownError'),
-        true,
-      );
-    } finally {
-      setPendingLimitTarget(null);
-    }
-  };
-
-  const handleClearUserLimit = async (userId: string) => {
-    setPendingLimitTarget({ scope: 'user', id: userId });
-    try {
-      await setUserBetLimit.mutateAsync({ userId, maxBetLimit: null });
-      showTransientFeedback(setActionFeedback, t('managerProfile.userLimitClearedSuccess'));
-    } catch (err) {
-      showTransientFeedback(
-        setActionFeedback,
-        err instanceof Error ? err.message : t('common.unknownError'),
-        true,
-      );
-    } finally {
-      setPendingLimitTarget(null);
-    }
-  };
 
   const isLoading = managerLoading || usersLoading;
   const managerEffectiveLimit = betLimitSettings?.effective.manager?.effectiveMaxBetLimit ?? null;
@@ -822,7 +784,6 @@ export const ManagerProfilePage = () => {
 
               {managedUsers.map(({ profile, balance }) => {
                 const effectiveLimit = effectiveUserLimitById.get(profile.id);
-                const explicitLimit = explicitUserLimitById.get(profile.id) ?? null;
 
                 return (
                   <tr
@@ -849,15 +810,9 @@ export const ManagerProfilePage = () => {
                       {betLimitLoading ? (
                         <span style={{ color: 'var(--color-text-secondary)' }}>{t('common.loading')}</span>
                       ) : (
-                        <BetLimitControls
-                          labelContext={profile.username}
-                          explicitLimit={explicitLimit}
-                          effectiveLimit={effectiveLimit?.effectiveMaxBetLimit ?? null}
-                          source={effectiveLimit?.source ?? null}
-                          pending={pendingLimitTarget?.scope === 'user' && pendingLimitTarget.id === profile.id}
-                          compact
-                          onSet={(value) => handleSetUserLimit(profile.id, value)}
-                          onClear={() => handleClearUserLimit(profile.id)}
+                        <EffectiveLimitBadge
+                          limit={effectiveLimit?.effectiveMaxBetLimit ?? null}
+                          source={effectiveLimit?.source === 'user' ? 'personal' : (effectiveLimit?.source ?? null)}
                         />
                       )}
                     </td>
