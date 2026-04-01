@@ -231,10 +231,13 @@
     "filterAll": "הכל",
     "searchPlaceholder": "חיפוש שווקים…",
     "volume": "נפח",
+    "marketId": "מזהה פנימי",
+    "polymarketId": "מזהה Polymarket",
     "closesAt": "נסגר",
     "source": "מקור",
     "updatedAt": "עודכן",
     "probability": "הסתברות",
+    "effectiveOdds": "יחס אפקטיבי",
     "finalOutcome": "תוצאה סופית",
     "status": {
       "open": "פתוח",

@@ -43,6 +43,18 @@ export const SuperAdminLayout = () => {
             {t('nav.managers')}
           </NavLink>
           <NavLink
+            to={ROUTES.ADMIN.MARKETS}
+            className={({ isActive }) =>
+              `block px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                isActive
+                  ? 'bg-gray-700 text-white'
+                  : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+              }`
+            }
+          >
+            {t('nav.markets')}
+          </NavLink>
+          <NavLink
             to={ROUTES.ADMIN.BET_LOG}
             className={({ isActive }) =>
               `block px-3 py-2 rounded-md text-sm font-medium transition-colors ${

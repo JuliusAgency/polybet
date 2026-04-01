@@ -5,16 +5,25 @@ import type { Market, MarketOutcome } from '@/features/bet';
 
 interface MarketCardProps {
   market: Market;
-  onOutcomeClick: (market: Market, outcome: MarketOutcome) => void;
+  mode?: 'interactive' | 'readonly';
+  onOutcomeClick?: (market: Market, outcome: MarketOutcome) => void;
 }
 
-export const MarketCard = ({ market, onOutcomeClick }: MarketCardProps) => {
+export const MarketCard = ({
+  market,
+  mode = 'interactive',
+  onOutcomeClick,
+}: MarketCardProps) => {
   const { t } = useTranslation();
   const [hoveredOutcomeId, setHoveredOutcomeId] = useState<string | null>(null);
+  const isInteractive = mode === 'interactive';
   const winnerOutcome = market.winning_outcome_id
     ? market.market_outcomes.find((outcome) => outcome.id === market.winning_outcome_id) ?? null
     : null;
-  const statusLabel = t(`markets.status.${market.status}`, { defaultValue: market.status });
+  const statusLabel = t(`markets.status.${market.status}`, {
+    defaultValue: market.status.toUpperCase(),
+  });
+  const uppercaseStatusLabel = statusLabel.toUpperCase();
 
   return (
     <div
@@ -28,7 +37,9 @@ export const MarketCard = ({ market, onOutcomeClick }: MarketCardProps) => {
       {(market.category || market.status) && (
         <div className="mb-2 flex flex-wrap gap-2">
           {market.category && <Badge variant="default">{market.category}</Badge>}
-          <Badge variant={market.status === 'resolved' ? 'win' : 'default'}>{statusLabel}</Badge>
+          <Badge variant={market.status === 'resolved' ? 'win' : 'default'}>
+            {uppercaseStatusLabel}
+          </Badge>
         </div>
       )}
 
@@ -40,8 +51,14 @@ export const MarketCard = ({ market, onOutcomeClick }: MarketCardProps) => {
         {market.question}
       </p>
 
-      {/* Volume and close date */}
-      <div className="mb-2 flex flex-wrap gap-x-4">
+      {/* Summary row */}
+      <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1">
+        <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+          {t('markets.marketId')}: {market.id}
+        </p>
+        <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+          {t('markets.polymarketId')}: {market.polymarket_id}
+        </p>
         <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
           {t('markets.source')}: Polymarket
         </p>
@@ -60,21 +77,58 @@ export const MarketCard = ({ market, onOutcomeClick }: MarketCardProps) => {
             })}
           </p>
         )}
-        {market.last_synced_at && (
-          <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-            {t('markets.updatedAt')}:{' '}
-            {new Date(market.last_synced_at).toLocaleTimeString(undefined, {
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
-          </p>
-        )}
       </div>
 
       {/* Outcomes */}
       <div className="flex flex-wrap gap-2">
         {market.market_outcomes.map((outcome) => {
-          const isHovered = hoveredOutcomeId === outcome.id;
+          const isHovered = isInteractive && hoveredOutcomeId === outcome.id;
+          const effectiveOddsChanged = outcome.effective_odds !== outcome.odds;
+          const outcomeContent = (
+            <>
+              <span style={{ color: 'var(--color-text-secondary)' }}>
+                {outcome.name}
+                {winnerOutcome?.id === outcome.id ? ` • ${t('markets.finalOutcome')}` : ''}
+              </span>
+              {outcome.price != null && (
+                <span className="ms-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                  {t('markets.probability')}: {(outcome.price * 100).toFixed(1)}%
+                </span>
+              )}
+              <span className="ms-2 font-semibold" style={{ color: 'var(--color-accent)' }}>
+                {outcome.odds.toFixed(2)}
+              </span>
+              {effectiveOddsChanged && (
+                <span className="ms-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                  {t('markets.effectiveOdds')}: {outcome.effective_odds.toFixed(2)}
+                </span>
+              )}
+              <span className="ms-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                {t('markets.updatedAt')}:{' '}
+                {new Date(outcome.updated_at).toLocaleTimeString(undefined, {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </span>
+            </>
+          );
+
+          if (!isInteractive || !onOutcomeClick) {
+            return (
+              <div
+                key={outcome.id}
+                className="rounded-lg px-3 py-2 text-sm"
+                style={{
+                  backgroundColor: 'var(--color-bg-base)',
+                  border: '1px solid var(--color-border)',
+                  color: 'var(--color-text-primary)',
+                }}
+              >
+                {outcomeContent}
+              </div>
+            );
+          }
+
           return (
             <button
               key={outcome.id}
@@ -90,18 +144,7 @@ export const MarketCard = ({ market, onOutcomeClick }: MarketCardProps) => {
                 color: 'var(--color-text-primary)',
               }}
             >
-              <span style={{ color: 'var(--color-text-secondary)' }}>
-                {outcome.name}
-                {winnerOutcome?.id === outcome.id ? ` • ${t('markets.finalOutcome')}` : ''}
-              </span>
-              {outcome.price != null && (
-                <span className="ms-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-                  {t('markets.probability')}: {(outcome.price * 100).toFixed(1)}%
-                </span>
-              )}
-              <span className="ms-2 font-semibold" style={{ color: 'var(--color-accent)' }}>
-                {outcome.odds.toFixed(2)}
-              </span>
+              {outcomeContent}
             </button>
           );
         })}

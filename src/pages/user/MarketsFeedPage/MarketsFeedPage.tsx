@@ -184,6 +184,7 @@ const MarketsFeedPage = () => {
             <MarketCard
               key={market.id}
               market={market}
+              mode="interactive"
               onOutcomeClick={handleOutcomeClick}
             />
           ))}
