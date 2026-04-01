@@ -132,7 +132,9 @@
     "transfer": "Withdrawal",
     "block": "Block",
     "unblock": "Unblock",
-    "reset_password": "Reset Password"
+    "reset_password": "Reset Password",
+    "set_user_max_bet_limit": "Set User Bet Limit",
+    "set_manager_max_bet_limit": "Set Manager Bet Limit"
   },
   "globalLog": {
     "title": "Global Log",

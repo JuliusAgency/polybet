@@ -132,7 +132,9 @@
     "transfer": "משיכה",
     "block": "חסימה",
     "unblock": "ביטול חסימה",
-    "reset_password": "איפוס סיסמה"
+    "reset_password": "איפוס סיסמה",
+    "set_user_max_bet_limit": "קביעת מגבלת הימור למשתמש",
+    "set_manager_max_bet_limit": "קביעת מגבלת הימור למנהל"
   },
   "globalLog": {
     "title": "יומן כללי",
