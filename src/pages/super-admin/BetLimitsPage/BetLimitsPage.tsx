@@ -7,7 +7,6 @@ import {
   useSetUserBetLimit,
 } from '@/features/admin/bet-limits';
 import type { ManagerLimitNode } from '@/features/admin/bet-limits';
-import { Input } from '@/shared/ui/Input';
 import { Button } from '@/shared/ui/Button';
 import { LimitEditor } from './components/LimitEditor';
 import { EffectiveLimitBadge } from './components/EffectiveLimitBadge';
@@ -92,25 +91,6 @@ export const BetLimitsPage = () => {
         )}
       </div>
 
-      {/* Search */}
-      <div
-        className="mb-4 flex items-end gap-3 rounded-xl border p-4"
-        style={{ backgroundColor: 'var(--color-bg-surface)', borderColor: 'var(--color-border)' }}
-      >
-        <div className="flex-1">
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={t('betLimits.searchPlaceholder')}
-          />
-        </div>
-        {search && (
-          <Button variant="secondary" onClick={() => setSearch('')}>
-            {t('betLimits.clearSearch')}
-          </Button>
-        )}
-      </div>
-
       {/* Loading / error */}
       {isLoading && (
         <p style={{ color: 'var(--color-text-secondary)' }}>{t('common.loading')}</p>
@@ -127,6 +107,37 @@ export const BetLimitsPage = () => {
           className="overflow-hidden rounded-xl border"
           style={{ backgroundColor: 'var(--color-bg-surface)', borderColor: 'var(--color-border)' }}
         >
+          {/* Search bar inside table header */}
+          <div
+            className="flex items-center gap-2 border-b px-4 py-3"
+            style={{ borderColor: 'var(--color-border)' }}
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 14 14"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
+              style={{ color: 'var(--color-text-muted)', flexShrink: 0 }}
+            >
+              <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3" />
+              <path d="M9.5 9.5L12 12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+            </svg>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t('betLimits.searchPlaceholder')}
+              className="flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--color-text-muted)]"
+              style={{ color: 'var(--color-text-primary)' }}
+            />
+            {search && (
+              <Button variant="secondary" onClick={() => setSearch('')}>
+                {t('betLimits.clearSearch')}
+              </Button>
+            )}
+          </div>
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b" style={{ borderColor: 'var(--color-border)' }}>

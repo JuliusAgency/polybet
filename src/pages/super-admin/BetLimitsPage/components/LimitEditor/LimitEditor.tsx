@@ -7,6 +7,25 @@ interface LimitEditorProps {
   isSaving: boolean;
 }
 
+const PencilIcon = () => (
+  <svg
+    width="12"
+    height="12"
+    viewBox="0 0 12 12"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    aria-hidden="true"
+  >
+    <path
+      d="M8.5 1.5a1.414 1.414 0 0 1 2 2L4 10H2v-2L8.5 1.5Z"
+      stroke="currentColor"
+      strokeWidth="1.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 export const LimitEditor = ({ value, onSave, isSaving }: LimitEditorProps) => {
   const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
@@ -88,16 +107,21 @@ export const LimitEditor = ({ value, onSave, isSaving }: LimitEditorProps) => {
       <button
         type="button"
         onClick={enterEdit}
-        className="font-mono text-sm underline-offset-2 hover:underline"
+        className="inline-flex items-center gap-1.5 rounded px-2 py-1 text-sm transition-colors hover:bg-[var(--color-hover)]"
         style={{
-          color: value != null ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
+          color: value != null ? 'var(--color-text-primary)' : 'var(--color-accent)',
           background: 'none',
-          border: 'none',
+          border: '1px dashed',
+          borderColor: 'var(--color-border)',
           cursor: 'pointer',
-          padding: 0,
         }}
       >
-        {value != null ? value.toFixed(2) : t('betLimits.noLimit')}
+        <span className="font-mono">
+          {value != null ? value.toFixed(2) : t('betLimits.noLimit')}
+        </span>
+        <span style={{ color: 'var(--color-text-muted)' }}>
+          <PencilIcon />
+        </span>
       </button>
       {value != null && (
         <button
