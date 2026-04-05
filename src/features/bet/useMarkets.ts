@@ -86,7 +86,15 @@ export function useMarkets(statusFilter: MarketStatusFilter = 'all', searchQuery
 
       const { data, error } = await query;
       if (error) throw new Error(error.message);
-      return (data ?? []) as unknown as Market[];
+      const markets = (data ?? []) as unknown as Market[];
+      if (import.meta.env.DEV && markets.length > 0) {
+        // eslint-disable-next-line no-console
+        console.log(
+          '[useMarkets] queryFn fetched, first market last_synced_at:',
+          markets[0].last_synced_at
+        );
+      }
+      return markets;
     },
     getNextPageParam: (lastPage): Cursor | undefined => {
       if (lastPage.length < MARKETS_PAGE_LIMIT) return undefined;

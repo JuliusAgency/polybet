@@ -47,14 +47,26 @@ export function useMarketRefresh(polymarketIds: string[], autoRefresh = true) {
 
       if (import.meta.env.DEV) {
         // eslint-disable-next-line no-console
-        console.log('[useMarketRefresh]', { ids, data, error });
+        console.log('[useMarketRefresh] edge response', {
+          ids,
+          updated: data?.updated,
+          requested: data?.requested,
+          errors: data?.errors,
+          error,
+        });
       }
 
       // Invalidate and force refetch to ensure UI shows fresh data.
-      // A Realtime-triggered refetch may have already deduped, so refetchQueries
-      // guarantees a second read after all DB writes are committed.
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.log('[useMarketRefresh] before invalidate+refetch');
+      }
       await queryClient.invalidateQueries({ queryKey: ['markets'] });
       await queryClient.refetchQueries({ queryKey: ['markets'], type: 'active' });
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.log('[useMarketRefresh] after invalidate+refetch');
+      }
 
       const result: RefreshResult = data && data.updated > 0 ? 'ok' : 'failed';
       setLastResult(result);
@@ -62,7 +74,11 @@ export function useMarketRefresh(polymarketIds: string[], autoRefresh = true) {
       // Reset result indicator after 4 seconds
       if (resultTimerRef.current) clearTimeout(resultTimerRef.current);
       resultTimerRef.current = setTimeout(() => setLastResult('idle'), 4_000);
-    } catch {
+    } catch (err) {
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.error('[useMarketRefresh] CAUGHT error:', err);
+      }
       setLastResult('failed');
       if (resultTimerRef.current) clearTimeout(resultTimerRef.current);
       resultTimerRef.current = setTimeout(() => setLastResult('idle'), 4_000);

@@ -89,7 +89,9 @@ Deno.serve(async (req: Request) => {
 
   const supabase = authResult.adminClient;
 
-  // Fetch all markets in parallel from Gamma API (query-param format returns an array)
+  // Fetch each market from Gamma API in parallel.
+  // The Gamma API may return multiple markets for a single conditionId query,
+  // so we must find the exact match by conditionId in the response array.
   const results = await Promise.allSettled(
     marketIds.map(async (conditionId) => {
       const items = await fetchJsonWithRetry<GammaMarket[]>(
@@ -103,7 +105,14 @@ Deno.serve(async (req: Request) => {
       if (!Array.isArray(items) || items.length === 0) {
         throw new Error('Market not found in Gamma API');
       }
-      return items[0];
+      // Find the exact market by conditionId — the API may return sibling markets
+      const match = items.find((m) => m.conditionId === conditionId);
+      if (!match) {
+        throw new Error(
+          `Gamma API returned ${items.length} markets but none matched conditionId ${conditionId}`
+        );
+      }
+      return match;
     })
   );
 
@@ -116,9 +125,17 @@ Deno.serve(async (req: Request) => {
     const conditionId = marketIds[i];
 
     if (result.status === 'rejected') {
-      errors.push(
-        `${conditionId}: ${result.reason instanceof Error ? result.reason.message : String(result.reason)}`
-      );
+      const reason = result.reason instanceof Error ? result.reason.message : String(result.reason);
+      errors.push(`${conditionId}: ${reason}`);
+
+      // Still update last_synced_at so the UI knows we attempted a sync,
+      // preventing permanent "Stale data" for markets the Gamma API no longer serves.
+      await supabase
+        .from('markets')
+        .update({ last_synced_at: changedAt })
+        .eq('polymarket_id', conditionId);
+
+      updated++;
       continue;
     }
 
