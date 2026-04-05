@@ -130,7 +130,7 @@ async function fetchGammaMarkets(
 async function fetchGammaMarketDetails(conditionId: string): Promise<GammaMarket | null> {
   try {
     const items = await fetchJsonWithRetry<GammaMarket[]>(
-      `${GAMMA_API_BASE}/markets?conditionId=${conditionId}`,
+      `${GAMMA_API_BASE}/markets?condition_ids=${conditionId}`,
       { headers: { Accept: 'application/json' } }
     );
     if (!Array.isArray(items) || items.length === 0) return null;

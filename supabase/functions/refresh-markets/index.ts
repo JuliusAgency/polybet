@@ -90,12 +90,11 @@ Deno.serve(async (req: Request) => {
   const supabase = authResult.adminClient;
 
   // Fetch each market from Gamma API in parallel.
-  // The Gamma API may return multiple markets for a single conditionId query,
-  // so we must find the exact match by conditionId in the response array.
+  // Use condition_ids (snake_case) — the correct Gamma API query parameter.
   const results = await Promise.allSettled(
     marketIds.map(async (conditionId) => {
       const items = await fetchJsonWithRetry<GammaMarket[]>(
-        `${GAMMA_API_BASE}/markets?conditionId=${conditionId}`,
+        `${GAMMA_API_BASE}/markets?condition_ids=${conditionId}`,
         {
           headers: { Accept: 'application/json' },
           timeoutMs: 10_000,
@@ -105,14 +104,7 @@ Deno.serve(async (req: Request) => {
       if (!Array.isArray(items) || items.length === 0) {
         throw new Error('Market not found in Gamma API');
       }
-      // Find the exact market by conditionId — the API may return sibling markets
-      const match = items.find((m) => m.conditionId === conditionId);
-      if (!match) {
-        throw new Error(
-          `Gamma API returned ${items.length} markets but none matched conditionId ${conditionId}`
-        );
-      }
-      return match;
+      return items[0];
     })
   );
 
@@ -223,7 +215,7 @@ Deno.serve(async (req: Request) => {
           fetchMarketDetails: async () => {
             try {
               const items = await fetchJsonWithRetry<GammaMarket[]>(
-                `${GAMMA_API_BASE}/markets?conditionId=${conditionId}`,
+                `${GAMMA_API_BASE}/markets?condition_ids=${conditionId}`,
                 { headers: { Accept: 'application/json' }, timeoutMs: 10_000, maxAttempts: 2 }
               );
               return Array.isArray(items) && items.length > 0 ? items[0] : null;
