@@ -24,7 +24,9 @@ export function useMarketRefresh(polymarketIds: string[], autoRefresh = true) {
   const resultTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeIdsRef = useRef<string[]>([]);
 
-  activeIdsRef.current = polymarketIds.slice(0, MARKETS_REFRESH_MAX_IDS);
+  const slicedIds = polymarketIds.slice(0, MARKETS_REFRESH_MAX_IDS);
+  activeIdsRef.current = slicedIds;
+  const hasIds = slicedIds.length > 0;
 
   const refresh = async () => {
     const ids = activeIdsRef.current;
@@ -33,10 +35,19 @@ export function useMarketRefresh(polymarketIds: string[], autoRefresh = true) {
     setIsRefreshing(true);
     setLastResult('idle');
     try {
-      const { data } = await invokeSupabaseFunction<RefreshMarketsResponse>('refresh-markets', {
-        method: 'POST',
-        body: { market_ids: ids },
-      });
+      const { data, error } = await invokeSupabaseFunction<RefreshMarketsResponse>(
+        'refresh-markets',
+        {
+          method: 'POST',
+          body: { market_ids: ids },
+        }
+      );
+
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.log('[useMarketRefresh]', { ids, data, error });
+      }
+
       void queryClient.invalidateQueries({ queryKey: ['markets'] });
 
       const result: RefreshResult = data && data.updated > 0 ? 'ok' : 'failed';
@@ -55,7 +66,7 @@ export function useMarketRefresh(polymarketIds: string[], autoRefresh = true) {
   };
 
   useEffect(() => {
-    if (!autoRefresh || activeIdsRef.current.length === 0) return;
+    if (!autoRefresh || !hasIds) return;
 
     timerRef.current = setInterval(() => {
       void refresh();
@@ -68,7 +79,7 @@ export function useMarketRefresh(polymarketIds: string[], autoRefresh = true) {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoRefresh]);
+  }, [autoRefresh, hasIds]);
 
   return { isRefreshing, lastResult, refresh };
 }

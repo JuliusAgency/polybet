@@ -89,15 +89,22 @@ Deno.serve(async (req: Request) => {
 
   const supabase = authResult.adminClient;
 
-  // Fetch all markets in parallel from Gamma API
+  // Fetch all markets in parallel from Gamma API (query-param format returns an array)
   const results = await Promise.allSettled(
-    marketIds.map((conditionId) =>
-      fetchJsonWithRetry<GammaMarket>(`${GAMMA_API_BASE}/markets/${conditionId}`, {
-        headers: { Accept: 'application/json' },
-        timeoutMs: 10_000,
-        maxAttempts: 2,
-      })
-    )
+    marketIds.map(async (conditionId) => {
+      const items = await fetchJsonWithRetry<GammaMarket[]>(
+        `${GAMMA_API_BASE}/markets?conditionId=${conditionId}`,
+        {
+          headers: { Accept: 'application/json' },
+          timeoutMs: 10_000,
+          maxAttempts: 2,
+        }
+      );
+      if (!Array.isArray(items) || items.length === 0) {
+        throw new Error('Market not found in Gamma API');
+      }
+      return items[0];
+    })
   );
 
   const changedAt = new Date().toISOString();
@@ -182,10 +189,11 @@ Deno.serve(async (req: Request) => {
           market: gm,
           fetchMarketDetails: async () => {
             try {
-              return await fetchJsonWithRetry<GammaMarket>(
-                `${GAMMA_API_BASE}/markets/${conditionId}`,
+              const items = await fetchJsonWithRetry<GammaMarket[]>(
+                `${GAMMA_API_BASE}/markets?conditionId=${conditionId}`,
                 { headers: { Accept: 'application/json' }, timeoutMs: 10_000, maxAttempts: 2 }
               );
+              return Array.isArray(items) && items.length > 0 ? items[0] : null;
             } catch {
               return null;
             }

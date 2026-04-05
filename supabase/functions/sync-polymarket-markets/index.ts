@@ -129,9 +129,12 @@ async function fetchGammaMarkets(
 
 async function fetchGammaMarketDetails(conditionId: string): Promise<GammaMarket | null> {
   try {
-    return await fetchJsonWithRetry<GammaMarket>(`${GAMMA_API_BASE}/markets/${conditionId}`, {
-      headers: { Accept: 'application/json' },
-    });
+    const items = await fetchJsonWithRetry<GammaMarket[]>(
+      `${GAMMA_API_BASE}/markets?conditionId=${conditionId}`,
+      { headers: { Accept: 'application/json' } }
+    );
+    if (!Array.isArray(items) || items.length === 0) return null;
+    return items[0];
   } catch {
     return null;
   }
