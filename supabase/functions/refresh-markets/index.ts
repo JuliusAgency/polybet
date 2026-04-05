@@ -168,16 +168,10 @@ Deno.serve(async (req: Request) => {
 
       if (outcomeRows.length === 0) continue;
 
-      const { error: upsertErr } = await supabase
-        .from('market_outcomes')
-        .upsert(outcomeRows, { onConflict: 'market_id,polymarket_token_id' });
-
-      if (upsertErr) {
-        errors.push(`${conditionId}: ${upsertErr.message}`);
-        continue;
-      }
-
-      // Update status + last_synced_at
+      // Update status + last_synced_at BEFORE outcomes upsert.
+      // Realtime subscribes to market_outcomes changes and triggers a refetch.
+      // If last_synced_at is written after the upsert, the Realtime-triggered
+      // refetch reads the OLD timestamp — causing the UI to show stale data.
       const { error: updateErr } = await supabase
         .from('markets')
         .update({ status: newStatus, last_synced_at: changedAt })
@@ -194,6 +188,15 @@ Deno.serve(async (req: Request) => {
         console.log(
           `[refresh-markets] Updated ${marketId}: status=${newStatus}, last_synced_at=${changedAt}`
         );
+      }
+
+      const { error: upsertErr } = await supabase
+        .from('market_outcomes')
+        .upsert(outcomeRows, { onConflict: 'market_id,polymarket_token_id' });
+
+      if (upsertErr) {
+        errors.push(`${conditionId}: outcomes upsert failed: ${upsertErr.message}`);
+        // last_synced_at was already updated — still count as updated
       }
 
       // Settle if resolved and not yet settled

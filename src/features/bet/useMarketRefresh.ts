@@ -50,8 +50,11 @@ export function useMarketRefresh(polymarketIds: string[], autoRefresh = true) {
         console.log('[useMarketRefresh]', { ids, data, error });
       }
 
-      // Wait for the refetch to complete so the UI shows fresh data
+      // Invalidate and force refetch to ensure UI shows fresh data.
+      // A Realtime-triggered refetch may have already deduped, so refetchQueries
+      // guarantees a second read after all DB writes are committed.
       await queryClient.invalidateQueries({ queryKey: ['markets'] });
+      await queryClient.refetchQueries({ queryKey: ['markets'], type: 'active' });
 
       const result: RefreshResult = data && data.updated > 0 ? 'ok' : 'failed';
       setLastResult(result);
