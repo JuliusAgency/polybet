@@ -272,6 +272,7 @@
     "priceDown": "מחיר ירד",
     "refreshing": "מרענן…",
     "refreshOdds": "רענן קואפיציינטים",
+      "refreshFailed": "עדכון נכשל (שוק לא נמצא ב-Polymarket)",
     "archive": "ארכיון",
     "archiveConfirm": "להעביר שוק זה לארכיון?",
     "archivedAt": "הועבר לארכיון ב"

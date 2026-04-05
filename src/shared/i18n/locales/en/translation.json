@@ -272,6 +272,7 @@
     "priceDown": "Price down",
     "refreshing": "Refreshing…",
     "refreshOdds": "Refresh odds",
+      "refreshFailed": "Refresh failed (not in Polymarket)",
     "archive": "Archive",
     "archiveConfirm": "Archive this market?",
     "archivedAt": "Archived at"

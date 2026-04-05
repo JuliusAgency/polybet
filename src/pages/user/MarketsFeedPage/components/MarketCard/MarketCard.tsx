@@ -76,7 +76,7 @@ export const MarketCard = ({
   isArchiving = false,
 }: MarketCardProps) => {
   const { t } = useTranslation();
-  const { isRefreshing, refresh } = useMarketRefresh(
+  const { isRefreshing, lastResult, refresh } = useMarketRefresh(
     market.polymarket_id ? [market.polymarket_id] : [],
     false // no auto-interval per card; global auto-refresh runs in useMarkets
   );
@@ -162,13 +162,36 @@ export const MarketCard = ({
               disabled={isRefreshing}
               className="rounded-lg px-2 py-1 text-xs font-medium transition-opacity disabled:opacity-40"
               style={{
-                backgroundColor: 'var(--color-bg-base)',
-                border: '1px solid var(--color-border)',
-                color: 'var(--color-text-secondary)',
+                backgroundColor:
+                  lastResult === 'ok'
+                    ? 'color-mix(in srgb, var(--color-win) 12%, transparent)'
+                    : lastResult === 'failed'
+                      ? 'color-mix(in srgb, var(--color-loss, #ef4444) 12%, transparent)'
+                      : 'var(--color-bg-base)',
+                border:
+                  lastResult === 'ok'
+                    ? '1px solid color-mix(in srgb, var(--color-win) 40%, transparent)'
+                    : lastResult === 'failed'
+                      ? '1px solid color-mix(in srgb, var(--color-loss, #ef4444) 40%, transparent)'
+                      : '1px solid var(--color-border)',
+                color:
+                  lastResult === 'ok'
+                    ? 'var(--color-win)'
+                    : lastResult === 'failed'
+                      ? 'var(--color-loss, #ef4444)'
+                      : 'var(--color-text-secondary)',
               }}
-              title={t('markets.refreshOdds')}
+              title={
+                lastResult === 'failed' ? t('markets.refreshFailed') : t('markets.refreshOdds')
+              }
             >
-              {isRefreshing ? '↻' : t('markets.refreshOdds')}
+              {isRefreshing
+                ? '↻'
+                : lastResult === 'ok'
+                  ? '✓'
+                  : lastResult === 'failed'
+                    ? '✗'
+                    : t('markets.refreshOdds')}
             </button>
           )}
         </div>

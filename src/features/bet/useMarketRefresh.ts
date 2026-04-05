@@ -8,7 +8,10 @@ interface RefreshMarketsResponse {
   settled: number;
   requested: number;
   timestamp: string;
+  errors?: string[];
 }
+
+export type RefreshResult = 'idle' | 'ok' | 'failed';
 
 /** Full-cycle sync for the given polymarket_ids: refreshes odds, updates market status,
  *  and settles resolved markets. Periodically auto-runs and can be triggered manually.
@@ -16,7 +19,9 @@ interface RefreshMarketsResponse {
 export function useMarketRefresh(polymarketIds: string[], autoRefresh = true) {
   const queryClient = useQueryClient();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastResult, setLastResult] = useState<RefreshResult>('idle');
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const resultTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeIdsRef = useRef<string[]>([]);
 
   activeIdsRef.current = polymarketIds.slice(0, MARKETS_REFRESH_MAX_IDS);
@@ -26,14 +31,24 @@ export function useMarketRefresh(polymarketIds: string[], autoRefresh = true) {
     if (ids.length === 0) return;
 
     setIsRefreshing(true);
+    setLastResult('idle');
     try {
-      await invokeSupabaseFunction<RefreshMarketsResponse>('refresh-markets', {
+      const { data } = await invokeSupabaseFunction<RefreshMarketsResponse>('refresh-markets', {
         method: 'POST',
         body: { market_ids: ids },
       });
       void queryClient.invalidateQueries({ queryKey: ['markets'] });
+
+      const result: RefreshResult = data && data.updated > 0 ? 'ok' : 'failed';
+      setLastResult(result);
+
+      // Reset result indicator after 4 seconds
+      if (resultTimerRef.current) clearTimeout(resultTimerRef.current);
+      resultTimerRef.current = setTimeout(() => setLastResult('idle'), 4_000);
     } catch {
-      // Silent — background operation, no user-visible error
+      setLastResult('failed');
+      if (resultTimerRef.current) clearTimeout(resultTimerRef.current);
+      resultTimerRef.current = setTimeout(() => setLastResult('idle'), 4_000);
     } finally {
       setIsRefreshing(false);
     }
@@ -55,5 +70,5 @@ export function useMarketRefresh(polymarketIds: string[], autoRefresh = true) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoRefresh]);
 
-  return { isRefreshing, refresh };
+  return { isRefreshing, lastResult, refresh };
 }
