@@ -1,6 +1,7 @@
-import { useEffect, useMemo } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect } from 'react';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/shared/api/supabase';
+import { MARKETS_PAGE_LIMIT, MARKETS_REFRESH_MAX_IDS } from '@/shared/config/markets';
 import { useMarketRefresh } from './useMarketRefresh';
 
 export type MarketStatusFilter = 'all' | 'open' | 'closed' | 'resolved' | 'archived';
@@ -35,49 +36,102 @@ export interface Market {
   image_url: string | null;
   close_at: string | null;
   last_synced_at: string | null;
+  created_at: string;
   volume?: number | null;
   market_outcomes: MarketOutcome[];
 }
 
-export function useMarkets(statusFilter: MarketStatusFilter = 'all') {
-  const queryClient = useQueryClient();
+interface Cursor {
+  lastCreatedAt: string;
+  lastId: string;
+}
 
-  const result = useQuery<Market[]>({
-    queryKey: ['markets', statusFilter],
-    queryFn: async () => {
-      const { data, error } = await supabase
+export function useMarkets(statusFilter: MarketStatusFilter = 'all', searchQuery = '') {
+  const queryClient = useQueryClient();
+  const queryKey = ['markets', statusFilter, searchQuery] as const;
+
+  const result = useInfiniteQuery<
+    Market[],
+    Error,
+    { pages: Market[][] },
+    typeof queryKey,
+    Cursor | undefined
+  >({
+    queryKey,
+    initialPageParam: undefined,
+    queryFn: async ({ pageParam }) => {
+      let query = supabase
         .from('markets')
         .select(
-          'id, polymarket_id, question, status, winning_outcome_id, category, image_url, close_at, last_synced_at, volume, market_outcomes!market_outcomes_market_id_fkey(id, name, price, odds, effective_odds, updated_at, polymarket_token_id)'
+          'id, polymarket_id, question, status, winning_outcome_id, category, image_url, close_at, last_synced_at, created_at, volume, market_outcomes!market_outcomes_market_id_fkey(id, name, price, odds, effective_odds, updated_at, polymarket_token_id)'
         )
         .in('status', STATUS_MAP[statusFilter])
-        .eq('is_visible', true)
-        .order('created_at', { ascending: false });
+        .eq('is_visible', true);
 
+      if (searchQuery.trim()) {
+        query = query.ilike('question', `%${searchQuery.trim()}%`);
+      }
+
+      // Cursor: fetch rows after the last item of the previous page
+      if (pageParam) {
+        query = query.or(
+          `created_at.lt.${pageParam.lastCreatedAt},and(created_at.eq.${pageParam.lastCreatedAt},id.lt.${pageParam.lastId})`
+        );
+      }
+
+      query = query
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .limit(MARKETS_PAGE_LIMIT);
+
+      const { data, error } = await query;
       if (error) throw new Error(error.message);
       return (data ?? []) as unknown as Market[];
     },
+    getNextPageParam: (lastPage): Cursor | undefined => {
+      if (lastPage.length < MARKETS_PAGE_LIMIT) return undefined;
+      const last = lastPage[lastPage.length - 1];
+      return { lastCreatedAt: last.created_at, lastId: last.id };
+    },
   });
+
+  // Flatten all pages into a single array
+  const markets = result.data?.pages.flat() ?? [];
+
+  // Realtime: invalidate current query when market_outcomes change
+  const handleRealtimeChange = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryClient, statusFilter, searchQuery]);
 
   useEffect(() => {
     const channel = supabase
       .channel('market_outcomes_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'market_outcomes' }, () => {
-        void queryClient.invalidateQueries({ queryKey: ['markets'] });
-      })
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'market_outcomes' },
+        handleRealtimeChange
+      )
       .subscribe();
 
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [queryClient]);
+  }, [handleRealtimeChange]);
 
-  const polymarketIds = useMemo(
-    () => (result.data ?? []).map((m) => m.polymarket_id),
-    [result.data]
-  );
+  // Pass the first N polymarket IDs to the refresh hook
+  const polymarketIds = markets.slice(0, MARKETS_REFRESH_MAX_IDS).map((m) => m.polymarket_id);
 
   const { isRefreshing } = useMarketRefresh(polymarketIds);
 
-  return { ...result, isRefreshing };
+  return {
+    markets,
+    isLoading: result.isLoading,
+    isError: result.isError,
+    error: result.error,
+    fetchNextPage: result.fetchNextPage,
+    hasNextPage: result.hasNextPage,
+    isFetchingNextPage: result.isFetchingNextPage,
+    isRefreshing,
+  };
 }

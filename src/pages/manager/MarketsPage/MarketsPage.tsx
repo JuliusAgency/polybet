@@ -4,7 +4,7 @@ import { MarketCard } from '@/pages/user/MarketsFeedPage/components/MarketCard';
 
 const MarketsPage = () => {
   const { t } = useTranslation();
-  const { data: markets, isLoading, isError, error } = useMarkets();
+  const { markets, isLoading, isError, error } = useMarkets();
 
   return (
     <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--color-bg-base)' }}>

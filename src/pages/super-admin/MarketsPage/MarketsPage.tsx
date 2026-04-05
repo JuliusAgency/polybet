@@ -6,7 +6,7 @@ import type { Market } from '@/features/bet';
 
 const MarketsPage = () => {
   const { t } = useTranslation();
-  const { data: markets, isLoading, isError, error } = useMarkets();
+  const { markets, isLoading, isError, error } = useMarkets();
   const archiveMarket = useArchiveMarket();
 
   const handleArchive = (market: Market) => {

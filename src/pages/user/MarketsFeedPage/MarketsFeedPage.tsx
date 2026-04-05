@@ -1,7 +1,9 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMarkets, useUserBalance, useMyBets } from '@/features/bet';
 import type { Market, MarketOutcome, MarketStatusFilter } from '@/features/bet';
+import { useDebounce } from '@/shared/hooks/useDebounce';
+import { useIntersectionObserver } from '@/shared/hooks/useIntersectionObserver';
 import { BetSlip } from './components/BetSlip';
 import { MarketCard } from './components/MarketCard';
 import { BalanceWidget } from './components/BalanceWidget';
@@ -16,13 +18,24 @@ interface SelectedBet {
 const MarketsFeedPage = () => {
   const { t } = useTranslation();
   const [statusFilter, setStatusFilter] = useState<MarketStatusFilter>('all');
-  const { data: markets, isLoading, isError, error } = useMarkets(statusFilter);
+  const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearch = useDebounce(searchQuery, 300);
+
+  const { markets, isLoading, isError, error, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    useMarkets(statusFilter, debouncedSearch);
+
   const { data: balance } = useUserBalance();
   const { data: bets } = useMyBets();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-
   const [selectedBet, setSelectedBet] = useState<SelectedBet | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  const handleLoadMore = useCallback(() => {
+    void fetchNextPage();
+  }, [fetchNextPage]);
+
+  useIntersectionObserver(sentinelRef, handleLoadMore, !!hasNextPage && !isFetchingNextPage);
 
   const handleOutcomeClick = useCallback((market: Market, outcome: MarketOutcome) => {
     setSelectedBet({ market, outcome });
@@ -35,12 +48,6 @@ const MarketsFeedPage = () => {
   const availableBalance = balance?.available ?? 0;
   const inPlay = balance?.in_play ?? 0;
   const openBetsCount = (bets ?? []).filter((b) => b.status === 'open').length;
-
-  const filteredMarkets = useMemo(() => {
-    if (!markets) return [];
-    if (!searchQuery) return markets;
-    return markets.filter((m) => m.question.toLowerCase().includes(searchQuery.toLowerCase()));
-  }, [markets, searchQuery]);
 
   return (
     <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--color-bg-base)' }}>
@@ -58,7 +65,24 @@ const MarketsFeedPage = () => {
         onOpenDrawer={() => setIsDrawerOpen(true)}
       />
 
-      {/* Loading state */}
+      {/* Filter row: status pills + search */}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <StatusFilter value={statusFilter} onChange={setStatusFilter} />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder={t('markets.searchPlaceholder')}
+          className="rounded-full border px-3 py-1 text-sm outline-none"
+          style={{
+            backgroundColor: 'var(--color-bg-elevated)',
+            borderColor: 'var(--color-border)',
+            color: 'var(--color-text-primary)',
+          }}
+        />
+      </div>
+
+      {/* Loading state — initial load */}
       {isLoading && (
         <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
           {t('common.loading')}
@@ -72,43 +96,17 @@ const MarketsFeedPage = () => {
         </p>
       )}
 
-      {/* Filter row: status pills + search */}
-      {!isLoading && !isError && (
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <StatusFilter value={statusFilter} onChange={setStatusFilter} />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t('markets.searchPlaceholder')}
-            className="rounded-full border px-3 py-1 text-sm outline-none"
-            style={{
-              backgroundColor: 'var(--color-bg-elevated)',
-              borderColor: 'var(--color-border)',
-              color: 'var(--color-text-primary)',
-            }}
-          />
-        </div>
-      )}
-
       {/* Empty state — no markets at all */}
-      {!isLoading && !isError && markets?.length === 0 && (
+      {!isLoading && !isError && markets.length === 0 && (
         <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-          {t('markets.noMarkets')}
-        </p>
-      )}
-
-      {/* Empty state — search produced no results */}
-      {!isLoading && !isError && markets && markets.length > 0 && filteredMarkets.length === 0 && (
-        <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-          {t('common.noData')}
+          {debouncedSearch ? t('markets.noResults') : t('markets.noMarkets')}
         </p>
       )}
 
       {/* Markets grid */}
-      {!isLoading && !isError && filteredMarkets.length > 0 && (
+      {!isLoading && !isError && markets.length > 0 && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {filteredMarkets.map((market) => (
+          {markets.map((market) => (
             <MarketCard
               key={market.id}
               market={market}
@@ -119,6 +117,23 @@ const MarketsFeedPage = () => {
             />
           ))}
         </div>
+      )}
+
+      {/* Infinite scroll sentinel */}
+      <div ref={sentinelRef} className="h-4" />
+
+      {/* Loading next page */}
+      {isFetchingNextPage && (
+        <p className="mt-4 text-center text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+          {t('markets.loadingMore')}
+        </p>
+      )}
+
+      {/* All pages loaded */}
+      {!hasNextPage && markets.length > 0 && !isLoading && (
+        <p className="mt-4 text-center text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+          {t('markets.allLoaded')}
+        </p>
       )}
 
       {/* BetSlip modal */}
@@ -132,6 +147,7 @@ const MarketsFeedPage = () => {
           onSuccess={handleBetSuccess}
         />
       )}
+
       {/* Active bets drawer */}
       <ActiveBetsDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
     </div>
