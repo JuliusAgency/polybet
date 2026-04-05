@@ -23,6 +23,7 @@ export function useMarketRefresh(polymarketIds: string[], autoRefresh = true) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resultTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeIdsRef = useRef<string[]>([]);
+  const refreshingRef = useRef(false);
 
   const slicedIds = polymarketIds.slice(0, MARKETS_REFRESH_MAX_IDS);
   activeIdsRef.current = slicedIds;
@@ -30,8 +31,9 @@ export function useMarketRefresh(polymarketIds: string[], autoRefresh = true) {
 
   const refresh = async () => {
     const ids = activeIdsRef.current;
-    if (ids.length === 0) return;
+    if (ids.length === 0 || refreshingRef.current) return;
 
+    refreshingRef.current = true;
     setIsRefreshing(true);
     setLastResult('idle');
     try {
@@ -48,7 +50,8 @@ export function useMarketRefresh(polymarketIds: string[], autoRefresh = true) {
         console.log('[useMarketRefresh]', { ids, data, error });
       }
 
-      void queryClient.invalidateQueries({ queryKey: ['markets'] });
+      // Wait for the refetch to complete so the UI shows fresh data
+      await queryClient.invalidateQueries({ queryKey: ['markets'] });
 
       const result: RefreshResult = data && data.updated > 0 ? 'ok' : 'failed';
       setLastResult(result);
@@ -61,6 +64,7 @@ export function useMarketRefresh(polymarketIds: string[], autoRefresh = true) {
       if (resultTimerRef.current) clearTimeout(resultTimerRef.current);
       resultTimerRef.current = setTimeout(() => setLastResult('idle'), 4_000);
     } finally {
+      refreshingRef.current = false;
       setIsRefreshing(false);
     }
   };

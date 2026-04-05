@@ -178,10 +178,23 @@ Deno.serve(async (req: Request) => {
       }
 
       // Update status + last_synced_at
-      await supabase
+      const { error: updateErr } = await supabase
         .from('markets')
         .update({ status: newStatus, last_synced_at: changedAt })
         .eq('id', marketId);
+
+      if (updateErr) {
+        console.error(
+          `[refresh-markets] Failed to update last_synced_at for ${marketId}:`,
+          updateErr.message
+        );
+        errors.push(`${conditionId}: market update failed: ${updateErr.message}`);
+        continue;
+      } else {
+        console.log(
+          `[refresh-markets] Updated ${marketId}: status=${newStatus}, last_synced_at=${changedAt}`
+        );
+      }
 
       // Settle if resolved and not yet settled
       if (newStatus === 'resolved' && !marketRow.winning_outcome_id) {
