@@ -11,8 +11,9 @@ interface RefreshMarketsResponse {
 }
 
 /** Full-cycle sync for the given polymarket_ids: refreshes odds, updates market status,
- *  and settles resolved markets. Periodically auto-runs and can be triggered manually. */
-export function useMarketRefresh(polymarketIds: string[]) {
+ *  and settles resolved markets. Periodically auto-runs and can be triggered manually.
+ *  Pass autoRefresh=false to disable the interval (manual-only mode for per-card buttons). */
+export function useMarketRefresh(polymarketIds: string[], autoRefresh = true) {
   const queryClient = useQueryClient();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -39,7 +40,7 @@ export function useMarketRefresh(polymarketIds: string[]) {
   };
 
   useEffect(() => {
-    if (activeIdsRef.current.length === 0) return;
+    if (!autoRefresh || activeIdsRef.current.length === 0) return;
 
     timerRef.current = setInterval(() => {
       void refresh();
@@ -52,7 +53,7 @@ export function useMarketRefresh(polymarketIds: string[]) {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [autoRefresh]);
 
   return { isRefreshing, refresh };
 }

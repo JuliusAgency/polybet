@@ -87,7 +87,8 @@ export const MarketCard = ({
 }: MarketCardProps) => {
   const { t } = useTranslation();
   const { isRefreshing, refresh } = useMarketRefresh(
-    market.polymarket_id ? [market.polymarket_id] : []
+    market.polymarket_id ? [market.polymarket_id] : [],
+    false // no auto-interval per card; global auto-refresh runs in useMarkets
   );
   const syncedLabel = useSyncedAgoLabel(market.last_synced_at);
   const isStale = market.last_synced_at
