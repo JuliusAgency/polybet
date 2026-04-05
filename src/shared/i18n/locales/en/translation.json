@@ -246,6 +246,7 @@
     "source": "Source",
     "updatedAt": "Updated",
     "updatedMinutesAgo": "{{minutes}}m ago",
+    "updatedSecondsAgo": "{{seconds}}s ago",
     "updatedJustNow": "just now",
     "probability": "Probability",
     "effectiveOdds": "Effective",

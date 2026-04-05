@@ -5,12 +5,14 @@ import { useMarketRefresh } from '@/features/bet';
 import { MARKETS_STALE_THRESHOLD_MS } from '@/shared/config/markets';
 import { useTicker } from '@/shared/hooks/useTicker';
 
-function formatOutcomeUpdatedAt(
+function formatSyncedAgo(
   timestamp: string,
   t: (key: string, opts?: Record<string, unknown>) => string
 ): string {
-  const minutes = Math.floor((Date.now() - new Date(timestamp).getTime()) / 60000);
-  if (minutes < 1) return t('markets.updatedJustNow');
+  const seconds = Math.floor((Date.now() - new Date(timestamp).getTime()) / 1000);
+  if (seconds < 5) return t('markets.updatedJustNow');
+  if (seconds < 60) return t('markets.updatedSecondsAgo', { seconds });
+  const minutes = Math.floor(seconds / 60);
   return t('markets.updatedMinutesAgo', { minutes });
 }
 
@@ -83,7 +85,7 @@ export const MarketCard = ({
   useTicker(10_000); // re-render every 10s so "X ago" labels stay current
   const isStale = market.last_synced_at
     ? Date.now() - new Date(market.last_synced_at).getTime() > MARKETS_STALE_THRESHOLD_MS
-    : false;
+    : true;
   const [hoveredOutcomeId, setHoveredOutcomeId] = useState<string | null>(null);
   const isInteractive = mode === 'interactive';
 
@@ -96,11 +98,6 @@ export const MarketCard = ({
   const statusLabel = t(`markets.status.${market.status}`, {
     defaultValue: market.status.toUpperCase(),
   });
-
-  const outcomesUpdatedAt = market.market_outcomes.map((o) => o.updated_at);
-  const allSameUpdatedAt =
-    outcomesUpdatedAt.length > 0 && outcomesUpdatedAt.every((t) => t === outcomesUpdatedAt[0]);
-  const sharedUpdatedAt = allSameUpdatedAt ? outcomesUpdatedAt[0] : null;
 
   const closesDate = market.close_at
     ? new Date(market.close_at).toLocaleDateString(undefined, {
@@ -311,13 +308,12 @@ export const MarketCard = ({
             {market.status === 'open' ? t('markets.closesAt') : t('markets.closedAt')} {closesDate}
           </span>
         )}
-        {/* Show outcome timestamp only when data is fresh; stale badge replaces it */}
-        {!isStale && sharedUpdatedAt && (
+        {/* Synced-ago or stale badge */}
+        {!isStale && market.last_synced_at && (
           <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-            {t('markets.updatedAt')} {formatOutcomeUpdatedAt(sharedUpdatedAt, t)}
+            {formatSyncedAgo(market.last_synced_at, t)}
           </span>
         )}
-        {/* Stale badge — shown only when last_synced_at is older than threshold */}
         {isStale && (
           <span className="ms-auto text-xs" style={{ color: 'var(--color-loss, #ef4444)' }}>
             {t('markets.syncedStale')}

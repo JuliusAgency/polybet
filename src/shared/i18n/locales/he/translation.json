@@ -246,6 +246,7 @@
     "source": "מקור",
     "updatedAt": "עודכן",
     "updatedMinutesAgo": "לפני {{minutes}} ד'",
+    "updatedSecondsAgo": "לפני {{seconds}} שנ'",
     "updatedJustNow": "זה עתה",
     "probability": "הסתברות",
     "effectiveOdds": "יחס אפקטיבי",
