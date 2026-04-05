@@ -1,5 +1,5 @@
 export { useMarkets } from './useMarkets';
-export type { Market, MarketOutcome } from './useMarkets';
+export type { Market, MarketOutcome, MarketStatusFilter } from './useMarkets';
 
 export { useUserBalance } from './useUserBalance';
 export type { UserBalance } from './useUserBalance';
@@ -12,3 +12,4 @@ export type { MyBet } from './useMyBets';
 
 export { useBetResultNotifications } from './useBetResultNotifications';
 export { useUnseenBetsCount } from './useUnseenBetsCount';
+export { useMarketRefresh } from './useMarketRefresh';

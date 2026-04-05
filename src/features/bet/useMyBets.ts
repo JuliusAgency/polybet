@@ -30,6 +30,9 @@ export function useMyBets() {
   useEffect(() => {
     if (!userId) return;
 
+    // Single channel that listens to:
+    // 1. bets table — direct bet status changes (e.g. won/lost after settlement)
+    // 2. markets table — market resolution changes the joined markets data in the query
     const channel = supabase
       .channel(`user_bets_${userId}`)
       .on(
@@ -37,8 +40,11 @@ export function useMyBets() {
         { event: '*', schema: 'public', table: 'bets', filter: `user_id=eq.${userId}` },
         () => {
           void queryClient.invalidateQueries({ queryKey: ['user', 'bets', userId] });
-        },
+        }
       )
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'markets' }, () => {
+        void queryClient.invalidateQueries({ queryKey: ['user', 'bets', userId] });
+      })
       .subscribe();
 
     return () => {
@@ -53,7 +59,7 @@ export function useMyBets() {
       const { data, error } = await supabase
         .from('bets')
         .select(
-          'id, outcome_id, stake, locked_odds, potential_payout, status, placed_at, settled_at, seen_at, markets(question, status, winning_outcome_id, last_synced_at), market_outcomes(name)',
+          'id, outcome_id, stake, locked_odds, potential_payout, status, placed_at, settled_at, seen_at, markets(question, status, winning_outcome_id, last_synced_at), market_outcomes(name)'
         )
         // Defense-in-depth: RLS enforces this, but explicit filter documents intent
         .eq('user_id', session!.user.id)

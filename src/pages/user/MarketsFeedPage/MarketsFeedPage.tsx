@@ -1,11 +1,12 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMarkets, useUserBalance, useMyBets } from '@/features/bet';
-import type { Market, MarketOutcome } from '@/features/bet';
+import type { Market, MarketOutcome, MarketStatusFilter } from '@/features/bet';
 import { BetSlip } from './components/BetSlip';
 import { MarketCard } from './components/MarketCard';
 import { BalanceWidget } from './components/BalanceWidget';
 import { ActiveBetsDrawer } from './components/ActiveBetsDrawer';
+import { StatusFilter } from './components/StatusFilter';
 
 interface SelectedBet {
   market: Market;
@@ -14,26 +15,14 @@ interface SelectedBet {
 
 const MarketsFeedPage = () => {
   const { t } = useTranslation();
-  const { data: markets, isLoading, isError, error } = useMarkets();
+  const [statusFilter, setStatusFilter] = useState<MarketStatusFilter>('all');
+  const { data: markets, isLoading, isError, error } = useMarkets(statusFilter);
   const { data: balance } = useUserBalance();
   const { data: bets } = useMyBets();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const [selectedBet, setSelectedBet] = useState<SelectedBet | null>(null);
-  const [showSuccessBanner, setShowSuccessBanner] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Auto-dismiss success banner after 3 seconds
-  useEffect(() => {
-    if (!showSuccessBanner) return;
-
-    const timer = setTimeout(() => {
-      setShowSuccessBanner(false);
-    }, 3000);
-
-    return () => clearTimeout(timer);
-  }, [showSuccessBanner]);
 
   const handleOutcomeClick = useCallback((market: Market, outcome: MarketOutcome) => {
     setSelectedBet({ market, outcome });
@@ -41,41 +30,22 @@ const MarketsFeedPage = () => {
 
   const handleBetSuccess = () => {
     setSelectedBet(null);
-    setShowSuccessBanner(true);
   };
 
   const availableBalance = balance?.available ?? 0;
   const inPlay = balance?.in_play ?? 0;
   const openBetsCount = (bets ?? []).filter((b) => b.status === 'open').length;
 
-  // Derive unique categories from loaded markets
-  const categories = useMemo(() => {
-    if (!markets) return [];
-    const unique = new Set(markets.map((m) => m.category).filter(Boolean));
-    return Array.from(unique) as string[];
-  }, [markets]);
-
-  // Filter markets client-side by category and search query
   const filteredMarkets = useMemo(() => {
     if (!markets) return [];
-    return markets.filter((m) => {
-      const matchesCategory = !selectedCategory || m.category === selectedCategory;
-      const matchesSearch =
-        !searchQuery || m.question.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesCategory && matchesSearch;
-    });
-  }, [markets, selectedCategory, searchQuery]);
+    if (!searchQuery) return markets;
+    return markets.filter((m) => m.question.toLowerCase().includes(searchQuery.toLowerCase()));
+  }, [markets, searchQuery]);
 
   return (
-    <div
-      className="min-h-screen p-6"
-      style={{ backgroundColor: 'var(--color-bg-base)' }}
-    >
+    <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--color-bg-base)' }}>
       {/* Header */}
-      <h1
-        className="mb-6 text-2xl font-bold"
-        style={{ color: 'var(--color-text-primary)' }}
-      >
+      <h1 className="mb-6 text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
         {t('markets.title')}
       </h1>
 
@@ -87,20 +57,6 @@ const MarketsFeedPage = () => {
         isLoading={!balance}
         onOpenDrawer={() => setIsDrawerOpen(true)}
       />
-
-      {/* Success banner */}
-      {showSuccessBanner && (
-        <div
-          className="mb-4 rounded-lg px-4 py-3 text-sm font-medium"
-          style={{
-            color: 'var(--color-win)',
-            backgroundColor: 'var(--color-win-muted)',
-            border: '1px solid var(--color-win)',
-          }}
-        >
-          {t('markets.betPlaced')}
-        </div>
-      )}
 
       {/* Loading state */}
       {isLoading && (
@@ -116,55 +72,16 @@ const MarketsFeedPage = () => {
         </p>
       )}
 
-      {/* Filter bar — shown when data is loaded without errors */}
+      {/* Filter row: status pills + search */}
       {!isLoading && !isError && (
-        <div className="mb-4 flex flex-wrap items-center gap-3">
-          {/* Category pills */}
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setSelectedCategory('')}
-              className="rounded-full px-3 py-1 text-sm font-medium transition-colors"
-              style={{
-                backgroundColor: !selectedCategory
-                  ? 'var(--color-accent)'
-                  : 'var(--color-bg-elevated)',
-                color: !selectedCategory
-                  ? 'var(--color-bg-base)'
-                  : 'var(--color-text-secondary)',
-                border: '1px solid var(--color-border)',
-              }}
-            >
-              {t('markets.filterAll')}
-            </button>
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat === selectedCategory ? '' : cat)}
-                className="rounded-full px-3 py-1 text-sm font-medium transition-colors"
-                style={{
-                  backgroundColor:
-                    selectedCategory === cat
-                      ? 'var(--color-accent)'
-                      : 'var(--color-bg-elevated)',
-                  color:
-                    selectedCategory === cat
-                      ? 'var(--color-bg-base)'
-                      : 'var(--color-text-secondary)',
-                  border: '1px solid var(--color-border)',
-                }}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-
-          {/* Search input */}
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <StatusFilter value={statusFilter} onChange={setStatusFilter} />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t('markets.searchPlaceholder')}
-            className="rounded-lg border px-3 py-1.5 text-sm outline-none"
+            className="rounded-full border px-3 py-1 text-sm outline-none"
             style={{
               backgroundColor: 'var(--color-bg-elevated)',
               borderColor: 'var(--color-border)',
@@ -181,16 +98,12 @@ const MarketsFeedPage = () => {
         </p>
       )}
 
-      {/* Empty state — filters produced no results */}
-      {!isLoading &&
-        !isError &&
-        markets &&
-        markets.length > 0 &&
-        filteredMarkets.length === 0 && (
-          <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-            {t('common.noData')}
-          </p>
-        )}
+      {/* Empty state — search produced no results */}
+      {!isLoading && !isError && markets && markets.length > 0 && filteredMarkets.length === 0 && (
+        <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+          {t('common.noData')}
+        </p>
+      )}
 
       {/* Markets grid */}
       {!isLoading && !isError && filteredMarkets.length > 0 && (
@@ -199,7 +112,9 @@ const MarketsFeedPage = () => {
             <MarketCard
               key={market.id}
               market={market}
-              mode="interactive"
+              mode={
+                market.status === 'open' || market.status === 'closed' ? 'interactive' : 'readonly'
+              }
               onOutcomeClick={handleOutcomeClick}
             />
           ))}
@@ -218,10 +133,7 @@ const MarketsFeedPage = () => {
         />
       )}
       {/* Active bets drawer */}
-      <ActiveBetsDrawer
-        isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
-      />
+      <ActiveBetsDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
     </div>
   );
 };

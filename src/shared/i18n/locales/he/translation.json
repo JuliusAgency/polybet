@@ -34,7 +34,8 @@
     "markets": "שווקים",
     "myBets": "ההימורים שלי",
     "wallet": "ארנק",
-    "stats": "סטטיסטיקה"
+    "stats": "סטטיסטיקה",
+    "settings": "הגדרות"
   },
   "auth": {
     "signOut": "התנתק",
@@ -219,7 +220,7 @@
   },
   "markets": {
     "title": "שווקים",
-    "noMarkets": "אין שווקים פתוחים כרגע",
+    "noMarkets": "אין שווקים זמינים",
     "betSlipTitle": "הנח הימור",
     "stakeLabel": "סכום הימור",
     "balance": "יתרה: {{amount}}",
@@ -229,15 +230,24 @@
     "confirmBet": "אשר הימור",
     "betPlaced": "ההימור הונח בהצלחה!",
     "filterAll": "הכל",
+    "filterOpen": "פתוח",
+    "filterClosed": "סגור",
+    "filterResolved": "נקבע",
+    "filterArchived": "ארכיון",
     "searchPlaceholder": "חיפוש שווקים…",
     "volume": "נפח",
     "marketId": "מזהה פנימי",
     "polymarketId": "מזהה Polymarket",
-    "closesAt": "נסגר",
+    "closesAt": "ייסגר",
+    "closedAt": "נסגר",
     "source": "מקור",
     "updatedAt": "עודכן",
+    "updatedMinutesAgo": "לפני {{minutes}} ד'",
+    "updatedJustNow": "זה עתה",
     "probability": "הסתברות",
     "effectiveOdds": "יחס אפקטיבי",
+    "rawOdds": "מכפיל מקורי: {{odds}}",
+    "marginApplied": "כולל מרווח בית",
     "finalOutcome": "תוצאה סופית",
     "activeBets_one": "הימור {{count}}",
     "activeBets_other": "{{count}} הימורים",
@@ -249,9 +259,26 @@
     "status": {
       "open": "פתוח",
       "closed": "סגור",
-      "resolved": "הוכרע",
+      "resolved": "נקבע",
       "archived": "ארכיון"
-    }
+    },
+    "syncedAgo": "עודכן לפני {{seconds}}ש",
+    "syncedJustNow": "עודכן זה עתה",
+    "syncedStale": "נתונים ישנים",
+    "priceUp": "מחיר עלה",
+    "priceDown": "מחיר ירד",
+    "refreshing": "מרענן…",
+    "refreshOdds": "רענן קואפיציינטים",
+    "archive": "ארכיון",
+    "archiveConfirm": "להעביר שוק זה לארכיון?",
+    "archivedAt": "הועבר לארכיון ב"
+  },
+  "settings": {
+    "title": "הגדרות",
+    "archiveAfterHours": "העברה לארכיון לאחר (שעות)",
+    "archiveAfterHoursDesc": "שווקים שנפתרו יועברו לארכיון אוטומטית לאחר מספר שעות זה.",
+    "save": "שמור",
+    "saved": "נשמר"
   },
   "bet": {
     "open": "פתוח",
@@ -259,6 +286,7 @@
     "lost": "הפסיד",
     "cancelled": "בוטל",
     "notification": {
+      "placed": "הימור בוצע · {{outcome}} · סכום {{stake}}",
       "won": "{{market}} · {{outcome}} · הימור {{stake}} → תשלום {{payout}} 🎉",
       "lost": "{{market}} · {{outcome}} · הימור {{stake}} — הפסד"
     }

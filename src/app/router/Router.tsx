@@ -8,12 +8,7 @@ import ManagerMarketsPage from '@/pages/manager/MarketsPage/MarketsPage';
 import UserActivityPage from '@/pages/manager/UserActivityPage/UserActivityPage';
 import TreasuryPage from '@/pages/manager/TreasuryPage/TreasuryPage';
 import ReportsPage from '@/pages/manager/ReportsPage/ReportsPage';
-import {
-  AuthLayout,
-  SuperAdminLayout,
-  ManagerLayout,
-  UserLayout,
-} from '@/app/layouts';
+import { AuthLayout, SuperAdminLayout, ManagerLayout, UserLayout } from '@/app/layouts';
 
 // Auth
 const SignInPage = lazy(() => import('@/pages/auth/SignInPage'));
@@ -25,8 +20,15 @@ const ManagerProfilePage = lazy(() => import('@/pages/super-admin/ManagerProfile
 const AdminMarketsPage = lazy(() => import('@/pages/super-admin/MarketsPage'));
 const GlobalBetLogPage = lazy(() => import('@/pages/super-admin/GlobalBetLogPage'));
 const AdminReportsPage = lazy(() => import('@/pages/super-admin/ReportsPage'));
-const TestLabPage = lazy(() => import('@/pages/super-admin/TestLabPage').then((m) => ({ default: m.TestLabPage })));
-const BetLimitsPage = lazy(() => import('@/pages/super-admin/BetLimitsPage').then((m) => ({ default: m.BetLimitsPage })));
+const TestLabPage = lazy(() =>
+  import('@/pages/super-admin/TestLabPage').then((m) => ({ default: m.TestLabPage }))
+);
+const BetLimitsPage = lazy(() =>
+  import('@/pages/super-admin/BetLimitsPage').then((m) => ({ default: m.BetLimitsPage }))
+);
+const SettingsPage = lazy(() =>
+  import('@/pages/super-admin/SettingsPage').then((m) => ({ default: m.SettingsPage }))
+);
 
 // Manager
 // Keep manager pages as eager imports to avoid lazy chunk mismatch in dev navigation.
@@ -89,6 +91,7 @@ export const Router = () => {
             <Route path="reports" element={<AdminReportsPage />} />
             <Route path="test-lab" element={<TestLabPage />} />
             <Route path="limits" element={<BetLimitsPage />} />
+            <Route path="settings" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to={ROUTES.ADMIN.DASHBOARD} replace />} />
           </Route>
 

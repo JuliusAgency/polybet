@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { Modal } from '@/shared/ui/Modal';
 import { Input } from '@/shared/ui/Input';
 import { Button } from '@/shared/ui/Button';
@@ -49,13 +50,19 @@ export const BetSlip = ({
       { marketId: market.id, outcomeId: outcome.id, stake },
       {
         onSuccess: () => {
+          toast.success(
+            t('bet.notification.placed', { outcome: outcome.name, stake: stake.toFixed(2) }),
+            {
+              duration: 5000,
+            }
+          );
           onSuccess();
           onClose();
         },
         onError: (err) => {
           setSubmitError(err instanceof Error ? err.message : t('common.unknownError'));
         },
-      },
+      }
     );
   };
 
@@ -65,14 +72,8 @@ export const BetSlip = ({
     <Modal isOpen onClose={onClose} title={t('markets.betSlipTitle')}>
       <div className="flex flex-col gap-4">
         {/* Market question */}
-        <div
-          className="rounded-lg p-3"
-          style={{ backgroundColor: 'var(--color-bg-base)' }}
-        >
-          <p
-            className="text-sm font-medium"
-            style={{ color: 'var(--color-text-primary)' }}
-          >
+        <div className="rounded-lg p-3" style={{ backgroundColor: 'var(--color-bg-base)' }}>
+          <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
             {market.question}
           </p>
         </div>
@@ -82,7 +83,7 @@ export const BetSlip = ({
           <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
             {outcome.name}
           </span>
-          <Badge variant="open">{outcome.odds.toFixed(2)}</Badge>
+          <Badge variant="open">{outcome.effective_odds.toFixed(2)}</Badge>
         </div>
 
         {/* Stake input */}
@@ -116,24 +117,30 @@ export const BetSlip = ({
 
         {/* Balance preview after bet */}
         {projectedAvailable !== null && projectedInPlay !== null && (
-          <div
-            className="rounded-lg p-3"
-            style={{ backgroundColor: 'var(--color-bg-base)' }}
-          >
-            <p className="mb-2 text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+          <div className="rounded-lg p-3" style={{ backgroundColor: 'var(--color-bg-base)' }}>
+            <p
+              className="mb-2 text-xs font-medium"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
               {t('markets.afterBet')}
             </p>
             <div className="flex flex-col gap-1">
               <div className="flex items-center justify-between text-xs">
-                <span style={{ color: 'var(--color-text-secondary)' }}>{t('markets.afterBetAvailable')}</span>
+                <span style={{ color: 'var(--color-text-secondary)' }}>
+                  {t('markets.afterBetAvailable')}
+                </span>
                 <span className="font-mono" style={{ color: 'var(--color-text-muted)' }}>
                   {availableBalance.toFixed(2)}
                   {' → '}
-                  <span style={{ color: 'var(--color-text-primary)' }}>{projectedAvailable.toFixed(2)}</span>
+                  <span style={{ color: 'var(--color-text-primary)' }}>
+                    {projectedAvailable.toFixed(2)}
+                  </span>
                 </span>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span style={{ color: 'var(--color-text-secondary)' }}>{t('markets.afterBetInPlay')}</span>
+                <span style={{ color: 'var(--color-text-secondary)' }}>
+                  {t('markets.afterBetInPlay')}
+                </span>
                 <span className="font-mono" style={{ color: 'var(--color-text-muted)' }}>
                   {inPlay.toFixed(2)}
                   {' → '}
@@ -153,10 +160,7 @@ export const BetSlip = ({
             <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
               {t('markets.potentialPayout')}
             </span>
-            <span
-              className="text-sm font-semibold"
-              style={{ color: 'var(--color-win)' }}
-            >
+            <span className="text-sm font-semibold" style={{ color: 'var(--color-win)' }}>
               {potentialPayout.toFixed(2)}
             </span>
           </div>

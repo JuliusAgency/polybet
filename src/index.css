@@ -35,6 +35,19 @@ input, textarea, select {
   color: var(--color-text-primary);
 }
 
+/* Sonner toast: close button on the right in LTR, left in RTL */
+[data-sonner-toaster][dir=ltr] [data-close-button] {
+  left: auto !important;
+  right: 0 !important;
+  transform: translate(35%, -35%) !important;
+}
+
+[data-sonner-toaster][dir=rtl] [data-close-button] {
+  left: 0 !important;
+  right: auto !important;
+  transform: translate(-35%, -35%) !important;
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 6px;

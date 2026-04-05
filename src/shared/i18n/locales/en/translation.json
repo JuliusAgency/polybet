@@ -34,7 +34,8 @@
     "markets": "Markets",
     "myBets": "My Bets",
     "wallet": "Wallet",
-    "stats": "Stats"
+    "stats": "Stats",
+    "settings": "Settings"
   },
   "auth": {
     "signOut": "Sign Out",
@@ -219,7 +220,7 @@
   },
   "markets": {
     "title": "Markets",
-    "noMarkets": "No open markets available",
+    "noMarkets": "No markets available",
     "betSlipTitle": "Place a Bet",
     "stakeLabel": "Stake",
     "balance": "Balance: {{amount}}",
@@ -229,15 +230,24 @@
     "confirmBet": "Confirm Bet",
     "betPlaced": "Bet placed successfully!",
     "filterAll": "All",
+    "filterOpen": "Open",
+    "filterClosed": "Closed",
+    "filterResolved": "Resolved",
+    "filterArchived": "Archived",
     "searchPlaceholder": "Search markets…",
     "volume": "Vol",
     "marketId": "ID",
     "polymarketId": "Polymarket ID",
     "closesAt": "Closes",
+    "closedAt": "Closed",
     "source": "Source",
     "updatedAt": "Updated",
+    "updatedMinutesAgo": "{{minutes}}m ago",
+    "updatedJustNow": "just now",
     "probability": "Probability",
     "effectiveOdds": "Effective",
+    "rawOdds": "Raw odds: {{odds}}",
+    "marginApplied": "Includes house margin",
     "finalOutcome": "Final outcome",
     "activeBets_one": "{{count}} bet",
     "activeBets_other": "{{count}} bets",
@@ -251,7 +261,24 @@
       "closed": "Closed",
       "resolved": "Resolved",
       "archived": "Archived"
-    }
+    },
+    "syncedAgo": "Updated {{seconds}}s ago",
+    "syncedJustNow": "Just updated",
+    "syncedStale": "Stale data",
+    "priceUp": "Price up",
+    "priceDown": "Price down",
+    "refreshing": "Refreshing…",
+    "refreshOdds": "Refresh odds",
+    "archive": "Archive",
+    "archiveConfirm": "Archive this market?",
+    "archivedAt": "Archived at"
+  },
+  "settings": {
+    "title": "Settings",
+    "archiveAfterHours": "Archive after (hours)",
+    "archiveAfterHoursDesc": "Resolved markets will be archived automatically after this many hours.",
+    "save": "Save",
+    "saved": "Saved"
   },
   "bet": {
     "open": "Open",
@@ -259,6 +286,7 @@
     "lost": "Lost",
     "cancelled": "Cancelled",
     "notification": {
+      "placed": "Bet placed · {{outcome}} · Stake {{stake}}",
       "won": "{{market}} · {{outcome}} · Stake {{stake}} → Payout {{payout}} 🎉",
       "lost": "{{market}} · {{outcome}} · Stake {{stake}} — lost"
     }

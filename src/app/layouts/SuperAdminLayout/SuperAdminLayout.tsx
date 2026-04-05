@@ -79,18 +79,6 @@ export const SuperAdminLayout = () => {
             {t('nav.reports')}
           </NavLink>
           <NavLink
-            to={ROUTES.ADMIN.TEST_LAB}
-            className={({ isActive }) =>
-              `block px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                isActive
-                  ? 'bg-gray-700 text-white'
-                  : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-              }`
-            }
-          >
-            {t('nav.testLab')}
-          </NavLink>
-          <NavLink
             to={ROUTES.ADMIN.LIMITS}
             className={({ isActive }) =>
               `block px-3 py-2 rounded-md text-sm font-medium transition-colors ${
@@ -102,7 +90,34 @@ export const SuperAdminLayout = () => {
           >
             {t('nav.betLimits')}
           </NavLink>
+          <NavLink
+            to={ROUTES.ADMIN.SETTINGS}
+            className={({ isActive }) =>
+              `block px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                isActive
+                  ? 'bg-gray-700 text-white'
+                  : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+              }`
+            }
+          >
+            {t('nav.settings')}
+          </NavLink>
         </nav>
+
+        <div className="px-4 pb-3 border-t border-gray-800 pt-3">
+          <NavLink
+            to={ROUTES.ADMIN.TEST_LAB}
+            className={({ isActive }) =>
+              `block px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                isActive
+                  ? 'bg-gray-700 text-white'
+                  : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+              }`
+            }
+          >
+            {t('nav.testLab')}
+          </NavLink>
+        </div>
 
         <div className="px-4 py-4 border-t border-gray-800 flex flex-col gap-3">
           <div className="flex items-center justify-between gap-2">
@@ -119,7 +134,9 @@ export const SuperAdminLayout = () => {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 min-h-0 overflow-y-auto"><Outlet /></main>
+      <main className="flex-1 min-h-0 overflow-y-auto">
+        <Outlet />
+      </main>
     </div>
   );
 };

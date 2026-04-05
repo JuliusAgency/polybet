@@ -10,6 +10,7 @@ export const ROUTES = {
     REPORTS: '/admin/reports',
     TEST_LAB: '/admin/test-lab',
     LIMITS: '/admin/limits',
+    SETTINGS: '/admin/settings',
   },
 
   MANAGER: {
@@ -30,8 +31,5 @@ export const ROUTES = {
 } as const;
 
 export const buildPath = (path: string, params: Record<string, string>): string => {
-  return Object.entries(params).reduce(
-    (acc, [key, val]) => acc.replace(`:${key}`, val),
-    path
-  );
+  return Object.entries(params).reduce((acc, [key, val]) => acc.replace(`:${key}`, val), path);
 };
