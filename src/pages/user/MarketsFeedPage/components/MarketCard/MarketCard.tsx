@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { Market, MarketOutcome } from '@/features/bet';
 import { useMarketRefresh } from '@/features/bet';
 import { MARKETS_STALE_THRESHOLD_MS } from '@/shared/config/markets';
+import { useTicker } from '@/shared/hooks/useTicker';
 
 function formatOutcomeUpdatedAt(
   timestamp: string,
@@ -11,17 +12,6 @@ function formatOutcomeUpdatedAt(
   const minutes = Math.floor((Date.now() - new Date(timestamp).getTime()) / 60000);
   if (minutes < 1) return t('markets.updatedJustNow');
   return t('markets.updatedMinutesAgo', { minutes });
-}
-
-function useSyncedAgoLabel(lastSyncedAt: string | null): string {
-  const { t } = useTranslation();
-  if (!lastSyncedAt) return '';
-  const seconds = Math.floor((Date.now() - new Date(lastSyncedAt).getTime()) / 1000);
-  if (seconds < 10) return t('markets.syncedJustNow');
-  if (Date.now() - new Date(lastSyncedAt).getTime() > MARKETS_STALE_THRESHOLD_MS) {
-    return t('markets.syncedStale');
-  }
-  return t('markets.syncedAgo', { seconds });
 }
 
 function PriceMovementIndicator({
@@ -90,7 +80,7 @@ export const MarketCard = ({
     market.polymarket_id ? [market.polymarket_id] : [],
     false // no auto-interval per card; global auto-refresh runs in useMarkets
   );
-  const syncedLabel = useSyncedAgoLabel(market.last_synced_at);
+  useTicker(10_000); // re-render every 10s so "X ago" labels stay current
   const isStale = market.last_synced_at
     ? Date.now() - new Date(market.last_synced_at).getTime() > MARKETS_STALE_THRESHOLD_MS
     : false;
@@ -298,29 +288,16 @@ export const MarketCard = ({
             {market.status === 'open' ? t('markets.closesAt') : t('markets.closedAt')} {closesDate}
           </span>
         )}
-        {sharedUpdatedAt && (
+        {/* Show outcome timestamp only when data is fresh; stale badge replaces it */}
+        {!isStale && sharedUpdatedAt && (
           <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
             {t('markets.updatedAt')} {formatOutcomeUpdatedAt(sharedUpdatedAt, t)}
           </span>
         )}
-        {!sharedUpdatedAt &&
-          market.market_outcomes.map((outcome) => (
-            <span
-              key={outcome.id}
-              className="text-xs"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
-              {outcome.name}: {formatOutcomeUpdatedAt(outcome.updated_at, t)}
-            </span>
-          ))}
-        {syncedLabel && (
-          <span
-            className="ms-auto text-xs"
-            style={{
-              color: isStale ? 'var(--color-loss, #ef4444)' : 'var(--color-text-secondary)',
-            }}
-          >
-            {syncedLabel}
+        {/* Stale badge — shown only when last_synced_at is older than threshold */}
+        {isStale && (
+          <span className="ms-auto text-xs" style={{ color: 'var(--color-loss, #ef4444)' }}>
+            {t('markets.syncedStale')}
           </span>
         )}
       </div>
