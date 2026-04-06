@@ -6,7 +6,6 @@ import { ROUTES } from './routes';
 import UsersManagementPage from '@/pages/manager/UsersManagementPage/UsersManagementPage';
 import ManagerMarketsPage from '@/pages/manager/MarketsPage/MarketsPage';
 import UserActivityPage from '@/pages/manager/UserActivityPage/UserActivityPage';
-import TreasuryPage from '@/pages/manager/TreasuryPage/TreasuryPage';
 import ReportsPage from '@/pages/manager/ReportsPage/ReportsPage';
 import { AuthLayout, SuperAdminLayout, ManagerLayout, UserLayout } from '@/app/layouts';
 
@@ -108,7 +107,6 @@ export const Router = () => {
             <Route path="markets" element={<ManagerMarketsPage />} />
             <Route path="users" element={<UsersManagementPage />} />
             <Route path="users/:id" element={<UserActivityPage />} />
-            <Route path="treasury" element={<TreasuryPage />} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="activity" element={<UserActivityPage />} />
             <Route path="*" element={<Navigate to={ROUTES.MANAGER.USERS} replace />} />

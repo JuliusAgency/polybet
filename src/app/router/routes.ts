@@ -17,7 +17,6 @@ export const ROUTES = {
     USERS: '/manager/users',
     USER_PROFILE: '/manager/users/:id',
     MARKETS: '/manager/markets',
-    TREASURY: '/manager/treasury',
     REPORTS: '/manager/reports',
     ACTIVITY: '/manager/activity',
   },

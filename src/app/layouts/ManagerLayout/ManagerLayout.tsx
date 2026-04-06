@@ -9,10 +9,7 @@ export const ManagerLayout = () => {
   const { profile, signOut } = useAuth();
 
   return (
-    <div
-      className="flex bg-gray-950 text-gray-100"
-      style={{ height: '100vh' }}
-    >
+    <div className="flex bg-gray-950 text-gray-100" style={{ height: '100vh' }}>
       {/* Sidebar */}
       <aside className="w-60 flex-shrink-0 bg-gray-900 flex flex-col overflow-y-auto">
         <div className="px-6 py-5 border-b border-gray-800">
@@ -45,18 +42,6 @@ export const ManagerLayout = () => {
             {t('nav.users')}
           </NavLink>
           <NavLink
-            to={ROUTES.MANAGER.TREASURY}
-            className={({ isActive }) =>
-              `block px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                isActive
-                  ? 'bg-gray-700 text-white'
-                  : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-              }`
-            }
-          >
-            {t('nav.treasury')}
-          </NavLink>
-          <NavLink
             to={ROUTES.MANAGER.REPORTS}
             className={({ isActive }) =>
               `block px-3 py-2 rounded-md text-sm font-medium transition-colors ${
@@ -84,9 +69,7 @@ export const ManagerLayout = () => {
 
         <div className="px-4 py-4 border-t border-gray-800 flex flex-col gap-3">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-sm text-gray-400 truncate">
-              {profile?.username ?? ''}
-            </span>
+            <span className="text-sm text-gray-400 truncate">{profile?.username ?? ''}</span>
             <button
               onClick={() => void signOut()}
               className="text-sm text-gray-400 hover:text-white transition-colors flex-shrink-0"
