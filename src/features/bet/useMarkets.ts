@@ -46,9 +46,13 @@ interface Cursor {
   lastId: string;
 }
 
-export function useMarkets(statusFilter: MarketStatusFilter = 'all', searchQuery = '') {
+export function useMarkets(
+  statusFilter: MarketStatusFilter = 'all',
+  searchQuery = '',
+  categoryFilter: string | null = null
+) {
   const queryClient = useQueryClient();
-  const queryKey = ['markets', statusFilter, searchQuery] as const;
+  const queryKey = ['markets', statusFilter, searchQuery, categoryFilter] as const;
 
   const result = useInfiniteQuery<
     Market[],
@@ -70,6 +74,10 @@ export function useMarkets(statusFilter: MarketStatusFilter = 'all', searchQuery
 
       if (searchQuery.trim()) {
         query = query.ilike('question', `%${searchQuery.trim()}%`);
+      }
+
+      if (categoryFilter) {
+        query = query.eq('category', categoryFilter);
       }
 
       // Cursor: fetch rows after the last item of the previous page
@@ -110,7 +118,7 @@ export function useMarkets(statusFilter: MarketStatusFilter = 'all', searchQuery
   const handleRealtimeChange = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [queryClient, statusFilter, searchQuery]);
+  }, [queryClient, statusFilter, searchQuery, categoryFilter]);
 
   useEffect(() => {
     const channel = supabase

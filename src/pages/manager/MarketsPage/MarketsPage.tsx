@@ -1,11 +1,12 @@
 import { useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useMarkets } from '@/features/bet';
+import { useMarkets, useMarketCategories } from '@/features/bet';
 import type { MarketStatusFilter } from '@/features/bet';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { useIntersectionObserver } from '@/shared/hooks/useIntersectionObserver';
 import { MarketCard } from '@/pages/user/MarketsFeedPage/components/MarketCard';
 import { StatusFilter } from '@/pages/user/MarketsFeedPage/components/StatusFilter';
+import { CategoryFilter } from '@/pages/user/MarketsFeedPage/components/CategoryFilter';
 import { CardGridSkeleton } from '@/shared/ui/CardGridSkeleton';
 import { Spinner } from '@/shared/ui/Spinner';
 
@@ -13,10 +14,13 @@ const MarketsPage = () => {
   const { t } = useTranslation();
   const [statusFilter, setStatusFilter] = useState<MarketStatusFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const debouncedSearch = useDebounce(searchQuery, 300);
 
+  const { data: categories = [] } = useMarketCategories();
+
   const { markets, isLoading, isError, error, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useMarkets(statusFilter, debouncedSearch);
+    useMarkets(statusFilter, debouncedSearch, categoryFilter);
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const handleLoadMore = useCallback(() => {
@@ -30,44 +34,53 @@ const MarketsPage = () => {
         {t('markets.title')}
       </h1>
 
-      {/* Filter row */}
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <StatusFilter value={statusFilter} onChange={setStatusFilter} />
-        <div className="relative flex items-center">
-          <div
-            className="pointer-events-none absolute inset-y-0 flex items-center"
-            style={{ insetInlineStart: '10px' }}
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              style={{ color: 'var(--color-text-muted)' }}
+      {/* Filters */}
+      <div className="mb-4">
+        {/* Row: status pills + search */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <StatusFilter value={statusFilter} onChange={setStatusFilter} />
+          <div className="relative flex items-center">
+            <div
+              className="pointer-events-none absolute inset-y-0 flex items-center"
+              style={{ insetInlineStart: '10px' }}
             >
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{ color: 'var(--color-text-muted)' }}
+              >
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={t('markets.searchPlaceholder')}
+              className="rounded-full border py-1 text-sm outline-none"
+              style={{
+                backgroundColor: 'var(--color-bg-elevated)',
+                borderColor: 'var(--color-border)',
+                color: 'var(--color-text-primary)',
+                paddingInlineStart: '2rem',
+                paddingInlineEnd: '0.75rem',
+              }}
+            />
           </div>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t('markets.searchPlaceholder')}
-            className="rounded-full border py-1 text-sm outline-none"
-            style={{
-              backgroundColor: 'var(--color-bg-elevated)',
-              borderColor: 'var(--color-border)',
-              color: 'var(--color-text-primary)',
-              paddingInlineStart: '2rem',
-              paddingInlineEnd: '0.75rem',
-            }}
-          />
         </div>
+        {/* Category filter — below status row */}
+        <CategoryFilter
+          value={categoryFilter}
+          onChange={setCategoryFilter}
+          categories={categories}
+        />
       </div>
 
       {isLoading && <CardGridSkeleton count={4} />}

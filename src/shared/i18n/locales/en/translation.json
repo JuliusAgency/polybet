@@ -234,6 +234,8 @@
     "filterClosed": "Closed",
     "filterResolved": "Resolved",
     "filterArchived": "Archived",
+    "categoryFilterLabel": "Category",
+    "categoryAll": "All categories",
     "searchPlaceholder": "Search markets…",
     "loadingMore": "Loading more markets…",
     "allLoaded": "All markets loaded",

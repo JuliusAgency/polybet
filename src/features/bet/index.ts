@@ -1,6 +1,8 @@
 export { useMarkets } from './useMarkets';
 export type { Market, MarketOutcome, MarketStatusFilter } from './useMarkets';
 
+export { useMarketCategories } from './useMarketCategories';
+
 export { useUserBalance } from './useUserBalance';
 export type { UserBalance } from './useUserBalance';
 

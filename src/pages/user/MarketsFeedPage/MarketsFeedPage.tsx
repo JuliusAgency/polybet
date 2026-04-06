@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useMarkets, useUserBalance, useMyBets } from '@/features/bet';
+import { useMarkets, useUserBalance, useMyBets, useMarketCategories } from '@/features/bet';
 import type { Market, MarketOutcome, MarketStatusFilter } from '@/features/bet';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { useIntersectionObserver } from '@/shared/hooks/useIntersectionObserver';
@@ -11,6 +11,7 @@ import { MarketCard } from './components/MarketCard';
 import { BalanceWidget } from './components/BalanceWidget';
 import { ActiveBetsDrawer } from './components/ActiveBetsDrawer';
 import { StatusFilter } from './components/StatusFilter';
+import { CategoryFilter } from './components/CategoryFilter';
 
 interface SelectedBet {
   market: Market;
@@ -21,11 +22,14 @@ const MarketsFeedPage = () => {
   const { t } = useTranslation();
   const [statusFilter, setStatusFilter] = useState<MarketStatusFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [myBetsOnly, setMyBetsOnly] = useState(false);
   const debouncedSearch = useDebounce(searchQuery, 300);
 
+  const { data: categories = [] } = useMarketCategories();
+
   const { markets, isLoading, isError, error, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useMarkets(statusFilter, debouncedSearch);
+    useMarkets(statusFilter, debouncedSearch, categoryFilter);
 
   const { data: balance } = useUserBalance();
   const { data: bets } = useMyBets();
@@ -75,76 +79,85 @@ const MarketsFeedPage = () => {
         onOpenDrawer={() => setIsDrawerOpen(true)}
       />
 
-      {/* Filter row: status pills + my-bets toggle + search */}
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <StatusFilter value={statusFilter} onChange={setStatusFilter} />
-        </div>
-        <div className="flex items-center gap-2">
-          {hasBets && (
-            <button
-              onClick={() => setMyBetsOnly((v) => !v)}
-              className="flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium transition-all"
-              style={{
-                backgroundColor: myBetsOnly ? 'var(--color-accent)' : 'var(--color-bg-elevated)',
-                color: myBetsOnly ? '#fff' : 'var(--color-text-secondary)',
-                border: `1px solid ${myBetsOnly ? 'var(--color-accent)' : 'var(--color-border)'}`,
-                boxShadow: myBetsOnly ? '0 0 0 2px var(--color-accent-muted)' : 'none',
-                cursor: 'pointer',
-              }}
-            >
-              <svg
-                width="13"
-                height="13"
-                viewBox="0 0 24 24"
-                fill={myBetsOnly ? 'currentColor' : 'none'}
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                style={{ flexShrink: 0 }}
+      {/* Filters */}
+      <div className="mb-4">
+        {/* Row: status pills + my-bets toggle + search */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusFilter value={statusFilter} onChange={setStatusFilter} />
+          </div>
+          <div className="flex items-center gap-2">
+            {hasBets && (
+              <button
+                onClick={() => setMyBetsOnly((v) => !v)}
+                className="flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium transition-all"
+                style={{
+                  backgroundColor: myBetsOnly ? 'var(--color-accent)' : 'var(--color-bg-elevated)',
+                  color: myBetsOnly ? '#fff' : 'var(--color-text-secondary)',
+                  border: `1px solid ${myBetsOnly ? 'var(--color-accent)' : 'var(--color-border)'}`,
+                  boxShadow: myBetsOnly ? '0 0 0 2px var(--color-accent-muted)' : 'none',
+                  cursor: 'pointer',
+                }}
               >
-                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-              </svg>
-              {t('markets.myBetsOnly')}
-            </button>
-          )}
-          <div className="relative flex items-center">
-            <div
-              className="pointer-events-none absolute inset-y-0 flex items-center"
-              style={{ insetInlineStart: '10px' }}
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                style={{ color: 'var(--color-text-muted)' }}
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill={myBetsOnly ? 'currentColor' : 'none'}
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{ flexShrink: 0 }}
+                >
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                </svg>
+                {t('markets.myBetsOnly')}
+              </button>
+            )}
+            <div className="relative flex items-center">
+              <div
+                className="pointer-events-none absolute inset-y-0 flex items-center"
+                style={{ insetInlineStart: '10px' }}
               >
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{ color: 'var(--color-text-muted)' }}
+                >
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t('markets.searchPlaceholder')}
+                className="rounded-full border py-1 text-sm outline-none"
+                style={{
+                  backgroundColor: 'var(--color-bg-elevated)',
+                  borderColor: 'var(--color-border)',
+                  color: 'var(--color-text-primary)',
+                  paddingInlineStart: '2rem',
+                  paddingInlineEnd: '0.75rem',
+                }}
+              />
             </div>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t('markets.searchPlaceholder')}
-              className="rounded-full border py-1 text-sm outline-none"
-              style={{
-                backgroundColor: 'var(--color-bg-elevated)',
-                borderColor: 'var(--color-border)',
-                color: 'var(--color-text-primary)',
-                paddingInlineStart: '2rem',
-                paddingInlineEnd: '0.75rem',
-              }}
-            />
           </div>
         </div>
+        {/* Category filter — below status row */}
+        <CategoryFilter
+          value={categoryFilter}
+          onChange={setCategoryFilter}
+          categories={categories}
+        />
       </div>
 
       {/* Loading state — initial load */}

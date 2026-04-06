@@ -40,6 +40,7 @@ interface GammaMarket {
   volume: string | number;
   liquidity: string | number;
   image: string | null;
+  category?: string | null;
   tokens?: Array<{ token_id: string; winner?: boolean }>;
   updatedAt?: string | null;
   resolutionDate?: string | null;
@@ -770,6 +771,7 @@ async function upsertMarket(
     liquidity: parseFloat(String(gm.liquidity)) || 0,
     volume: parseFloat(String(gm.volume)) || 0,
     image_url: gm.image ?? null,
+    category: gm.category?.trim() || null,
     polymarket_slug: gm.slug ?? null,
     polymarket_status_raw: buildPolymarketStatusRaw(gm),
     last_synced_at: changedAt,
@@ -942,6 +944,7 @@ async function processResolvedMarket(
     liquidity: parseFloat(String(gm.liquidity)) || 0,
     volume: parseFloat(String(gm.volume)) || 0,
     image_url: gm.image ?? null,
+    category: gm.category?.trim() || null,
     polymarket_slug: gm.slug ?? null,
     polymarket_status_raw: buildPolymarketStatusRaw(gm),
     last_synced_at: changedAt,

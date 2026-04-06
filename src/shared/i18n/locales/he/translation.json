@@ -234,6 +234,8 @@
     "filterClosed": "סגור",
     "filterResolved": "נקבע",
     "filterArchived": "ארכיון",
+    "categoryFilterLabel": "קטגוריה",
+    "categoryAll": "כל הקטגוריות",
     "searchPlaceholder": "חיפוש שווקים…",
     "loadingMore": "טוען עוד שווקים…",
     "allLoaded": "כל השווקים נטענו",
