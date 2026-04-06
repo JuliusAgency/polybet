@@ -204,7 +204,6 @@ const MarketsFeedPage = () => {
           market={selectedBet.market}
           outcome={selectedBet.outcome}
           availableBalance={availableBalance}
-          inPlay={inPlay}
           onClose={() => setSelectedBet(null)}
           onSuccess={handleBetSuccess}
         />

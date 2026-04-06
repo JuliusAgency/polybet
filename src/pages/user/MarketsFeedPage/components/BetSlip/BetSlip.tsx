@@ -12,7 +12,6 @@ interface BetSlipProps {
   market: Market;
   outcome: MarketOutcome;
   availableBalance: number;
-  inPlay: number;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -21,7 +20,6 @@ export const BetSlip = ({
   market,
   outcome,
   availableBalance,
-  inPlay,
   onClose,
   onSuccess,
 }: BetSlipProps) => {
@@ -34,9 +32,13 @@ export const BetSlip = ({
   const stake = parseFloat(amount);
   const isValidStake = !isNaN(stake) && stake > 0;
   const isInsufficient = isValidStake && stake > availableBalance;
-  const potentialPayout = isValidStake && !isInsufficient ? stake * outcome.effective_odds : null;
-  const projectedAvailable = isValidStake && !isInsufficient ? availableBalance - stake : null;
-  const projectedInPlay = isValidStake && !isInsufficient ? inPlay + stake : null;
+  const potentialPayout =
+    isValidStake && !isInsufficient ? stake * (outcome.effective_odds - 1) : null;
+  const balanceIfWin =
+    isValidStake && !isInsufficient
+      ? availableBalance - stake + stake * outcome.effective_odds
+      : null;
+  const balanceIfLose = isValidStake && !isInsufficient ? availableBalance - stake : null;
 
   const handleAllIn = () => {
     setAmount(availableBalance.toFixed(2));
@@ -116,7 +118,7 @@ export const BetSlip = ({
         </div>
 
         {/* Balance preview after bet */}
-        {projectedAvailable !== null && projectedInPlay !== null && (
+        {balanceIfWin !== null && balanceIfLose !== null && (
           <div className="rounded-lg p-3" style={{ backgroundColor: 'var(--color-bg-base)' }}>
             <p
               className="mb-2 text-xs font-medium"
@@ -127,24 +129,30 @@ export const BetSlip = ({
             <div className="flex flex-col gap-1">
               <div className="flex items-center justify-between text-xs">
                 <span style={{ color: 'var(--color-text-secondary)' }}>
-                  {t('markets.afterBetAvailable')}
+                  {t('markets.afterBetIfWin')}
                 </span>
                 <span className="font-mono" style={{ color: 'var(--color-text-muted)' }}>
-                  {availableBalance.toFixed(2)}
-                  {' → '}
+                  <span style={{ color: 'var(--color-win)' }}>{balanceIfWin.toFixed(2)}</span>
+                  <span className="mx-1 font-bold" style={{ color: 'var(--color-text-primary)' }}>
+                    ←
+                  </span>
                   <span style={{ color: 'var(--color-text-primary)' }}>
-                    {projectedAvailable.toFixed(2)}
+                    {availableBalance.toFixed(2)}
                   </span>
                 </span>
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span style={{ color: 'var(--color-text-secondary)' }}>
-                  {t('markets.afterBetInPlay')}
+                  {t('markets.afterBetIfLose')}
                 </span>
                 <span className="font-mono" style={{ color: 'var(--color-text-muted)' }}>
-                  {inPlay.toFixed(2)}
-                  {' → '}
-                  <span style={{ color: 'var(--color-accent)' }}>{projectedInPlay.toFixed(2)}</span>
+                  <span style={{ color: 'var(--color-error)' }}>{balanceIfLose.toFixed(2)}</span>
+                  <span className="mx-1 font-bold" style={{ color: 'var(--color-text-primary)' }}>
+                    ←
+                  </span>
+                  <span style={{ color: 'var(--color-text-primary)' }}>
+                    {availableBalance.toFixed(2)}
+                  </span>
                 </span>
               </div>
             </div>

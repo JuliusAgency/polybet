@@ -258,8 +258,8 @@
     "noActiveBets": "No active bets",
     "totalLocked": "Total locked",
     "afterBet": "After bet",
-    "afterBetAvailable": "Available",
-    "afterBetInPlay": "In play",
+    "afterBetIfWin": "If we win",
+    "afterBetIfLose": "If we lose",
     "status": {
       "open": "Open",
       "closed": "Closed",
