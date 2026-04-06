@@ -8,10 +8,11 @@ import { useUserBalance } from '@/features/bet';
 import { useUserTransactions } from '@/features/wallet';
 import { Card } from '@/shared/ui/Card';
 import { Input } from '@/shared/ui/Input';
+import { Spinner } from '@/shared/ui/Spinner';
 
 const formatTransactionType = (
   txType: 'mint' | 'transfer' | 'bet_lock' | 'bet_payout' | 'adjustment',
-  t: TFunction,
+  t: TFunction
 ): string => {
   switch (txType) {
     case 'mint':
@@ -61,7 +62,7 @@ const WalletPage = () => {
         },
         () => {
           void queryClient.invalidateQueries({ queryKey: ['user', 'balance', userId] });
-        },
+        }
       )
       .subscribe();
 
@@ -73,10 +74,7 @@ const WalletPage = () => {
   return (
     <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--color-bg-base)' }}>
       {/* Page title */}
-      <h1
-        className="mb-6 text-2xl font-bold"
-        style={{ color: 'var(--color-text-primary)' }}
-      >
+      <h1 className="mb-6 text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
         {t('wallet.title')}
       </h1>
 
@@ -84,16 +82,11 @@ const WalletPage = () => {
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
         {/* Available Balance */}
         <Card padding="md">
-          <p
-            className="mb-1 text-sm font-medium"
-            style={{ color: 'var(--color-text-secondary)' }}
-          >
+          <p className="mb-1 text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
             {t('wallet.available')}
           </p>
           {balanceLoading ? (
-            <p className="text-xl font-semibold font-mono" style={{ color: 'var(--color-text-muted)' }}>
-              {t('common.loading')}
-            </p>
+            <Spinner size="sm" />
           ) : (
             <p
               className="text-2xl font-bold font-mono"
@@ -106,16 +99,11 @@ const WalletPage = () => {
 
         {/* In-Play Balance */}
         <Card padding="md">
-          <p
-            className="mb-1 text-sm font-medium"
-            style={{ color: 'var(--color-text-secondary)' }}
-          >
+          <p className="mb-1 text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
             {t('wallet.inPlay')}
           </p>
           {balanceLoading ? (
-            <p className="text-xl font-semibold font-mono" style={{ color: 'var(--color-text-muted)' }}>
-              {t('common.loading')}
-            </p>
+            <Spinner size="sm" />
           ) : (
             <p
               className="text-2xl font-bold font-mono"
@@ -128,21 +116,13 @@ const WalletPage = () => {
 
         {/* Total Equity */}
         <Card padding="md">
-          <p
-            className="mb-1 text-sm font-medium"
-            style={{ color: 'var(--color-text-secondary)' }}
-          >
+          <p className="mb-1 text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
             {t('wallet.totalEquity')}
           </p>
           {balanceLoading ? (
-            <p className="text-xl font-semibold font-mono" style={{ color: 'var(--color-text-muted)' }}>
-              {t('common.loading')}
-            </p>
+            <Spinner size="sm" />
           ) : (
-            <p
-              className="text-2xl font-bold font-mono"
-              style={{ color: 'var(--color-accent)' }}
-            >
+            <p className="text-2xl font-bold font-mono" style={{ color: 'var(--color-accent)' }}>
               {totalEquity.toFixed(2)}
             </p>
           )}
@@ -151,10 +131,7 @@ const WalletPage = () => {
 
       {/* Transactions section */}
       <div>
-        <h2
-          className="mb-4 text-lg font-semibold"
-          style={{ color: 'var(--color-text-primary)' }}
-        >
+        <h2 className="mb-4 text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
           {t('wallet.transactions')}
         </h2>
 
@@ -176,7 +153,9 @@ const WalletPage = () => {
 
         {/* Transactions table */}
         {txLoading ? (
-          <p style={{ color: 'var(--color-text-secondary)' }}>{t('common.loading')}</p>
+          <div className="flex justify-center py-12">
+            <Spinner size="md" />
+          </div>
         ) : !transactions || transactions.length === 0 ? (
           <p style={{ color: 'var(--color-text-secondary)' }}>{t('wallet.noTransactions')}</p>
         ) : (
@@ -227,25 +206,21 @@ const WalletPage = () => {
               </thead>
               <tbody>
                 {transactions.map((tx) => {
-                  const amountColor = tx.amount > 0
-                    ? 'var(--color-win)'
-                    : tx.amount < 0
-                      ? 'var(--color-loss)'
-                      : 'var(--color-text-secondary)';
+                  const amountColor =
+                    tx.amount > 0
+                      ? 'var(--color-win)'
+                      : tx.amount < 0
+                        ? 'var(--color-loss)'
+                        : 'var(--color-text-secondary)';
                   const amountPrefix = tx.amount > 0 ? '+' : '';
 
                   return (
-                    <tr
-                      key={tx.id}
-                      style={{ borderTop: '1px solid var(--color-border)' }}
-                    >
+                    <tr key={tx.id} style={{ borderTop: '1px solid var(--color-border)' }}>
                       <td
                         className="px-4 py-3 font-mono text-xs"
                         style={{ color: 'var(--color-text-secondary)' }}
                       >
-                        <div>
-                          {new Date(tx.created_at).toLocaleDateString(i18n.language)}
-                        </div>
+                        <div>{new Date(tx.created_at).toLocaleDateString(i18n.language)}</div>
                         <div>
                           {new Date(tx.created_at).toLocaleTimeString(i18n.language, {
                             hour: '2-digit',
@@ -253,17 +228,15 @@ const WalletPage = () => {
                           })}
                         </div>
                       </td>
-                      <td
-                        className="px-4 py-3"
-                        style={{ color: 'var(--color-text-primary)' }}
-                      >
+                      <td className="px-4 py-3" style={{ color: 'var(--color-text-primary)' }}>
                         {formatTransactionType(tx.type, t)}
                       </td>
                       <td
                         className="px-4 py-3 font-mono font-semibold"
                         style={{ color: amountColor }}
                       >
-                        {amountPrefix}{Math.abs(tx.amount).toFixed(2)}
+                        {amountPrefix}
+                        {Math.abs(tx.amount).toFixed(2)}
                       </td>
                       <td
                         className="px-4 py-3 font-mono"
@@ -271,10 +244,7 @@ const WalletPage = () => {
                       >
                         {tx.balance_after.toFixed(2)}
                       </td>
-                      <td
-                        className="px-4 py-3"
-                        style={{ color: 'var(--color-text-muted)' }}
-                      >
+                      <td className="px-4 py-3" style={{ color: 'var(--color-text-muted)' }}>
                         {tx.note ?? '—'}
                       </td>
                       <td

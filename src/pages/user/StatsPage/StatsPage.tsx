@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Card } from '@/shared/ui/Card';
+import { Spinner } from '@/shared/ui/Spinner';
 import { useUserStats } from '@/features/stats';
 
 const StatsPage = () => {
@@ -9,7 +10,9 @@ const StatsPage = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--color-bg-base)' }}>
-        <p style={{ color: 'var(--color-text-secondary)' }}>{t('common.loading')}</p>
+        <div className="flex justify-center py-12">
+          <Spinner size="md" />
+        </div>
       </div>
     );
   }
@@ -44,7 +47,10 @@ const StatsPage = () => {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {statCards.map((card) => (
           <Card key={card.key}>
-            <p className="mb-1 text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+            <p
+              className="mb-1 text-sm font-medium"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
               {card.label}
             </p>
             <p

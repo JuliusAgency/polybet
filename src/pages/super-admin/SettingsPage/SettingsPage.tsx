@@ -5,6 +5,7 @@ import {
   useUpdateSystemSetting,
 } from '@/features/admin/settings/useSystemSettings';
 import { Button } from '@/shared/ui/Button';
+import { Spinner } from '@/shared/ui/Spinner';
 
 const ARCHIVE_AFTER_HOURS_KEY = 'archive_after_hours';
 const DEFAULT_ARCHIVE_AFTER_HOURS = 168;
@@ -43,9 +44,9 @@ export const SettingsPage = () => {
       </h1>
 
       {isLoading && (
-        <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-          {t('common.loading')}
-        </p>
+        <div className="flex justify-center py-12">
+          <Spinner size="md" />
+        </div>
       )}
 
       {!isLoading && (

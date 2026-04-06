@@ -276,7 +276,9 @@
       "refreshFailed": "Refresh failed (not in Polymarket)",
     "archive": "Archive",
     "archiveConfirm": "Archive this market?",
-    "archivedAt": "Archived at"
+    "archivedAt": "Archived at",
+    "yourBet": "Your bet",
+    "myBetsOnly": "My bets only"
   },
   "settings": {
     "title": "Settings",
@@ -354,6 +356,7 @@
   "myBets": {
     "title": "My Bets",
     "openTab": "Open",
+    "resolvedTab": "Resolved",
     "historyTab": "History",
     "betId": "Bet ID",
     "market": "Market",
@@ -363,6 +366,7 @@
     "status": "Status",
     "settled": "Settled",
     "noOpenBets": "You have no open bets",
+    "noResolvedBets": "No resolved bets yet",
     "noHistory": "No settled bets yet",
     "totalWagered": "Total Wagered",
     "totalWon": "Total Payout",

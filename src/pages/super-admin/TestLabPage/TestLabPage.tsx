@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { supabase } from '@/shared/api/supabase';
+import { Spinner } from '@/shared/ui/Spinner';
 
 interface Outcome {
   id: string;
@@ -84,15 +85,17 @@ export const TestLabPage = () => {
     }
     if (usersRes.data) {
       setUsers(
-        (usersRes.data as unknown as Array<{
-          id: string;
-          username: string;
-          balances: { available: number; in_play: number }[] | null;
-        }>).map((u) => ({
+        (
+          usersRes.data as unknown as Array<{
+            id: string;
+            username: string;
+            balances: { available: number; in_play: number }[] | null;
+          }>
+        ).map((u) => ({
           id: u.id,
           username: u.username,
           balances: Array.isArray(u.balances) ? (u.balances[0] ?? null) : u.balances,
-        })),
+        }))
       );
     }
     setLoadingData(false);
@@ -103,17 +106,13 @@ export const TestLabPage = () => {
   }, []);
 
   // Derived: outcomes for selected markets
-  const betOutcomes =
-    markets.find((m) => m.id === betMarketId)?.market_outcomes ?? [];
-  const settleOutcomes =
-    markets.find((m) => m.id === settleMarketId)?.market_outcomes ?? [];
+  const betOutcomes = markets.find((m) => m.id === betMarketId)?.market_outcomes ?? [];
+  const settleOutcomes = markets.find((m) => m.id === settleMarketId)?.market_outcomes ?? [];
 
   const selectedUser = users.find((u) => u.id === betUserId);
   const selectedOutcome = betOutcomes.find((o) => o.id === betOutcomeId);
   const potentialPayout =
-    selectedOutcome && betStake
-      ? (parseFloat(betStake) * selectedOutcome.odds).toFixed(2)
-      : null;
+    selectedOutcome && betStake ? (parseFloat(betStake) * selectedOutcome.odds).toFixed(2) : null;
 
   const handleCreateMarket = async () => {
     setCreatingMarket(true);
@@ -160,7 +159,7 @@ export const TestLabPage = () => {
           settled: res.settled,
           winners: res.winners,
           losers: res.losers,
-        }),
+        })
       );
       // Market is now resolved — remove from list and reset
       setMarkets((prev) => prev.filter((m) => m.id !== settleMarketId));
@@ -197,12 +196,14 @@ export const TestLabPage = () => {
             opacity: creatingMarket ? 0.7 : 1,
           }}
         >
-          {creatingMarket ? t('common.loading') : '+ Create Demo Market'}
+          {creatingMarket ? <Spinner size="sm" /> : '+ Create Demo Market'}
         </button>
       </div>
 
       {loadingData ? (
-        <p style={{ color: 'var(--color-text-secondary)' }}>{t('common.loading')}</p>
+        <div className="flex justify-center py-12">
+          <Spinner size="md" />
+        </div>
       ) : markets.length === 0 ? (
         <div
           className="rounded-xl border p-6 flex items-center gap-4"
@@ -221,12 +222,11 @@ export const TestLabPage = () => {
               opacity: creatingMarket ? 0.7 : 1,
             }}
           >
-            {creatingMarket ? t('common.loading') : '+ Create Demo Market'}
+            {creatingMarket ? <Spinner size="sm" /> : '+ Create Demo Market'}
           </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-
           {/* ── Card 1: Place Demo Bet ── */}
           <div
             className="rounded-xl border p-6"
@@ -235,7 +235,10 @@ export const TestLabPage = () => {
               borderColor: 'var(--color-border)',
             }}
           >
-            <h2 className="mb-5 text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+            <h2
+              className="mb-5 text-base font-semibold"
+              style={{ color: 'var(--color-text-primary)' }}
+            >
               {t('testLab.placeBetCard')}
             </h2>
 
@@ -259,8 +262,8 @@ export const TestLabPage = () => {
               </select>
               {selectedUser?.balances && (
                 <p className="mt-1 text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                  {t('testLab.balance')}: {selectedUser.balances.available.toFixed(2)}{' '}
-                  &nbsp;|&nbsp; {t('testLab.inPlay')}: {selectedUser.balances.in_play.toFixed(2)}
+                  {t('testLab.balance')}: {selectedUser.balances.available.toFixed(2)} &nbsp;|&nbsp;{' '}
+                  {t('testLab.inPlay')}: {selectedUser.balances.in_play.toFixed(2)}
                 </p>
               )}
             </div>
@@ -271,7 +274,10 @@ export const TestLabPage = () => {
               <select
                 style={selectStyle}
                 value={betMarketId}
-                onChange={(e) => { setBetMarketId(e.target.value); setBetOutcomeId(''); }}
+                onChange={(e) => {
+                  setBetMarketId(e.target.value);
+                  setBetOutcomeId('');
+                }}
               >
                 <option value="">{t('testLab.pickMarket')}</option>
                 {markets.map((m) => (
@@ -332,7 +338,7 @@ export const TestLabPage = () => {
                 opacity: betLoading ? 0.7 : 1,
               }}
             >
-              {betLoading ? t('common.loading') : t('testLab.placeBet')}
+              {betLoading ? <Spinner size="sm" /> : t('testLab.placeBet')}
             </button>
           </div>
 
@@ -344,7 +350,10 @@ export const TestLabPage = () => {
               borderColor: 'var(--color-border)',
             }}
           >
-            <h2 className="mb-5 text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+            <h2
+              className="mb-5 text-base font-semibold"
+              style={{ color: 'var(--color-text-primary)' }}
+            >
               {t('testLab.settleCard')}
             </h2>
 
@@ -354,7 +363,10 @@ export const TestLabPage = () => {
               <select
                 style={selectStyle}
                 value={settleMarketId}
-                onChange={(e) => { setSettleMarketId(e.target.value); setSettleOutcomeId(''); }}
+                onChange={(e) => {
+                  setSettleMarketId(e.target.value);
+                  setSettleOutcomeId('');
+                }}
               >
                 <option value="">{t('testLab.pickMarket')}</option>
                 {markets.map((m) => (
@@ -397,10 +409,9 @@ export const TestLabPage = () => {
                 opacity: settleLoading ? 0.7 : 1,
               }}
             >
-              {settleLoading ? t('common.loading') : t('testLab.settle')}
+              {settleLoading ? <Spinner size="sm" /> : t('testLab.settle')}
             </button>
           </div>
-
         </div>
       )}
     </div>

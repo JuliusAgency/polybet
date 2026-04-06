@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/shared/ui/Badge';
+import { TableSkeleton } from '@/shared/ui/TableSkeleton';
 import { useFinancialTransactions } from '@/features/admin/financial-transactions';
 import type { TransactionFilters } from '@/features/admin/financial-transactions';
 import { formatInitiatorName } from '@/shared/utils';
@@ -15,7 +16,11 @@ const formatDate = (iso: string, locale: string): { date: string; time: string }
   const resolvedLocale = locale === 'he' ? 'he-IL' : 'en-GB';
   return {
     date: d.toLocaleDateString(resolvedLocale, { day: '2-digit', month: 'short', year: 'numeric' }),
-    time: d.toLocaleTimeString(resolvedLocale, { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+    time: d.toLocaleTimeString(resolvedLocale, {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    }),
   };
 };
 
@@ -39,11 +44,7 @@ export const FinancialTransactionsTable = ({
   const { transactions, totals, isLoading, error } = useFinancialTransactions(filters);
 
   if (isLoading) {
-    return (
-      <p style={{ color: 'var(--color-text-secondary)' }} className="py-6 text-center">
-        Loading…
-      </p>
-    );
+    return <TableSkeleton rows={5} cols={8} />;
   }
 
   if (error) {
@@ -65,10 +66,7 @@ export const FinancialTransactionsTable = ({
       >
         <table className="w-full text-sm">
           <thead>
-            <tr
-              className="border-b text-start"
-              style={{ borderColor: 'var(--color-border)' }}
-            >
+            <tr className="border-b text-start" style={{ borderColor: 'var(--color-border)' }}>
               {[
                 t('financialTable.actionId'),
                 t('financialTable.manager'),
@@ -130,9 +128,7 @@ export const FinancialTransactionsTable = ({
                 <td
                   className="px-4 py-3 font-mono"
                   style={{
-                    color: tx.type === 'adjustment'
-                      ? 'var(--color-win)'
-                      : 'var(--color-loss)',
+                    color: tx.type === 'adjustment' ? 'var(--color-win)' : 'var(--color-loss)',
                   }}
                 >
                   {formatAmount(tx.amount, tx.type)}
@@ -140,17 +136,21 @@ export const FinancialTransactionsTable = ({
                 <td
                   className="px-4 py-3 font-mono"
                   style={{
-                    color: tx.total_profit_calc >= 0
-                      ? 'var(--color-win)'
-                      : 'var(--color-loss)',
+                    color: tx.total_profit_calc >= 0 ? 'var(--color-win)' : 'var(--color-loss)',
                   }}
                 >
                   {formatRunningTotal(tx.total_profit_calc)}
                 </td>
-                <td className="px-4 py-3 text-xs max-w-[180px]" style={{ color: 'var(--color-text-muted)' }}>
+                <td
+                  className="px-4 py-3 text-xs max-w-[180px]"
+                  style={{ color: 'var(--color-text-muted)' }}
+                >
                   {tx.note ?? '—'}
                 </td>
-                <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                <td
+                  className="px-4 py-3 font-mono text-xs"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
                   <div>{formatDate(tx.created_at, i18n.language).date}</div>
                   <div>{formatDate(tx.created_at, i18n.language).time}</div>
                 </td>

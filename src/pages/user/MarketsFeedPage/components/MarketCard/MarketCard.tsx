@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Market, MarketOutcome } from '@/features/bet';
+import type { Market, MarketOutcome, MyBet } from '@/features/bet';
 import { useMarketRefresh } from '@/features/bet';
+import { Badge } from '@/shared/ui/Badge';
 import { MARKETS_STALE_THRESHOLD_MS } from '@/shared/config/markets';
 import { useTicker } from '@/shared/hooks/useTicker';
 
@@ -62,6 +63,7 @@ const STATUS_STYLES: Record<string, { bg: string; text: string; dot: string }> =
 
 interface MarketCardProps {
   market: Market;
+  userBet?: MyBet;
   mode?: 'interactive' | 'readonly';
   onOutcomeClick?: (market: Market, outcome: MarketOutcome) => void;
   previousPrices?: Record<string, number>;
@@ -71,6 +73,7 @@ interface MarketCardProps {
 
 export const MarketCard = ({
   market,
+  userBet,
   mode = 'interactive',
   onOutcomeClick,
   previousPrices,
@@ -201,6 +204,40 @@ export const MarketCard = ({
       >
         {market.question}
       </p>
+
+      {/* User's own bet banner — shown on all market statuses */}
+      {userBet && (
+        <div
+          className="flex flex-wrap items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium"
+          style={{
+            backgroundColor: 'color-mix(in srgb, var(--color-accent) 10%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--color-accent) 30%, transparent)',
+          }}
+        >
+          <span style={{ color: 'var(--color-text-secondary)' }}>{t('markets.yourBet')}:</span>
+          <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>
+            {userBet.market_outcomes?.name ?? '—'}
+          </span>
+          <span style={{ color: 'var(--color-text-secondary)', fontFamily: 'monospace' }}>
+            {userBet.stake.toFixed(2)}
+          </span>
+          {userBet.status === 'open' && (
+            <span style={{ color: 'var(--color-accent)', fontFamily: 'monospace' }}>
+              → {userBet.potential_payout.toFixed(2)}
+            </span>
+          )}
+          {userBet.status !== 'open' && (
+            <Badge variant={userBet.status === 'won' ? 'win' : 'loss'}>
+              {userBet.status === 'won' ? t('bet.won') : t('bet.lost')}
+            </Badge>
+          )}
+          {userBet.status === 'won' && (
+            <span style={{ color: 'var(--color-win)', fontFamily: 'monospace', fontWeight: 600 }}>
+              +{userBet.potential_payout.toFixed(2)}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Winner banner */}
       {winnerOutcome && (

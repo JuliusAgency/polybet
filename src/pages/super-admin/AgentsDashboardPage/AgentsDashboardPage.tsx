@@ -7,6 +7,7 @@ import type { AgentStatsRow } from '@/features/admin/agent-stats';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
+import { Spinner } from '@/shared/ui/Spinner';
 import { ROUTES, buildPath } from '@/app/router/routes';
 
 const selectStyle: React.CSSProperties = {
@@ -39,8 +40,7 @@ const AgentsDashboardPage = () => {
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       rows = rows.filter(
-        (a) =>
-          a.username.toLowerCase().includes(q) || a.full_name.toLowerCase().includes(q),
+        (a) => a.username.toLowerCase().includes(q) || a.full_name.toLowerCase().includes(q)
       );
     }
     return [...rows].sort((a, b) => {
@@ -68,7 +68,7 @@ const AgentsDashboardPage = () => {
         setSortDir('desc');
       }
     },
-    [sortCol],
+    [sortCol]
   );
 
   const handleClearFilters = () => {
@@ -92,17 +92,39 @@ const AgentsDashboardPage = () => {
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-xl border p-4" style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-surface)' }}>
-          <p className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>{t('agentsDashboard.totalPoints')}</p>
-          <p className="text-xl font-bold font-mono" style={{ color: 'var(--color-text-primary)' }}>{kpis.total_points_in_system.toFixed(2)}</p>
+        <div
+          className="rounded-xl border p-4"
+          style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-surface)' }}
+        >
+          <p className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+            {t('agentsDashboard.totalPoints')}
+          </p>
+          <p className="text-xl font-bold font-mono" style={{ color: 'var(--color-text-primary)' }}>
+            {kpis.total_points_in_system.toFixed(2)}
+          </p>
         </div>
-        <div className="rounded-xl border p-4" style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-surface)' }}>
-          <p className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>{t('agentsDashboard.openExposure')}</p>
-          <p className="text-xl font-bold font-mono" style={{ color: 'var(--color-text-primary)' }}>{kpis.open_exposure.toFixed(2)}</p>
+        <div
+          className="rounded-xl border p-4"
+          style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-surface)' }}
+        >
+          <p className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+            {t('agentsDashboard.openExposure')}
+          </p>
+          <p className="text-xl font-bold font-mono" style={{ color: 'var(--color-text-primary)' }}>
+            {kpis.open_exposure.toFixed(2)}
+          </p>
         </div>
-        <div className="rounded-xl border p-4" style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-surface)' }}>
-          <p className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>{t('agentsDashboard.systemProfit')}</p>
-          <p className="text-xl font-bold font-mono" style={{ color: kpis.system_profit >= 0 ? 'var(--color-win)' : 'var(--color-error)' }}>
+        <div
+          className="rounded-xl border p-4"
+          style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-surface)' }}
+        >
+          <p className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+            {t('agentsDashboard.systemProfit')}
+          </p>
+          <p
+            className="text-xl font-bold font-mono"
+            style={{ color: kpis.system_profit >= 0 ? 'var(--color-win)' : 'var(--color-error)' }}
+          >
             {kpis.system_profit.toFixed(2)}
           </p>
           <div className="mt-2 space-y-0.5">
@@ -143,9 +165,12 @@ const AgentsDashboardPage = () => {
             <div>{t('agentsDashboard.systemCountsHintLineResolved')}</div>
             <div>{t('agentsDashboard.systemCountsHintLineArchived')}</div>
           </div>
-          <p className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>{t('agentsDashboard.systemCounts')}</p>
+          <p className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+            {t('agentsDashboard.systemCounts')}
+          </p>
           <p className="text-sm font-mono" style={{ color: 'var(--color-text-primary)' }}>
-            U:{kpis.total_users} M:{kpis.total_managers} A:{kpis.active_markets} R:{kpis.resolved_markets} AR:{kpis.archived_markets}
+            U:{kpis.total_users} M:{kpis.total_managers} A:{kpis.active_markets} R:
+            {kpis.resolved_markets} AR:{kpis.archived_markets}
           </p>
         </div>
       </div>
@@ -160,17 +185,12 @@ const AgentsDashboardPage = () => {
       >
         {/* Month dropdown */}
         <div className="flex flex-col gap-1">
-          <label
-            className="text-xs font-medium"
-            style={{ color: 'var(--color-text-secondary)' }}
-          >
+          <label className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
             {t('globalLog.month')}
           </label>
           <select
             value={month ?? ''}
-            onChange={(e) =>
-              setMonth(e.target.value === '' ? undefined : parseInt(e.target.value))
-            }
+            onChange={(e) => setMonth(e.target.value === '' ? undefined : parseInt(e.target.value))}
             className="rounded-lg border px-3 py-2 text-sm outline-none"
             style={selectStyle}
           >
@@ -185,17 +205,12 @@ const AgentsDashboardPage = () => {
 
         {/* Year dropdown */}
         <div className="flex flex-col gap-1">
-          <label
-            className="text-xs font-medium"
-            style={{ color: 'var(--color-text-secondary)' }}
-          >
+          <label className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
             {t('globalLog.year')}
           </label>
           <select
             value={year ?? ''}
-            onChange={(e) =>
-              setYear(e.target.value === '' ? undefined : parseInt(e.target.value))
-            }
+            onChange={(e) => setYear(e.target.value === '' ? undefined : parseInt(e.target.value))}
             className="rounded-lg border px-3 py-2 text-sm outline-none"
             style={selectStyle}
           >
@@ -224,7 +239,9 @@ const AgentsDashboardPage = () => {
 
       {/* Table */}
       {isLoading ? (
-        <p style={{ color: 'var(--color-text-secondary)' }}>{t('common.loading')}</p>
+        <div className="flex justify-center py-12">
+          <Spinner size="md" />
+        </div>
       ) : (
         <div
           className="overflow-hidden rounded-xl border"
@@ -307,35 +324,33 @@ const AgentsDashboardPage = () => {
                     {/* Agent column */}
                     <td className="px-4 py-3">
                       <button
-                        onClick={() => navigate(buildPath(ROUTES.ADMIN.MANAGER_PROFILE, { id: agent.agent_id }))}
+                        onClick={() =>
+                          navigate(buildPath(ROUTES.ADMIN.MANAGER_PROFILE, { id: agent.agent_id }))
+                        }
                         className="cursor-pointer text-start underline-offset-2 hover:underline"
-                        style={{ color: 'var(--color-accent)', background: 'none', border: 'none', padding: 0 }}
+                        style={{
+                          color: 'var(--color-accent)',
+                          background: 'none',
+                          border: 'none',
+                          padding: 0,
+                        }}
                       >
                         @{agent.username}
                       </button>
                       {agent.full_name && (
-                        <div
-                          className="text-xs"
-                          style={{ color: 'var(--color-text-secondary)' }}
-                        >
+                        <div className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
                           {agent.full_name}
                         </div>
                       )}
                     </td>
 
                     {/* Monthly Deposits */}
-                    <td
-                      className="px-4 py-3 font-mono"
-                      style={{ color: 'var(--color-win)' }}
-                    >
+                    <td className="px-4 py-3 font-mono" style={{ color: 'var(--color-win)' }}>
                       {agent.monthly_deposits.toFixed(2)}
                     </td>
 
                     {/* Monthly Withdrawals */}
-                    <td
-                      className="px-4 py-3 font-mono"
-                      style={{ color: 'var(--color-error)' }}
-                    >
+                    <td className="px-4 py-3 font-mono" style={{ color: 'var(--color-error)' }}>
                       {agent.monthly_withdrawals.toFixed(2)}
                     </td>
 
@@ -351,10 +366,7 @@ const AgentsDashboardPage = () => {
                     <td
                       className="px-4 py-3 font-mono"
                       style={{
-                        color:
-                          agent.monthly_pnl >= 0
-                            ? 'var(--color-win)'
-                            : 'var(--color-error)',
+                        color: agent.monthly_pnl >= 0 ? 'var(--color-win)' : 'var(--color-error)',
                       }}
                     >
                       {agent.monthly_pnl.toFixed(2)}

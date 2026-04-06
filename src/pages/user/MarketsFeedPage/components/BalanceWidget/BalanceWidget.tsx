@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { Spinner } from '@/shared/ui/Spinner';
 
 interface BalanceWidgetProps {
   available: number;
@@ -21,11 +22,12 @@ export const BalanceWidget = ({
     return (
       <div
         className="mb-4 flex items-center gap-4 rounded-lg px-4 py-2.5"
-        style={{ backgroundColor: 'var(--color-bg-surface)', border: '1px solid var(--color-border)' }}
+        style={{
+          backgroundColor: 'var(--color-bg-surface)',
+          border: '1px solid var(--color-border)',
+        }}
       >
-        <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-          {t('common.loading')}
-        </span>
+        <Spinner size="sm" />
       </div>
     );
   }
@@ -33,14 +35,20 @@ export const BalanceWidget = ({
   return (
     <div
       className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg px-4 py-2.5"
-      style={{ backgroundColor: 'var(--color-bg-surface)', border: '1px solid var(--color-border)' }}
+      style={{
+        backgroundColor: 'var(--color-bg-surface)',
+        border: '1px solid var(--color-border)',
+      }}
     >
       {/* Available balance */}
       <div className="flex items-center gap-2">
         <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
           {t('wallet.available')}
         </span>
-        <span className="font-mono text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+        <span
+          className="font-mono text-sm font-semibold"
+          style={{ color: 'var(--color-text-primary)' }}
+        >
           {available.toFixed(2)}
         </span>
       </div>

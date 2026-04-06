@@ -276,7 +276,9 @@
       "refreshFailed": "עדכון נכשל (שוק לא נמצא ב-Polymarket)",
     "archive": "ארכיון",
     "archiveConfirm": "להעביר שוק זה לארכיון?",
-    "archivedAt": "הועבר לארכיון ב"
+    "archivedAt": "הועבר לארכיון ב",
+    "yourBet": "ההימור שלך",
+    "myBetsOnly": "ההימורים שלי"
   },
   "settings": {
     "title": "הגדרות",
@@ -354,6 +356,7 @@
   "myBets": {
     "title": "ההימורים שלי",
     "openTab": "פתוחים",
+    "resolvedTab": "נקבע",
     "historyTab": "היסטוריה",
     "betId": "מזהה הימור",
     "market": "שוק",
@@ -363,6 +366,7 @@
     "status": "סטטוס",
     "settled": "הוסדר",
     "noOpenBets": "אין לך הימורים פתוחים",
+    "noResolvedBets": "אין הימורים שנקבעו עדיין",
     "noHistory": "אין הימורים מוסדרים עדיין",
     "totalWagered": "סך ההימורים",
     "totalWon": "סך קבלות",

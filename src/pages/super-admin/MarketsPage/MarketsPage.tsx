@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useMarkets } from '@/features/bet';
 import { useArchiveMarket } from '@/features/admin/markets/useArchiveMarket';
 import { MarketCard } from '@/pages/user/MarketsFeedPage/components/MarketCard';
+import { CardGridSkeleton } from '@/shared/ui/CardGridSkeleton';
 import type { Market } from '@/features/bet';
 
 const MarketsPage = () => {
@@ -20,11 +21,7 @@ const MarketsPage = () => {
         {t('markets.title')}
       </h1>
 
-      {isLoading && (
-        <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-          {t('common.loading')}
-        </p>
-      )}
+      {isLoading && <CardGridSkeleton count={4} />}
 
       {isError && (
         <p className="text-sm" style={{ color: 'var(--color-error)' }}>

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMyBets } from '@/features/bet';
+import { Spinner } from '@/shared/ui/Spinner';
 
 interface ActiveBetsDrawerProps {
   isOpen: boolean;
@@ -60,7 +61,12 @@ export const ActiveBetsDrawer = ({ isOpen, onClose }: ActiveBetsDrawerProps) => 
           <button
             onClick={onClose}
             className="flex h-7 w-7 items-center justify-center rounded-lg text-lg"
-            style={{ color: 'var(--color-text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}
+            style={{
+              color: 'var(--color-text-secondary)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+            }}
             aria-label="Close"
           >
             ×
@@ -70,9 +76,9 @@ export const ActiveBetsDrawer = ({ isOpen, onClose }: ActiveBetsDrawerProps) => 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-5 py-4">
           {isLoading && (
-            <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-              {t('common.loading')}
-            </p>
+            <div className="flex justify-center py-12">
+              <Spinner size="md" />
+            </div>
           )}
 
           {!isLoading && openBets.length === 0 && (
@@ -111,7 +117,10 @@ export const ActiveBetsDrawer = ({ isOpen, onClose }: ActiveBetsDrawerProps) => 
                       <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
                         {t('myBets.wager')}
                       </span>
-                      <span className="font-mono text-xs font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                      <span
+                        className="font-mono text-xs font-semibold"
+                        style={{ color: 'var(--color-text-primary)' }}
+                      >
                         {bet.stake.toFixed(2)}
                       </span>
                     </div>
@@ -119,7 +128,10 @@ export const ActiveBetsDrawer = ({ isOpen, onClose }: ActiveBetsDrawerProps) => 
                       <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
                         @
                       </span>
-                      <span className="font-mono text-xs font-semibold" style={{ color: 'var(--color-accent)' }}>
+                      <span
+                        className="font-mono text-xs font-semibold"
+                        style={{ color: 'var(--color-accent)' }}
+                      >
                         {bet.locked_odds.toFixed(2)}
                       </span>
                     </div>
@@ -127,7 +139,10 @@ export const ActiveBetsDrawer = ({ isOpen, onClose }: ActiveBetsDrawerProps) => 
                       <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
                         {t('myBets.potentialPayout')}
                       </span>
-                      <span className="font-mono text-xs font-semibold" style={{ color: 'var(--color-win)' }}>
+                      <span
+                        className="font-mono text-xs font-semibold"
+                        style={{ color: 'var(--color-win)' }}
+                      >
                         {bet.potential_payout.toFixed(2)}
                       </span>
                     </div>
@@ -155,7 +170,10 @@ export const ActiveBetsDrawer = ({ isOpen, onClose }: ActiveBetsDrawerProps) => 
             <span className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
               {t('markets.totalLocked')}
             </span>
-            <span className="font-mono text-sm font-semibold" style={{ color: 'var(--color-accent)' }}>
+            <span
+              className="font-mono text-sm font-semibold"
+              style={{ color: 'var(--color-accent)' }}
+            >
               {totalLocked.toFixed(2)}
             </span>
           </div>

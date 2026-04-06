@@ -5,6 +5,7 @@ import { useAuth } from '@/shared/hooks/useAuth';
 
 export interface MyBet {
   id: string;
+  market_id: string;
   outcome_id: string;
   stake: number;
   locked_odds: number;
@@ -59,7 +60,7 @@ export function useMyBets() {
       const { data, error } = await supabase
         .from('bets')
         .select(
-          'id, outcome_id, stake, locked_odds, potential_payout, status, placed_at, settled_at, seen_at, markets(question, status, winning_outcome_id, last_synced_at), market_outcomes(name)'
+          'id, market_id, outcome_id, stake, locked_odds, potential_payout, status, placed_at, settled_at, seen_at, markets(question, status, winning_outcome_id, last_synced_at), market_outcomes(name)'
         )
         // Defense-in-depth: RLS enforces this, but explicit filter documents intent
         .eq('user_id', session!.user.id)

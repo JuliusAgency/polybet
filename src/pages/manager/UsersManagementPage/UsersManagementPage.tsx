@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Button } from '@/shared/ui/Button';
 import { Badge } from '@/shared/ui/Badge';
+import { TableSkeleton } from '@/shared/ui/TableSkeleton';
 import { AdjustBalanceModal } from '@/features/manager/balance';
 import { useManagerToggleUserBlock, useMyUsers } from '@/features/manager/users';
 import { CreateUserModal } from './components/CreateUserModal';
@@ -36,15 +37,11 @@ const UsersManagementPage = () => {
       await toggleUserBlock.mutateAsync({ targetUserId: userId });
       await queryClient.invalidateQueries({ queryKey: ['manager', 'users'] });
       toast.success(
-        isActive
-          ? t('managerProfile.userBlockedSuccess')
-          : t('managerProfile.userUnblockedSuccess'),
+        isActive ? t('managerProfile.userBlockedSuccess') : t('managerProfile.userUnblockedSuccess')
       );
     } catch (mutationError) {
       toast.error(
-        mutationError instanceof Error
-          ? mutationError.message
-          : t('common.unknownError'),
+        mutationError instanceof Error ? mutationError.message : t('common.unknownError')
       );
     } finally {
       setPendingUserId(null);
@@ -63,9 +60,7 @@ const UsersManagementPage = () => {
         </Button>
       </div>
 
-      {isLoading && (
-        <p style={{ color: 'var(--color-text-secondary)' }}>{t('common.loading')}</p>
-      )}
+      {isLoading && <TableSkeleton rows={5} cols={6} />}
       {error && (
         <p style={{ color: 'var(--color-loss)' }}>
           {error instanceof Error ? error.message : t('common.unknownError')}
@@ -173,9 +168,7 @@ const UsersManagementPage = () => {
                           variant={isInactive ? 'secondary' : 'danger'}
                           className="px-3 py-1 text-xs"
                           disabled={pendingUserId === row.user_id}
-                          onClick={() =>
-                            handleToggleBlock(row.user_id, fullName, !isInactive)
-                          }
+                          onClick={() => handleToggleBlock(row.user_id, fullName, !isInactive)}
                         >
                           {isInactive ? t('managerProfile.unblock') : t('managerProfile.block')}
                         </Button>

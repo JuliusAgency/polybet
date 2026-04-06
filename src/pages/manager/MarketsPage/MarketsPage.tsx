@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useMarkets } from '@/features/bet';
 import { MarketCard } from '@/pages/user/MarketsFeedPage/components/MarketCard';
+import { CardGridSkeleton } from '@/shared/ui/CardGridSkeleton';
 
 const MarketsPage = () => {
   const { t } = useTranslation();
@@ -12,11 +13,7 @@ const MarketsPage = () => {
         {t('markets.title')}
       </h1>
 
-      {isLoading && (
-        <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-          {t('common.loading')}
-        </p>
-      )}
+      {isLoading && <CardGridSkeleton count={4} />}
 
       {isError && (
         <p className="text-sm" style={{ color: 'var(--color-error)' }}>

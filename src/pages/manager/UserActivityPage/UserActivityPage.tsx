@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/Button';
 import { Badge } from '@/shared/ui/Badge';
+import { Spinner } from '@/shared/ui/Spinner';
 import { useManagerBetLog } from '@/features/manager/bet-log';
 import { useMyUsers } from '@/features/manager/users';
 import type { BetStatus } from '@/features/admin/bet-log';
@@ -42,9 +43,7 @@ const UserActivityPage = () => {
   };
 
   // Find the username for the route-based user header
-  const routeUser = routeUserId
-    ? users?.find((u) => u.user_id === routeUserId)
-    : null;
+  const routeUser = routeUserId ? users?.find((u) => u.user_id === routeUserId) : null;
 
   const columns = [
     t('globalLog.date'),
@@ -59,15 +58,9 @@ const UserActivityPage = () => {
   ];
 
   return (
-    <div
-      className="min-h-screen p-6"
-      style={{ backgroundColor: 'var(--color-bg-base)' }}
-    >
+    <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--color-bg-base)' }}>
       <div className="mb-6">
-        <h1
-          className="text-2xl font-bold"
-          style={{ color: 'var(--color-text-primary)' }}
-        >
+        <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
           {routeUser?.profiles?.username
             ? `@${routeUser.profiles.username}`
             : t('userActivity.title')}
@@ -85,10 +78,7 @@ const UserActivityPage = () => {
         {/* User dropdown — only shown at /activity, not at /users/:id */}
         {!routeUserId && (
           <div className="flex flex-col gap-1">
-            <label
-              className="text-xs font-medium"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
+            <label className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
               {t('globalLog.user')}
             </label>
             <select
@@ -109,10 +99,7 @@ const UserActivityPage = () => {
 
         {/* Status filter */}
         <div className="flex flex-col gap-1">
-          <label
-            className="text-xs font-medium"
-            style={{ color: 'var(--color-text-secondary)' }}
-          >
+          <label className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
             {t('globalLog.status')}
           </label>
           <select
@@ -136,7 +123,9 @@ const UserActivityPage = () => {
 
       {/* Table */}
       {isLoading ? (
-        <p style={{ color: 'var(--color-text-secondary)' }}>{t('common.loading')}</p>
+        <div className="flex justify-center py-12">
+          <Spinner size="md" />
+        </div>
       ) : (
         <div
           className="overflow-hidden rounded-xl border"
@@ -183,34 +172,31 @@ const UserActivityPage = () => {
                       style={{ color: 'var(--color-text-secondary)' }}
                     >
                       <div>{new Date(row.placed_at).toLocaleDateString(i18n.language)}</div>
-                      <div>{new Date(row.placed_at).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
+                      <div>
+                        {new Date(row.placed_at).toLocaleTimeString(i18n.language, {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit',
+                        })}
+                      </div>
                     </td>
 
                     {/* User — only at /activity */}
                     {!routeUserId && (
-                      <td
-                        className="px-4 py-3"
-                        style={{ color: 'var(--color-text-primary)' }}
-                      >
+                      <td className="px-4 py-3" style={{ color: 'var(--color-text-primary)' }}>
                         @{row.user_username}
                       </td>
                     )}
 
                     {/* Market */}
-                    <td
-                      className="px-4 py-3"
-                      style={{ color: 'var(--color-text-primary)' }}
-                    >
+                    <td className="px-4 py-3" style={{ color: 'var(--color-text-primary)' }}>
                       {row.market_description.length > 40
                         ? `${row.market_description.slice(0, 40)}…`
                         : row.market_description}
                     </td>
 
                     {/* Selection */}
-                    <td
-                      className="px-4 py-3"
-                      style={{ color: 'var(--color-text-secondary)' }}
-                    >
+                    <td className="px-4 py-3" style={{ color: 'var(--color-text-secondary)' }}>
                       {row.outcome_name}
                     </td>
 
@@ -246,16 +232,22 @@ const UserActivityPage = () => {
                       {row.settled_at ? (
                         <>
                           <div>{new Date(row.settled_at).toLocaleDateString(i18n.language)}</div>
-                          <div>{new Date(row.settled_at).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
+                          <div>
+                            {new Date(row.settled_at).toLocaleTimeString(i18n.language, {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              second: '2-digit',
+                            })}
+                          </div>
                         </>
-                      ) : '—'}
+                      ) : (
+                        '—'
+                      )}
                     </td>
 
                     {/* Status */}
                     <td className="px-4 py-3">
-                      <Badge variant={betStatusVariant(row.status)}>
-                        {t(`bet.${row.status}`)}
-                      </Badge>
+                      <Badge variant={betStatusVariant(row.status)}>{t(`bet.${row.status}`)}</Badge>
                     </td>
                   </tr>
                 ))

@@ -6,6 +6,7 @@ import { useManagerGroupStats } from '@/features/stats';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { Card } from '@/shared/ui/Card';
 import { Button } from '@/shared/ui/Button';
+import { Spinner } from '@/shared/ui/Spinner';
 
 const selectStyle: React.CSSProperties = {
   backgroundColor: 'var(--color-bg-elevated)',
@@ -40,11 +41,11 @@ const ReportsPage = () => {
   const filteredTotals = {
     totalDeposits: filteredTransactions.reduce(
       (sum, tx) => (tx.type === 'adjustment' ? sum + tx.amount : sum),
-      0,
+      0
     ),
     totalWithdrawals: filteredTransactions.reduce(
       (sum, tx) => (tx.type === 'transfer' ? sum + Math.abs(tx.amount) : sum),
-      0,
+      0
     ),
     netProfit: 0,
   };
@@ -69,16 +70,10 @@ const ReportsPage = () => {
   ];
 
   return (
-    <div
-      className="min-h-screen p-6"
-      style={{ backgroundColor: 'var(--color-bg-base)' }}
-    >
+    <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--color-bg-base)' }}>
       {/* Page title */}
       <div className="mb-6">
-        <h1
-          className="text-2xl font-bold"
-          style={{ color: 'var(--color-text-primary)' }}
-        >
+        <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
           {t('reports.title')}
         </h1>
       </div>
@@ -86,49 +81,31 @@ const ReportsPage = () => {
       {/* Net Profit Calculator row */}
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card>
-          <p
-            className="mb-1 text-sm font-medium"
-            style={{ color: 'var(--color-text-secondary)' }}
-          >
+          <p className="mb-1 text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
             {t('financialTable.totalDeposits')}
           </p>
-          <p
-            className="text-xl font-bold font-mono"
-            style={{ color: 'var(--color-text-primary)' }}
-          >
+          <p className="text-xl font-bold font-mono" style={{ color: 'var(--color-text-primary)' }}>
             {filteredTotals.totalDeposits.toFixed(2)}
           </p>
         </Card>
 
         <Card>
-          <p
-            className="mb-1 text-sm font-medium"
-            style={{ color: 'var(--color-text-secondary)' }}
-          >
+          <p className="mb-1 text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
             {t('financialTable.totalWithdrawals')}
           </p>
-          <p
-            className="text-xl font-bold font-mono"
-            style={{ color: 'var(--color-text-primary)' }}
-          >
+          <p className="text-xl font-bold font-mono" style={{ color: 'var(--color-text-primary)' }}>
             {filteredTotals.totalWithdrawals.toFixed(2)}
           </p>
         </Card>
 
         <Card>
-          <p
-            className="mb-1 text-sm font-medium"
-            style={{ color: 'var(--color-text-secondary)' }}
-          >
+          <p className="mb-1 text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
             {t('financialTable.netProfit')}
           </p>
           <p
             className="text-xl font-bold font-mono"
             style={{
-              color:
-                filteredTotals.netProfit >= 0
-                  ? 'var(--color-win)'
-                  : 'var(--color-error)',
+              color: filteredTotals.netProfit >= 0 ? 'var(--color-win)' : 'var(--color-error)',
             }}
           >
             {filteredTotals.netProfit.toFixed(2)}
@@ -139,10 +116,7 @@ const ReportsPage = () => {
       {/* Group betting metrics */}
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card>
-          <p
-            className="mb-1 text-sm font-medium"
-            style={{ color: 'var(--color-text-secondary)' }}
-          >
+          <p className="mb-1 text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
             {t('reports.groupOpenExposure')}
           </p>
           <p className="text-xl font-bold font-mono" style={{ color: 'var(--color-text-primary)' }}>
@@ -151,10 +125,7 @@ const ReportsPage = () => {
         </Card>
 
         <Card>
-          <p
-            className="mb-1 text-sm font-medium"
-            style={{ color: 'var(--color-text-secondary)' }}
-          >
+          <p className="mb-1 text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
             {t('reports.groupTurnover')}
           </p>
           <p className="text-xl font-bold font-mono" style={{ color: 'var(--color-text-primary)' }}>
@@ -163,10 +134,7 @@ const ReportsPage = () => {
         </Card>
 
         <Card>
-          <p
-            className="mb-1 text-sm font-medium"
-            style={{ color: 'var(--color-text-secondary)' }}
-          >
+          <p className="mb-1 text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
             {t('reports.groupPnl')}
           </p>
           <p
@@ -188,17 +156,12 @@ const ReportsPage = () => {
       >
         {/* Month dropdown */}
         <div className="flex flex-col gap-1">
-          <label
-            className="text-xs font-medium"
-            style={{ color: 'var(--color-text-secondary)' }}
-          >
+          <label className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
             {t('globalLog.month')}
           </label>
           <select
             value={month ?? ''}
-            onChange={(e) =>
-              setMonth(e.target.value === '' ? undefined : Number(e.target.value))
-            }
+            onChange={(e) => setMonth(e.target.value === '' ? undefined : Number(e.target.value))}
             className="rounded-lg border px-3 py-2 text-sm outline-none"
             style={selectStyle}
           >
@@ -213,17 +176,12 @@ const ReportsPage = () => {
 
         {/* Year dropdown */}
         <div className="flex flex-col gap-1">
-          <label
-            className="text-xs font-medium"
-            style={{ color: 'var(--color-text-secondary)' }}
-          >
+          <label className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
             {t('globalLog.year')}
           </label>
           <select
             value={year ?? ''}
-            onChange={(e) =>
-              setYear(e.target.value === '' ? undefined : Number(e.target.value))
-            }
+            onChange={(e) => setYear(e.target.value === '' ? undefined : Number(e.target.value))}
             className="rounded-lg border px-3 py-2 text-sm outline-none"
             style={selectStyle}
           >
@@ -238,10 +196,7 @@ const ReportsPage = () => {
 
         {/* User dropdown */}
         <div className="flex flex-col gap-1">
-          <label
-            className="text-xs font-medium"
-            style={{ color: 'var(--color-text-secondary)' }}
-          >
+          <label className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
             {t('globalLog.user')}
           </label>
           <select
@@ -266,7 +221,9 @@ const ReportsPage = () => {
 
       {/* Table */}
       {isLoading ? (
-        <p style={{ color: 'var(--color-text-secondary)' }}>{t('common.loading')}</p>
+        <div className="flex justify-center py-12">
+          <Spinner size="md" />
+        </div>
       ) : (
         <div
           className="overflow-hidden rounded-xl border"
@@ -312,9 +269,7 @@ const ReportsPage = () => {
                       className="px-4 py-3 font-mono text-xs"
                       style={{ color: 'var(--color-text-secondary)' }}
                     >
-                      <div>
-                        {new Date(tx.created_at).toLocaleDateString(i18n.language)}
-                      </div>
+                      <div>{new Date(tx.created_at).toLocaleDateString(i18n.language)}</div>
                       <div>
                         {new Date(tx.created_at).toLocaleTimeString(i18n.language, {
                           hour: '2-digit',
@@ -325,18 +280,12 @@ const ReportsPage = () => {
                     </td>
 
                     {/* User */}
-                    <td
-                      className="px-4 py-3"
-                      style={{ color: 'var(--color-text-primary)' }}
-                    >
+                    <td className="px-4 py-3" style={{ color: 'var(--color-text-primary)' }}>
                       @{tx.user_username}
                     </td>
 
                     {/* Type */}
-                    <td
-                      className="px-4 py-3"
-                      style={{ color: 'var(--color-text-secondary)' }}
-                    >
+                    <td className="px-4 py-3" style={{ color: 'var(--color-text-secondary)' }}>
                       {tx.type === 'adjustment'
                         ? t('financialTable.deposit')
                         : t('financialTable.withdrawal')}
@@ -346,10 +295,7 @@ const ReportsPage = () => {
                     <td
                       className="px-4 py-3 font-mono"
                       style={{
-                        color:
-                          tx.type === 'adjustment'
-                            ? 'var(--color-win)'
-                            : 'var(--color-error)',
+                        color: tx.type === 'adjustment' ? 'var(--color-win)' : 'var(--color-error)',
                       }}
                     >
                       {tx.amount.toFixed(2)}
@@ -364,10 +310,7 @@ const ReportsPage = () => {
                     </td>
 
                     {/* Note */}
-                    <td
-                      className="px-4 py-3"
-                      style={{ color: 'var(--color-text-secondary)' }}
-                    >
+                    <td className="px-4 py-3" style={{ color: 'var(--color-text-secondary)' }}>
                       {tx.note ?? '—'}
                     </td>
                   </tr>

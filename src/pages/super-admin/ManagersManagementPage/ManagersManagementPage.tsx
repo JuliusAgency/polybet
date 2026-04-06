@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/Button';
 import { Badge } from '@/shared/ui/Badge';
+import { TableSkeleton } from '@/shared/ui/TableSkeleton';
 import { ROUTES, buildPath } from '@/app/router/routes';
 import { useManagers } from '@/features/admin/managers';
 import { CreateManagerModal } from './components/CreateManagerModal';
@@ -17,16 +18,10 @@ export const ManagersManagementPage = () => {
   const [showSuccess, setShowSuccess] = useState(false);
 
   return (
-    <div
-      className="min-h-screen p-6"
-      style={{ backgroundColor: 'var(--color-bg-base)' }}
-    >
+    <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--color-bg-base)' }}>
       {/* Header row */}
       <div className="mb-6 flex items-center justify-between">
-        <h1
-          className="text-2xl font-bold"
-          style={{ color: 'var(--color-text-primary)' }}
-        >
+        <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
           {t('managers.title')}
         </h1>
         <Button variant="primary" onClick={() => setIsCreateOpen(true)}>
@@ -57,9 +52,7 @@ export const ManagersManagementPage = () => {
         </div>
       )}
 
-      {isLoading && (
-        <p style={{ color: 'var(--color-text-secondary)' }}>{t('common.loading')}</p>
-      )}
+      {isLoading && <TableSkeleton rows={4} cols={5} />}
 
       {error && (
         <p style={{ color: 'var(--color-loss)' }}>
@@ -77,10 +70,7 @@ export const ManagersManagementPage = () => {
         >
           <table className="w-full text-sm">
             <thead>
-              <tr
-                className="border-b text-start"
-                style={{ borderColor: 'var(--color-border)' }}
-              >
+              <tr className="border-b text-start" style={{ borderColor: 'var(--color-border)' }}>
                 {[
                   t('managers.fullName'),
                   t('managers.username'),
@@ -122,7 +112,10 @@ export const ManagersManagementPage = () => {
                   <td className="px-4 py-3" style={{ color: 'var(--color-text-secondary)' }}>
                     @{profile.username}
                   </td>
-                  <td className="px-4 py-3 font-mono" style={{ color: 'var(--color-text-primary)' }}>
+                  <td
+                    className="px-4 py-3 font-mono"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
                     {manager.balance.toFixed(2)}
                   </td>
                   <td className="px-4 py-3">

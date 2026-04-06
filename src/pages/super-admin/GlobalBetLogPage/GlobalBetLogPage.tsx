@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/Button';
 import { Badge } from '@/shared/ui/Badge';
+import { TableSkeleton } from '@/shared/ui/TableSkeleton';
 import { useManagers } from '@/features/admin/managers';
 import { useBetLog } from '@/features/admin/bet-log';
 import type { BetStatus } from '@/features/admin/bet-log';
@@ -82,10 +83,7 @@ const GlobalBetLogPage = () => {
   };
 
   return (
-    <div
-      className="min-h-screen p-6"
-      style={{ backgroundColor: 'var(--color-bg-base)' }}
-    >
+    <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--color-bg-base)' }}>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
           {t('globalLog.title')}
@@ -99,10 +97,7 @@ const GlobalBetLogPage = () => {
               })}
             </span>
           )}
-          <Button
-            variant="primary"
-            onClick={() => setIsSyncModalOpen(true)}
-          >
+          <Button variant="primary" onClick={() => setIsSyncModalOpen(true)}>
             {t('settlement.syncMarkets')}
           </Button>
         </div>
@@ -123,21 +118,20 @@ const GlobalBetLogPage = () => {
         className="mb-6 flex gap-1 rounded-lg p-1 w-fit"
         style={{ backgroundColor: 'var(--color-bg-surface)' }}
       >
-        {([
-          { key: 'bet-log', label: t('globalLog.betLog') },
-          { key: 'financial-log', label: t('globalLog.financialLog') },
-        ] as { key: Tab; label: string }[]).map((tab) => (
+        {(
+          [
+            { key: 'bet-log', label: t('globalLog.betLog') },
+            { key: 'financial-log', label: t('globalLog.financialLog') },
+          ] as { key: Tab; label: string }[]
+        ).map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             className="rounded-md px-4 py-2 text-sm font-medium transition-colors"
             style={{
-              backgroundColor:
-                activeTab === tab.key ? 'var(--color-accent)' : 'transparent',
+              backgroundColor: activeTab === tab.key ? 'var(--color-accent)' : 'transparent',
               color:
-                activeTab === tab.key
-                  ? 'var(--color-text-primary)'
-                  : 'var(--color-text-secondary)',
+                activeTab === tab.key ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
               cursor: 'pointer',
               border: 'none',
               outline: 'none',
@@ -212,7 +206,7 @@ const GlobalBetLogPage = () => {
 
           {/* Table */}
           {betLoading ? (
-            <p style={{ color: 'var(--color-text-secondary)' }}>{t('common.loading')}</p>
+            <TableSkeleton rows={6} cols={9} />
           ) : (
             <div
               className="overflow-hidden rounded-xl border"
@@ -254,33 +248,21 @@ const GlobalBetLogPage = () => {
                         style={{ borderColor: 'var(--color-border)' }}
                       >
                         {/* User */}
-                        <td
-                          className="px-4 py-3"
-                          style={{ color: 'var(--color-text-primary)' }}
-                        >
+                        <td className="px-4 py-3" style={{ color: 'var(--color-text-primary)' }}>
                           @{row.user_username}
                         </td>
                         {/* Manager */}
-                        <td
-                          className="px-4 py-3"
-                          style={{ color: 'var(--color-text-secondary)' }}
-                        >
+                        <td className="px-4 py-3" style={{ color: 'var(--color-text-secondary)' }}>
                           {row.manager_username ? `@${row.manager_username}` : '—'}
                         </td>
                         {/* Market */}
-                        <td
-                          className="px-4 py-3"
-                          style={{ color: 'var(--color-text-primary)' }}
-                        >
+                        <td className="px-4 py-3" style={{ color: 'var(--color-text-primary)' }}>
                           {row.market_description.length > 40
                             ? `${row.market_description.slice(0, 40)}…`
                             : row.market_description}
                         </td>
                         {/* Selection */}
-                        <td
-                          className="px-4 py-3"
-                          style={{ color: 'var(--color-text-secondary)' }}
-                        >
+                        <td className="px-4 py-3" style={{ color: 'var(--color-text-secondary)' }}>
                           {row.outcome_name}
                         </td>
                         {/* Wager */}
@@ -316,7 +298,13 @@ const GlobalBetLogPage = () => {
                           style={{ color: 'var(--color-text-secondary)' }}
                         >
                           <div>{new Date(row.placed_at).toLocaleDateString(i18n.language)}</div>
-                          <div>{new Date(row.placed_at).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
+                          <div>
+                            {new Date(row.placed_at).toLocaleTimeString(i18n.language, {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              second: '2-digit',
+                            })}
+                          </div>
                         </td>
                       </tr>
                     ))

@@ -7,12 +7,11 @@ import { Button } from '@/shared/ui/Button';
 import { Badge } from '@/shared/ui/Badge';
 import { Modal } from '@/shared/ui/Modal';
 import { Input } from '@/shared/ui/Input';
+import { Spinner } from '@/shared/ui/Spinner';
 import { useAdjustBalance, useAdjustManagerBalance } from '@/features/admin/adjust-balance';
 import { useToggleUserBlock, useResetPassword } from '@/features/admin/manage-user';
 import { useManagerUsers, useManagerActionLogs } from '@/features/admin/manager-users';
-import {
-  useBetLimitSettings,
-} from '@/features/admin/bet-limits';
+import { useBetLimitSettings } from '@/features/admin/bet-limits';
 import { EffectiveLimitBadge } from '@/pages/super-admin/BetLimitsPage/components/EffectiveLimitBadge';
 import type { DbProfile } from '@/shared/types/database';
 import { formatInitiatorName } from '@/shared/utils';
@@ -48,7 +47,7 @@ const formatAmount = (value: number | null | undefined) => (value != null ? valu
 const showTransientFeedback = (
   setFeedback: Dispatch<SetStateAction<{ message: string; isError: boolean } | null>>,
   message: string,
-  isError = false,
+  isError = false
 ) => {
   setFeedback({ message, isError });
   window.setTimeout(() => setFeedback(null), 3000);
@@ -153,7 +152,12 @@ interface ResetPasswordModalProps {
   onSuccess: () => void;
 }
 
-const ResetPasswordModal = ({ isOpen, onClose, targetUser, onSuccess }: ResetPasswordModalProps) => {
+const ResetPasswordModal = ({
+  isOpen,
+  onClose,
+  targetUser,
+  onSuccess,
+}: ResetPasswordModalProps) => {
   const { t } = useTranslation();
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -212,7 +216,6 @@ const ResetPasswordModal = ({ isOpen, onClose, targetUser, onSuccess }: ResetPas
   );
 };
 
-
 type ModalState =
   | { kind: 'deposit'; user: DbProfile }
   | { kind: 'withdrawal'; user: DbProfile }
@@ -230,7 +233,10 @@ export const ManagerProfilePage = () => {
   const queryClient = useQueryClient();
 
   const [modal, setModal] = useState<ModalState>(null);
-  const [actionFeedback, setActionFeedback] = useState<{ message: string; isError: boolean } | null>(null);
+  const [actionFeedback, setActionFeedback] = useState<{
+    message: string;
+    isError: boolean;
+  } | null>(null);
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
   const [managerActionPending, setManagerActionPending] = useState(false);
   const [logFilter, setLogFilter] = useState<LogFilter>('all');
@@ -250,7 +256,6 @@ export const ManagerProfilePage = () => {
   const { data: users, isLoading: usersLoading, error: usersError } = useManagerUsers(managerId);
   const { data: betLimitSettings, isLoading: betLimitLoading } = useBetLimitSettings(managerId);
 
-
   const managedUsers = users ?? [];
   const userIds = managedUsers.map((user) => user.profile.id);
   const managerAndUserIds = manager ? [manager.id, ...userIds] : userIds;
@@ -259,19 +264,21 @@ export const ManagerProfilePage = () => {
   const effectiveUserLimitById = useMemo(
     () =>
       new Map(
-        (betLimitSettings?.effective.users ?? []).map((userLimit) => [userLimit.userId, userLimit]),
+        (betLimitSettings?.effective.users ?? []).map((userLimit) => [userLimit.userId, userLimit])
       ),
-    [betLimitSettings?.effective.users],
+    [betLimitSettings?.effective.users]
   );
 
   const filteredLogs = useMemo(() => {
     if (!actionLogs) return [];
-    if (logFilter === 'financial') return actionLogs.filter((log) => FINANCIAL_ACTIONS.has(log.action));
+    if (logFilter === 'financial')
+      return actionLogs.filter((log) => FINANCIAL_ACTIONS.has(log.action));
     if (logFilter === 'account') return actionLogs.filter((log) => ACCOUNT_ACTIONS.has(log.action));
     return actionLogs;
   }, [actionLogs, logFilter]);
 
-  const invalidateActionLog = () => queryClient.invalidateQueries({ queryKey: ACTION_LOG_QUERY_KEY });
+  const invalidateActionLog = () =>
+    queryClient.invalidateQueries({ queryKey: ACTION_LOG_QUERY_KEY });
 
   const invalidateManagerPageData = () => {
     queryClient.invalidateQueries({ queryKey: usersQueryKey });
@@ -296,13 +303,15 @@ export const ManagerProfilePage = () => {
       invalidateActionLog();
       showTransientFeedback(
         setActionFeedback,
-        user.is_active ? t('managerProfile.userBlockedSuccess') : t('managerProfile.userUnblockedSuccess'),
+        user.is_active
+          ? t('managerProfile.userBlockedSuccess')
+          : t('managerProfile.userUnblockedSuccess')
       );
     } catch (err) {
       showTransientFeedback(
         setActionFeedback,
         err instanceof Error ? err.message : t('common.unknownError'),
-        true,
+        true
       );
     } finally {
       setPendingUserId(null);
@@ -326,13 +335,13 @@ export const ManagerProfilePage = () => {
         setActionFeedback,
         manager.is_active
           ? t('managerProfile.managerBlockedSuccess')
-          : t('managerProfile.managerUnblockedSuccess'),
+          : t('managerProfile.managerUnblockedSuccess')
       );
     } catch (err) {
       showTransientFeedback(
         setActionFeedback,
         err instanceof Error ? err.message : t('common.unknownError'),
-        true,
+        true
       );
     } finally {
       setManagerActionPending(false);
@@ -353,7 +362,10 @@ export const ManagerProfilePage = () => {
     <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--color-bg-base)' }}>
       <div className="mb-6">
         {managerLoading ? (
-          <div className="h-8 w-48 rounded" style={{ backgroundColor: 'var(--color-bg-elevated)' }} />
+          <div
+            className="h-8 w-48 rounded"
+            style={{ backgroundColor: 'var(--color-bg-elevated)' }}
+          />
         ) : (
           <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
             {t('managerProfile.title', { name: manager?.full_name ?? manager?.username ?? '—' })}
@@ -379,7 +391,11 @@ export const ManagerProfilePage = () => {
         </div>
       )}
 
-      {isLoading && <p style={{ color: 'var(--color-text-secondary)' }}>{t('common.loading')}</p>}
+      {isLoading && (
+        <div className="flex justify-center py-12">
+          <Spinner size="md" />
+        </div>
+      )}
 
       {usersError && (
         <p style={{ color: 'var(--color-loss)' }}>
@@ -405,7 +421,10 @@ export const ManagerProfilePage = () => {
           >
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="rounded-lg border p-4" style={{ borderColor: 'var(--color-border)' }}>
+                <div
+                  className="rounded-lg border p-4"
+                  style={{ borderColor: 'var(--color-border)' }}
+                >
                   <p
                     className="text-xs font-medium uppercase tracking-[0.14em]"
                     style={{ color: 'var(--color-text-muted)' }}
@@ -413,38 +432,56 @@ export const ManagerProfilePage = () => {
                     {t('managerProfile.username')}
                   </p>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <span className="text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                    <span
+                      className="text-base font-semibold"
+                      style={{ color: 'var(--color-text-primary)' }}
+                    >
                       @{manager.username}
                     </span>
                     <Badge variant="pending">{t('managerProfile.managerRoleBadge')}</Badge>
                   </div>
                 </div>
 
-                <div className="rounded-lg border p-4" style={{ borderColor: 'var(--color-border)' }}>
+                <div
+                  className="rounded-lg border p-4"
+                  style={{ borderColor: 'var(--color-border)' }}
+                >
                   <p
                     className="text-xs font-medium uppercase tracking-[0.14em]"
                     style={{ color: 'var(--color-text-muted)' }}
                   >
                     {t('managerProfile.fullName')}
                   </p>
-                  <p className="mt-2 text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                  <p
+                    className="mt-2 text-base font-semibold"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
                     {manager.full_name}
                   </p>
                 </div>
 
-                <div className="rounded-lg border p-4" style={{ borderColor: 'var(--color-border)' }}>
+                <div
+                  className="rounded-lg border p-4"
+                  style={{ borderColor: 'var(--color-border)' }}
+                >
                   <p
                     className="text-xs font-medium uppercase tracking-[0.14em]"
                     style={{ color: 'var(--color-text-muted)' }}
                   >
                     {t('managerProfile.available')}
                   </p>
-                  <p className="mt-2 font-mono text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                  <p
+                    className="mt-2 font-mono text-base font-semibold"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
                     {formatAmount(managerBalance)}
                   </p>
                 </div>
 
-                <div className="rounded-lg border p-4" style={{ borderColor: 'var(--color-border)' }}>
+                <div
+                  className="rounded-lg border p-4"
+                  style={{ borderColor: 'var(--color-border)' }}
+                >
                   <p
                     className="text-xs font-medium uppercase tracking-[0.14em]"
                     style={{ color: 'var(--color-text-muted)' }}
@@ -460,11 +497,12 @@ export const ManagerProfilePage = () => {
               </div>
 
               <div className="flex flex-col gap-4">
-                <div className="rounded-lg border p-4" style={{ borderColor: 'var(--color-border)' }}>
+                <div
+                  className="rounded-lg border p-4"
+                  style={{ borderColor: 'var(--color-border)' }}
+                >
                   {betLimitLoading ? (
-                    <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                      {t('common.loading')}
-                    </p>
+                    <Spinner size="sm" />
                   ) : (
                     <div className="flex flex-col gap-1">
                       <span
@@ -475,15 +513,27 @@ export const ManagerProfilePage = () => {
                       </span>
                       <EffectiveLimitBadge
                         limit={managerEffectiveLimit}
-                        source={managerLimitSource === 'manager' ? 'manager' : managerLimitSource === 'global' ? 'global' : null}
+                        source={
+                          managerLimitSource === 'manager'
+                            ? 'manager'
+                            : managerLimitSource === 'global'
+                              ? 'global'
+                              : null
+                        }
                       />
                     </div>
                   )}
                 </div>
 
-                <div className="rounded-lg border p-4" style={{ borderColor: 'var(--color-border)' }}>
+                <div
+                  className="rounded-lg border p-4"
+                  style={{ borderColor: 'var(--color-border)' }}
+                >
                   <div className="mb-3 flex items-center justify-between gap-3">
-                    <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                    <h3
+                      className="text-sm font-semibold"
+                      style={{ color: 'var(--color-text-primary)' }}
+                    >
                       {t('managerProfile.managerActions')}
                     </h3>
                     <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
@@ -612,19 +662,29 @@ export const ManagerProfilePage = () => {
                     <td className="px-4 py-3" style={{ color: 'var(--color-text-secondary)' }}>
                       {profile.full_name}
                     </td>
-                    <td className="px-4 py-3 font-mono" style={{ color: 'var(--color-text-primary)' }}>
+                    <td
+                      className="px-4 py-3 font-mono"
+                      style={{ color: 'var(--color-text-primary)' }}
+                    >
                       {balance.available.toFixed(2)}
                     </td>
-                    <td className="px-4 py-3 font-mono" style={{ color: 'var(--color-text-secondary)' }}>
+                    <td
+                      className="px-4 py-3 font-mono"
+                      style={{ color: 'var(--color-text-secondary)' }}
+                    >
                       {balance.in_play.toFixed(2)}
                     </td>
                     <td className="px-4 py-3">
                       {betLimitLoading ? (
-                        <span style={{ color: 'var(--color-text-secondary)' }}>{t('common.loading')}</span>
+                        <Spinner size="sm" />
                       ) : (
                         <EffectiveLimitBadge
                           limit={effectiveLimit?.effectiveMaxBetLimit ?? null}
-                          source={effectiveLimit?.source === 'user' ? 'personal' : (effectiveLimit?.source ?? null)}
+                          source={
+                            effectiveLimit?.source === 'user'
+                              ? 'personal'
+                              : (effectiveLimit?.source ?? null)
+                          }
                         />
                       )}
                     </td>
@@ -655,7 +715,9 @@ export const ManagerProfilePage = () => {
                           onClick={() => handleToggleBlock(profile)}
                           disabled={pendingUserId === profile.id}
                         >
-                          {profile.is_active ? t('managerProfile.block') : t('managerProfile.unblock')}
+                          {profile.is_active
+                            ? t('managerProfile.block')
+                            : t('managerProfile.unblock')}
                         </Button>
                         <Button
                           variant="secondary"
@@ -796,7 +858,10 @@ export const ManagerProfilePage = () => {
                     <td className="px-4 py-3" style={{ color: 'var(--color-text-primary)' }}>
                       @{log.target_username}
                     </td>
-                    <td className="px-4 py-3 font-mono" style={{ color: 'var(--color-text-primary)' }}>
+                    <td
+                      className="px-4 py-3 font-mono"
+                      style={{ color: 'var(--color-text-primary)' }}
+                    >
                       {log.amount != null ? log.amount.toFixed(2) : '—'}
                     </td>
                     <td className="px-4 py-3" style={{ color: 'var(--color-text-secondary)' }}>

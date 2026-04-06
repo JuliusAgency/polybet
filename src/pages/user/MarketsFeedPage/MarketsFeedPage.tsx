@@ -4,6 +4,8 @@ import { useMarkets, useUserBalance, useMyBets } from '@/features/bet';
 import type { Market, MarketOutcome, MarketStatusFilter } from '@/features/bet';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { useIntersectionObserver } from '@/shared/hooks/useIntersectionObserver';
+import { Spinner } from '@/shared/ui/Spinner';
+import { CardGridSkeleton } from '@/shared/ui/CardGridSkeleton';
 import { BetSlip } from './components/BetSlip';
 import { MarketCard } from './components/MarketCard';
 import { BalanceWidget } from './components/BalanceWidget';
@@ -19,6 +21,7 @@ const MarketsFeedPage = () => {
   const { t } = useTranslation();
   const [statusFilter, setStatusFilter] = useState<MarketStatusFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [myBetsOnly, setMyBetsOnly] = useState(false);
   const debouncedSearch = useDebounce(searchQuery, 300);
 
   const { markets, isLoading, isError, error, fetchNextPage, hasNextPage, isFetchingNextPage } =
@@ -49,6 +52,13 @@ const MarketsFeedPage = () => {
   const inPlay = balance?.in_play ?? 0;
   const openBetsCount = (bets ?? []).filter((b) => b.status === 'open').length;
 
+  const myBetMarketIds = new Set((bets ?? []).map((b) => b.market_id));
+  const hasBets = myBetMarketIds.size > 0;
+
+  const userBetForMarket = (marketId: string) => (bets ?? []).find((b) => b.market_id === marketId);
+
+  const visibleMarkets = myBetsOnly ? markets.filter((m) => myBetMarketIds.has(m.id)) : markets;
+
   return (
     <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--color-bg-base)' }}>
       {/* Header */}
@@ -65,29 +75,80 @@ const MarketsFeedPage = () => {
         onOpenDrawer={() => setIsDrawerOpen(true)}
       />
 
-      {/* Filter row: status pills + search */}
+      {/* Filter row: status pills + my-bets toggle + search */}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <StatusFilter value={statusFilter} onChange={setStatusFilter} />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder={t('markets.searchPlaceholder')}
-          className="rounded-full border px-3 py-1 text-sm outline-none"
-          style={{
-            backgroundColor: 'var(--color-bg-elevated)',
-            borderColor: 'var(--color-border)',
-            color: 'var(--color-text-primary)',
-          }}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <StatusFilter value={statusFilter} onChange={setStatusFilter} />
+        </div>
+        <div className="flex items-center gap-2">
+          {hasBets && (
+            <button
+              onClick={() => setMyBetsOnly((v) => !v)}
+              className="flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium transition-all"
+              style={{
+                backgroundColor: myBetsOnly ? 'var(--color-accent)' : 'var(--color-bg-elevated)',
+                color: myBetsOnly ? '#fff' : 'var(--color-text-secondary)',
+                border: `1px solid ${myBetsOnly ? 'var(--color-accent)' : 'var(--color-border)'}`,
+                boxShadow: myBetsOnly ? '0 0 0 2px var(--color-accent-muted)' : 'none',
+                cursor: 'pointer',
+              }}
+            >
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill={myBetsOnly ? 'currentColor' : 'none'}
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{ flexShrink: 0 }}
+              >
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+              </svg>
+              {t('markets.myBetsOnly')}
+            </button>
+          )}
+          <div className="relative flex items-center">
+            <div
+              className="pointer-events-none absolute inset-y-0 flex items-center"
+              style={{ insetInlineStart: '10px' }}
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{ color: 'var(--color-text-muted)' }}
+              >
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={t('markets.searchPlaceholder')}
+              className="rounded-full border py-1 text-sm outline-none"
+              style={{
+                backgroundColor: 'var(--color-bg-elevated)',
+                borderColor: 'var(--color-border)',
+                color: 'var(--color-text-primary)',
+                paddingInlineStart: '2rem',
+                paddingInlineEnd: '0.75rem',
+              }}
+            />
+          </div>
+        </div>
       </div>
 
       {/* Loading state — initial load */}
-      {isLoading && (
-        <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-          {t('common.loading')}
-        </p>
-      )}
+      {isLoading && <CardGridSkeleton count={4} />}
 
       {/* Error state */}
       {isError && (
@@ -97,19 +158,20 @@ const MarketsFeedPage = () => {
       )}
 
       {/* Empty state — no markets at all */}
-      {!isLoading && !isError && markets.length === 0 && (
+      {!isLoading && !isError && visibleMarkets.length === 0 && (
         <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
           {debouncedSearch ? t('markets.noResults') : t('markets.noMarkets')}
         </p>
       )}
 
       {/* Markets grid */}
-      {!isLoading && !isError && markets.length > 0 && (
+      {!isLoading && !isError && visibleMarkets.length > 0 && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {markets.map((market) => (
+          {visibleMarkets.map((market) => (
             <MarketCard
               key={market.id}
               market={market}
+              userBet={userBetForMarket(market.id)}
               mode={
                 market.status === 'open' || market.status === 'closed' ? 'interactive' : 'readonly'
               }
@@ -124,9 +186,9 @@ const MarketsFeedPage = () => {
 
       {/* Loading next page */}
       {isFetchingNextPage && (
-        <p className="mt-4 text-center text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-          {t('markets.loadingMore')}
-        </p>
+        <div className="mt-4 flex justify-center">
+          <Spinner size="sm" />
+        </div>
       )}
 
       {/* All pages loaded */}

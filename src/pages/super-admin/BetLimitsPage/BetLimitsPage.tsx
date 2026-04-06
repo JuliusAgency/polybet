@@ -8,6 +8,7 @@ import {
 } from '@/features/admin/bet-limits';
 import type { ManagerLimitNode } from '@/features/admin/bet-limits';
 import { Button } from '@/shared/ui/Button';
+import { Spinner } from '@/shared/ui/Spinner';
 import { LimitEditor } from './components/LimitEditor';
 import { EffectiveLimitBadge } from './components/EffectiveLimitBadge';
 
@@ -43,8 +44,7 @@ export const BetLimitsPage = () => {
           m.username.toLowerCase().includes(q) || (m.fullName ?? '').toLowerCase().includes(q);
         const matchedUsers = m.users.filter(
           (u) =>
-            u.username.toLowerCase().includes(q) ||
-            (u.fullName ?? '').toLowerCase().includes(q),
+            u.username.toLowerCase().includes(q) || (u.fullName ?? '').toLowerCase().includes(q)
         );
         if (managerMatches || matchedUsers.length > 0) {
           return {
@@ -93,7 +93,9 @@ export const BetLimitsPage = () => {
 
       {/* Loading / error */}
       {isLoading && (
-        <p style={{ color: 'var(--color-text-secondary)' }}>{t('common.loading')}</p>
+        <div className="flex justify-center py-12">
+          <Spinner size="md" />
+        </div>
       )}
       {error && (
         <p style={{ color: 'var(--color-loss)' }}>
@@ -122,7 +124,12 @@ export const BetLimitsPage = () => {
               style={{ color: 'var(--color-text-muted)', flexShrink: 0 }}
             >
               <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3" />
-              <path d="M9.5 9.5L12 12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+              <path
+                d="M9.5 9.5L12 12"
+                stroke="currentColor"
+                strokeWidth="1.3"
+                strokeLinecap="round"
+              />
             </svg>
             <input
               type="text"
@@ -227,11 +234,14 @@ export const BetLimitsPage = () => {
                     >
                       <td className="px-4 py-3" style={{ color: 'var(--color-text-primary)' }}>
                         <span className="me-2 text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                          {hasUsers ? (open ? '▼' : '▶') : <span className="inline-block w-3" />}
+                          {hasUsers ? open ? '▼' : '▶' : <span className="inline-block w-3" />}
                         </span>
                         <span className="font-medium">@{manager.username}</span>
                         {manager.fullName && (
-                          <span className="ms-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                          <span
+                            className="ms-2 text-xs"
+                            style={{ color: 'var(--color-text-secondary)' }}
+                          >
                             {manager.fullName}
                           </span>
                         )}
@@ -255,7 +265,11 @@ export const BetLimitsPage = () => {
                         className="px-4 py-3 font-mono text-xs"
                         style={{ color: 'var(--color-text-secondary)' }}
                       >
-                        {hasUsers ? manager.users.length : <span style={{ color: 'var(--color-text-muted)' }}>—</span>}
+                        {hasUsers ? (
+                          manager.users.length
+                        ) : (
+                          <span style={{ color: 'var(--color-text-muted)' }}>—</span>
+                        )}
                       </td>
                     </tr>
 
@@ -274,8 +288,8 @@ export const BetLimitsPage = () => {
                             className="py-2 pe-4 ps-10"
                             style={{ color: 'var(--color-text-primary)' }}
                           >
-                            <span style={{ color: 'var(--color-text-muted)' }}>└ </span>
-                            @{user.username}
+                            <span style={{ color: 'var(--color-text-muted)' }}>└ </span>@
+                            {user.username}
                             {user.fullName && (
                               <span
                                 className="ms-2 text-xs"
