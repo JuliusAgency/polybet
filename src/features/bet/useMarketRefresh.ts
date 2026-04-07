@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { type InfiniteData, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/shared/api/supabase';
 import { invokeSupabaseFunction } from '@/shared/api/supabase/invokeSupabaseFunction';
 import { MARKETS_REFRESH_INTERVAL_MS, MARKETS_REFRESH_MAX_IDS } from '@/shared/config/markets';
+import type { Market } from './useMarkets';
 
 interface RefreshMarketsResponse {
   updated: number;
@@ -56,16 +58,31 @@ export function useMarketRefresh(polymarketIds: string[], autoRefresh = true) {
         });
       }
 
-      // Invalidate and force refetch to ensure UI shows fresh data.
-      if (import.meta.env.DEV) {
-        // eslint-disable-next-line no-console
-        console.log('[useMarketRefresh] before invalidate+refetch');
-      }
-      await queryClient.invalidateQueries({ queryKey: ['markets'] });
-      await queryClient.refetchQueries({ queryKey: ['markets'], type: 'active' });
-      if (import.meta.env.DEV) {
-        // eslint-disable-next-line no-console
-        console.log('[useMarketRefresh] after invalidate+refetch');
+      // Fetch fresh data only for the refreshed market IDs and patch cache in-place.
+      // Avoids invalidating all pages so the cursor stays intact during infinite scroll.
+      if (data && data.updated > 0) {
+        const { data: freshMarkets } = await supabase
+          .from('markets')
+          .select(
+            'id, polymarket_id, question, status, winning_outcome_id, category, image_url, close_at, last_synced_at, created_at, volume, market_outcomes!market_outcomes_market_id_fkey(id, name, price, odds, effective_odds, updated_at, polymarket_token_id)'
+          )
+          .in('polymarket_id', ids);
+
+        if (freshMarkets && freshMarkets.length > 0) {
+          const freshById = Object.fromEntries(freshMarkets.map((m) => [m.id, m]));
+          queryClient.setQueriesData<InfiniteData<Market[]>>(
+            { queryKey: ['markets'] },
+            (old) => {
+              if (!old) return old;
+              return {
+                ...old,
+                pages: old.pages.map((page) =>
+                  page.map((market) => freshById[market.id] ?? market)
+                ),
+              };
+            }
+          );
+        }
       }
 
       const result: RefreshResult = data && data.updated > 0 ? 'ok' : 'failed';

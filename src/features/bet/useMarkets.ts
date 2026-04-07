@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from 'react';
-import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { type InfiniteData, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/shared/api/supabase';
 import { MARKETS_PAGE_LIMIT, MARKETS_REFRESH_MAX_IDS } from '@/shared/config/markets';
 import { useMarketRefresh } from './useMarketRefresh';
@@ -63,6 +63,7 @@ export function useMarkets(
   >({
     queryKey,
     initialPageParam: undefined,
+    staleTime: 5 * 60 * 1000,
     queryFn: async ({ pageParam }) => {
       let query = supabase
         .from('markets')
@@ -114,11 +115,39 @@ export function useMarkets(
   // Flatten all pages into a single array
   const markets = result.data?.pages.flat() ?? [];
 
-  // Realtime: invalidate current query when market_outcomes change
-  const handleRealtimeChange = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey });
+  // Realtime: patch the cached outcome in-place without invalidating pages (preserves cursor)
+  const handleRealtimeChange = useCallback(
+    (payload: { new: Record<string, unknown> }) => {
+      const updated = payload.new;
+      if (!updated || typeof updated !== 'object') return;
+      const outcomeId = updated['id'] as string | undefined;
+      const marketId = updated['market_id'] as string | undefined;
+      if (!outcomeId || !marketId) return;
+
+      queryClient.setQueriesData<InfiniteData<Market[]>>(
+        { queryKey: ['markets'] },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page) =>
+              page.map((market) => {
+                if (market.id !== marketId) return market;
+                return {
+                  ...market,
+                  market_outcomes: market.market_outcomes.map((o) =>
+                    o.id === outcomeId ? { ...o, ...(updated as Partial<MarketOutcome>) } : o
+                  ),
+                };
+              })
+            ),
+          };
+        }
+      );
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [queryClient, statusFilter, searchQuery, categoryFilter]);
+    [queryClient]
+  );
 
   useEffect(() => {
     const channel = supabase
