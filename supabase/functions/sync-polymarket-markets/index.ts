@@ -136,8 +136,33 @@ async function fetchGammaMarketDetails(conditionId: string): Promise<GammaMarket
     );
     if (!Array.isArray(items) || items.length === 0) return null;
     return items[0];
-  } catch {
+  } catch (e: unknown) {
+    console.error(
+      `fetchGammaMarketDetails failed for ${conditionId}:`,
+      e instanceof Error ? e.message : String(e)
+    );
     return null;
+  }
+}
+
+/** Fetch multiple markets by condition IDs in one request (batch lookup).
+ *  Returns a map of conditionId → GammaMarket for found markets. */
+async function fetchGammaMarketsBatch(conditionIds: string[]): Promise<Map<string, GammaMarket>> {
+  if (conditionIds.length === 0) return new Map();
+  const params = conditionIds.map((id) => `condition_ids=${encodeURIComponent(id)}`).join('&');
+  try {
+    const items = await fetchJsonWithRetry<GammaMarket[]>(`${GAMMA_API_BASE}/markets?${params}`, {
+      headers: { Accept: 'application/json' },
+      timeoutMs: 30_000,
+    });
+    if (!Array.isArray(items)) return new Map();
+    return new Map(items.map((m) => [m.conditionId, m]));
+  } catch (e: unknown) {
+    console.error(
+      `fetchGammaMarketsBatch failed for ${conditionIds.length} markets:`,
+      e instanceof Error ? e.message : String(e)
+    );
+    return new Map();
   }
 }
 
@@ -363,23 +388,32 @@ Deno.serve(async (req: Request) => {
         }
 
         // Deduplicate by polymarket_id (polymarket_id is unique in schema; safety measure only)
-        const unique = [...new Map(openMarkets.map((m) => [m.polymarket_id, m])).values()];
+        const allUnique = [...new Map(openMarkets.map((m) => [m.polymarket_id, m])).values()];
+        // Skip demo/local markets — they have no Polymarket data
+        const unique = allUnique.filter((m) => m.polymarket_id?.startsWith('0x'));
         totalCount = unique.length;
         await updateRun(buildFetchedProgressUpdate(0, unique.length)); // activeCount=0 → phase stays 'syncing_resolved'
 
-        // Step 3: for each market, fetch from Polymarket and settle if resolved
-        for (const { polymarket_id } of unique) {
-          try {
-            const gm = await fetchGammaMarketDetails(polymarket_id);
-            if (gm?.resolved) {
-              await processResolvedMarket(supabase, gm, autoShowAll, runId, stats);
+        // Step 3: fetch from Polymarket in batches and settle resolved markets
+        const BACKFILL_BATCH_SIZE = 20;
+        for (let batchStart = 0; batchStart < unique.length; batchStart += BACKFILL_BATCH_SIZE) {
+          const batch = unique.slice(batchStart, batchStart + BACKFILL_BATCH_SIZE);
+          const gmMap = await fetchGammaMarketsBatch(batch.map((m) => m.polymarket_id));
+
+          for (const { polymarket_id } of batch) {
+            try {
+              const gm = gmMap.get(polymarket_id);
+              if (gm?.resolved) {
+                await processResolvedMarket(supabase, gm, autoShowAll, runId, stats);
+              }
+            } catch (e: unknown) {
+              stats.errors.push(
+                `Backfill check failed for ${polymarket_id}: ${e instanceof Error ? e.message : String(e)}`
+              );
             }
-          } catch (e: unknown) {
-            stats.errors.push(
-              `Backfill check failed for ${polymarket_id}: ${e instanceof Error ? e.message : String(e)}`
-            );
+            processedCount++;
           }
-          processedCount++;
+
           await updateRun({
             ...buildIncrementedProgressUpdate({ processedCount, activeCount: 0, totalCount }),
             markets_synced: stats.markets_synced,
@@ -445,28 +479,45 @@ Deno.serve(async (req: Request) => {
           ).values(),
         ];
 
+        // Filter out demo/local markets — they have no Polymarket data
+        const realMarkets = uniqueMarkets.filter((m) => m.polymarket_id?.startsWith('0x'));
+        const demoMarkets = uniqueMarkets.filter((m) => !m.polymarket_id?.startsWith('0x'));
+        if (demoMarkets.length > 0) {
+          processedCount += demoMarkets.length;
+        }
+
         totalCount = uniqueMarkets.length;
         await updateRun(buildFetchedProgressUpdate(uniqueMarkets.length, 0));
 
-        for (const marketRow of uniqueMarkets) {
-          try {
-            const gm = await fetchGammaMarketDetails(marketRow.polymarket_id);
-            if (!gm) {
+        // Process in batches of 20 to avoid Gamma API rate limits
+        const BATCH_SIZE = 20;
+        for (let batchStart = 0; batchStart < realMarkets.length; batchStart += BATCH_SIZE) {
+          const batch = realMarkets.slice(batchStart, batchStart + BATCH_SIZE);
+          const conditionIds = batch.map((m) => m.polymarket_id);
+
+          const gmMap = await fetchGammaMarketsBatch(conditionIds);
+
+          for (const marketRow of batch) {
+            try {
+              const gm = gmMap.get(marketRow.polymarket_id);
+              if (!gm) {
+                stats.errors.push(
+                  `Hot-set market details unavailable for ${marketRow.polymarket_id}`
+                );
+              } else if (gm.resolved) {
+                await processResolvedMarket(supabase, gm, autoShowAll, runId, stats);
+              } else {
+                await upsertMarket(supabase, gm, 'open', autoShowAll, runId, stats);
+              }
+            } catch (e: unknown) {
               stats.errors.push(
-                `Hot-set market details unavailable for ${marketRow.polymarket_id}`
+                `Hot-set sync failed for ${marketRow.polymarket_id}: ${e instanceof Error ? e.message : String(e)}`
               );
-            } else if (gm.resolved) {
-              await processResolvedMarket(supabase, gm, autoShowAll, runId, stats);
-            } else {
-              await upsertMarket(supabase, gm, 'open', autoShowAll, runId, stats);
             }
-          } catch (e: unknown) {
-            stats.errors.push(
-              `Hot-set sync failed for ${marketRow.polymarket_id}: ${e instanceof Error ? e.message : String(e)}`
-            );
+
+            processedCount++;
           }
 
-          processedCount++;
           await updateRun({
             ...buildIncrementedProgressUpdate({
               processedCount,
