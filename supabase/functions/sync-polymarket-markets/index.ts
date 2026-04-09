@@ -433,11 +433,16 @@ Deno.serve(async (req: Request) => {
       if (mode === 'hot_set') {
         await updateRun({ phase: 'syncing_active' });
 
+        // Limit to the 200 most recently created markets — the feed is sorted by created_at DESC
+        // so these are exactly what users see first. Syncing all 100K+ visible markets per minute
+        // is physically impossible and leaves everything stale.
         const { data: visibleMarkets, error: visibleErr } = await supabase
           .from('markets')
           .select('id, polymarket_id')
           .eq('is_visible', true)
-          .in('status', ['open', 'closed']);
+          .in('status', ['open', 'closed'])
+          .order('created_at', { ascending: false })
+          .limit(200);
 
         if (visibleErr) {
           stats.errors.push(`Failed to fetch visible markets for hot_set: ${visibleErr.message}`);
