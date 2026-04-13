@@ -6,13 +6,9 @@ interface ArchiveMarketParams {
 }
 
 async function archiveMarket({ marketId }: ArchiveMarketParams): Promise<void> {
-  const now = new Date().toISOString();
-
-  const { error } = await supabase
-    .from('markets')
-    .update({ status: 'archived', archived_at: now })
-    .eq('id', marketId)
-    .eq('status', 'resolved');
+  const { error } = await supabase.rpc('archive_market', {
+    p_market_id: marketId,
+  });
 
   if (error) throw new Error(error.message);
 }

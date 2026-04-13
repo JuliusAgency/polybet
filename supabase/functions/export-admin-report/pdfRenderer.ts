@@ -16,11 +16,12 @@ function loadHebrewFont(): ArrayBuffer {
   return _fontCache;
 }
 
-// Hebrew Unicode strings are in logical (RTL) order.
-// Reverse characters so they render correctly when drawn LTR by pdf-lib.
-function reverseForPdf(text: string): string {
-  return [...text].reverse().join('');
-}
+// Hebrew text is stored in logical (RTL) Unicode order.
+// Modern PDF viewers (Chrome, Firefox, Preview, Adobe Reader) apply the
+// Unicode Bidirectional Algorithm automatically, so we must NOT reverse
+// Hebrew strings — doing so causes double-reversal and backwards text.
+// We only need to position text right-aligned, which the RTL draw
+// functions already handle via (rightEdge - textWidth).
 
 // Wrap text into lines fitting maxWidth. Wraps at character level (handles long words).
 function wrapText(text: string, maxWidth: number, font: PDFFont, size: number): string[] {
@@ -106,7 +107,7 @@ function drawTableHeaderRTL(
   let cx = rightEdge;
   for (let i = 0; i < columns.length; i++) {
     cx -= colWidths[i];
-    const text  = reverseForPdf(columns[i]);
+    const text  = columns[i];
     const textW = font.widthOfTextAtSize(text, LABEL_SIZE);
     drawText(page, text, cx + colWidths[i] - CELL_PAD - textW, y - HEADER_H + 8, font, LABEL_SIZE, COLOR_WHITE);
   }
@@ -175,15 +176,15 @@ function drawKpisRTL(
   const rowH = LINE_H + ROW_PAD;
 
   fillRect(page, leftEdge, y - HEADER_H + 4, labelW + valueW, HEADER_H, COLOR_HEADER);
-  const indText    = reverseForPdf('מדד');
-  const valueText  = reverseForPdf('ערך');
+  const indText    = 'מדד';
+  const valueText  = 'ערך';
   drawText(page, indText,   rightEdge - CELL_PAD - font.widthOfTextAtSize(indText, LABEL_SIZE),                y - HEADER_H + 8, font, LABEL_SIZE, COLOR_WHITE);
   drawText(page, valueText, rightEdge - labelW - CELL_PAD - font.widthOfTextAtSize(valueText, LABEL_SIZE),     y - HEADER_H + 8, font, LABEL_SIZE, COLOR_WHITE);
   y -= HEADER_H;
 
   for (let i = 0; i < kpis.length; i++) {
     if (i % 2 === 1) fillRect(page, leftEdge, y - rowH, labelW + valueW, rowH, COLOR_ALT);
-    const labelText = reverseForPdf(kpis[i].label);
+    const labelText = kpis[i].label;
     drawText(page, labelText,      rightEdge - CELL_PAD - font.widthOfTextAtSize(labelText, CELL_SIZE),               y - rowH + ROW_PAD / 2, font, CELL_SIZE);
     drawText(page, kpis[i].value,  rightEdge - labelW - CELL_PAD - font.widthOfTextAtSize(kpis[i].value, CELL_SIZE),  y - rowH + ROW_PAD / 2, font, CELL_SIZE);
     y -= rowH;
@@ -306,14 +307,14 @@ export async function renderTablePdf(doc: ReportDocument): Promise<Uint8Array> {
   const ctx: DrawCtx = { pages, font, pageWidth, pageHeight, addPage };
 
   if (isRTL) {
-    // Title – right-aligned, Hebrew reversed
-    const titleText = reverseForPdf(doc.title);
+    // Title – right-aligned
+    const titleText = doc.title;
     const titleW    = font.widthOfTextAtSize(titleText, TITLE_SIZE);
     drawText(firstPage, titleText, rightEdge - titleW, y, font, TITLE_SIZE);
     y -= 22;
 
     // Period
-    const periodLabel  = reverseForPdf('תקופה') + ':';
+    const periodLabel  = 'תקופה' + ':';
     const periodLabelW = font.widthOfTextAtSize(periodLabel, LABEL_SIZE);
     const periodValue  = ` ${doc.period}`;
     const periodValueW = font.widthOfTextAtSize(periodValue, LABEL_SIZE);
@@ -322,7 +323,7 @@ export async function renderTablePdf(doc: ReportDocument): Promise<Uint8Array> {
     y -= 20;
 
     // Generated at
-    const genLabel  = reverseForPdf('נוצר') + ':';
+    const genLabel  = 'נוצר' + ':';
     const genLabelW = font.widthOfTextAtSize(genLabel, CELL_SIZE);
     const genValue  = ` ${new Date().toISOString().slice(0, 19).replace('T', ' ')}`;
     const genValueW = font.widthOfTextAtSize(genValue, CELL_SIZE);

@@ -817,7 +817,10 @@ async function upsertMarket(
     .eq('polymarket_id', gm.conditionId)
     .maybeSingle();
 
-  const marketStatus: 'open' | 'closed' = gm.closed && !gm.resolved ? 'closed' : status;
+  // Close if Polymarket flags it OR if close_at has already passed
+  const isExpiredByTime = gm.endDate != null && new Date(gm.endDate).getTime() <= Date.now();
+  const marketStatus: 'open' | 'closed' =
+    (gm.closed && !gm.resolved) || (status === 'open' && isExpiredByTime) ? 'closed' : status;
 
   const marketRow = {
     polymarket_id: gm.conditionId,

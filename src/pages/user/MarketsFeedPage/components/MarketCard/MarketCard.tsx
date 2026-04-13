@@ -91,15 +91,19 @@ export const MarketCard = ({
     : true;
   const [hoveredOutcomeId, setHoveredOutcomeId] = useState<string | null>(null);
   const isInteractive = mode === 'interactive';
+  const isExpired = market.close_at != null && new Date(market.close_at).getTime() <= Date.now();
+
+  // Effective status: show 'closed' in UI when close_at has passed even if DB still says 'open'
+  const effectiveStatus = isExpired && market.status === 'open' ? 'closed' : market.status;
 
   const winnerOutcome = market.winning_outcome_id
     ? (market.market_outcomes.find((o) => o.id === market.winning_outcome_id) ?? null)
     : null;
 
-  const statusStyle = STATUS_STYLES[market.status] ?? STATUS_STYLES.closed;
+  const statusStyle = STATUS_STYLES[effectiveStatus] ?? STATUS_STYLES.closed;
 
-  const statusLabel = t(`markets.status.${market.status}`, {
-    defaultValue: market.status.toUpperCase(),
+  const statusLabel = t(`markets.status.${effectiveStatus}`, {
+    defaultValue: effectiveStatus.toUpperCase(),
   });
 
   const closesDate = market.close_at
@@ -310,7 +314,7 @@ export const MarketCard = ({
                 : '1px solid var(--color-border)',
           };
 
-          if (!isInteractive || !onOutcomeClick) {
+          if (!isInteractive || !onOutcomeClick || isExpired) {
             return (
               <div key={outcome.id} className="rounded-lg px-3 py-2" style={sharedStyle}>
                 {inner}
