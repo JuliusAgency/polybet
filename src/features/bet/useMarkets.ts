@@ -70,8 +70,13 @@ export function useMarkets(
         .select(
           'id, polymarket_id, question, status, winning_outcome_id, category, image_url, close_at, last_synced_at, created_at, volume, market_outcomes!market_outcomes_market_id_fkey(id, name, price, odds, effective_odds, updated_at, polymarket_token_id)'
         )
-        .in('status', STATUS_MAP[statusFilter])
         .eq('is_visible', true);
+
+      // For 'all' the IN covers the full status domain, which tricks the planner
+      // into a Seq Scan. Skip the predicate so it walks idx_markets_visible_feed.
+      if (statusFilter !== 'all') {
+        query = query.in('status', STATUS_MAP[statusFilter]);
+      }
 
       if (searchQuery.trim()) {
         query = query.ilike('question', `%${searchQuery.trim()}%`);
