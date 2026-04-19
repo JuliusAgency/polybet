@@ -1,6 +1,12 @@
 import { useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useMarkets, useUserBalance, useMyBets, useMarketCategories } from '@/features/bet';
+import {
+  useMarkets,
+  useUserBalance,
+  useMyBets,
+  useMarketCategories,
+  groupMarketsByEvent,
+} from '@/features/bet';
 import type { Market, MarketOutcome, MarketStatusFilter } from '@/features/bet';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { useIntersectionObserver } from '@/shared/hooks/useIntersectionObserver';
@@ -8,6 +14,7 @@ import { Spinner } from '@/shared/ui/Spinner';
 import { CardGridSkeleton } from '@/shared/ui/CardGridSkeleton';
 import { BetSlip } from './components/BetSlip';
 import { MarketCard } from './components/MarketCard';
+import { EventCard } from './components/EventCard';
 import { BalanceWidget } from './components/BalanceWidget';
 import { ActiveBetsDrawer } from './components/ActiveBetsDrawer';
 import { StatusFilter } from './components/StatusFilter';
@@ -62,6 +69,7 @@ const MarketsFeedPage = () => {
   const userBetForMarket = (marketId: string) => (bets ?? []).find((b) => b.market_id === marketId);
 
   const visibleMarkets = myBetsOnly ? markets.filter((m) => myBetMarketIds.has(m.id)) : markets;
+  const feedItems = groupMarketsByEvent(visibleMarkets);
 
   return (
     <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--color-bg-base)' }}>
@@ -171,26 +179,43 @@ const MarketsFeedPage = () => {
       )}
 
       {/* Empty state — no markets at all */}
-      {!isLoading && !isError && visibleMarkets.length === 0 && (
+      {!isLoading && !isError && feedItems.length === 0 && (
         <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
           {debouncedSearch ? t('markets.noResults') : t('markets.noMarkets')}
         </p>
       )}
 
-      {/* Markets grid */}
-      {!isLoading && !isError && visibleMarkets.length > 0 && (
+      {/* Feed grid: events grouped + standalone markets */}
+      {!isLoading && !isError && feedItems.length > 0 && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {visibleMarkets.map((market) => (
-            <MarketCard
-              key={market.id}
-              market={market}
-              userBet={userBetForMarket(market.id)}
-              mode={
-                market.status === 'open' || market.status === 'closed' ? 'interactive' : 'readonly'
-              }
-              onOutcomeClick={handleOutcomeClick}
-            />
-          ))}
+          {feedItems.map((item) => {
+            if (item.type === 'event') {
+              return (
+                <EventCard
+                  key={item.key}
+                  event={item.event}
+                  markets={item.markets}
+                  bets={bets ?? []}
+                  mode={item.event.status === 'archived' ? 'readonly' : 'interactive'}
+                  onOutcomeClick={handleOutcomeClick}
+                />
+              );
+            }
+            const market = item.market;
+            return (
+              <MarketCard
+                key={item.key}
+                market={market}
+                userBet={userBetForMarket(market.id)}
+                mode={
+                  market.status === 'open' || market.status === 'closed'
+                    ? 'interactive'
+                    : 'readonly'
+                }
+                onOutcomeClick={handleOutcomeClick}
+              />
+            );
+          })}
         </div>
       )}
 

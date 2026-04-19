@@ -8,15 +8,16 @@
  * Concatenates class names, filtering out falsy values.
  */
 export const cn = (...classes: (string | false | null | undefined)[]): string =>
-    classes.filter(Boolean).join(' ');
+  classes.filter(Boolean).join(' ');
 
 /**
  * Returns a display name for a transaction/action initiator.
  * Super admins are shown using the localized alias instead of their username.
  */
+export { formatVolume } from './formatVolume';
+
 export const formatInitiatorName = (
   role: string,
   username: string,
-  t: (key: string) => string,
-): string =>
-  role === 'super_admin' ? t('common.superAdminAlias') : `@${username}`;
+  t: (key: string) => string
+): string => (role === 'super_admin' ? t('common.superAdminAlias') : `@${username}`);

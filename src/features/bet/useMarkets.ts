@@ -26,6 +26,17 @@ export interface MarketOutcome {
   polymarket_token_id: string | null;
 }
 
+export interface MarketEvent {
+  id: string;
+  title: string;
+  description: string | null;
+  category: string | null;
+  image_url: string | null;
+  close_at: string | null;
+  status: 'open' | 'closed' | 'resolved' | 'archived';
+  volume?: number | null;
+}
+
 export interface Market {
   id: string;
   polymarket_id: string;
@@ -38,6 +49,9 @@ export interface Market {
   last_synced_at: string | null;
   created_at: string;
   volume?: number | null;
+  event_id: string | null;
+  group_label: string | null;
+  event: MarketEvent | null;
   market_outcomes: MarketOutcome[];
 }
 
@@ -68,7 +82,7 @@ export function useMarkets(
       let query = supabase
         .from('markets')
         .select(
-          'id, polymarket_id, question, status, winning_outcome_id, category, image_url, close_at, last_synced_at, created_at, volume, market_outcomes!market_outcomes_market_id_fkey(id, name, price, odds, effective_odds, updated_at, polymarket_token_id)'
+          'id, polymarket_id, question, status, winning_outcome_id, category, image_url, close_at, last_synced_at, created_at, volume, event_id, group_label, event:event_id(id, title, description, category, image_url, close_at, status, volume), market_outcomes!market_outcomes_market_id_fkey(id, name, price, odds, effective_odds, updated_at, polymarket_token_id)'
         )
         .eq('is_visible', true);
 
@@ -129,26 +143,23 @@ export function useMarkets(
       const marketId = updated['market_id'] as string | undefined;
       if (!outcomeId || !marketId) return;
 
-      queryClient.setQueriesData<InfiniteData<Market[]>>(
-        { queryKey: ['markets'] },
-        (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            pages: old.pages.map((page) =>
-              page.map((market) => {
-                if (market.id !== marketId) return market;
-                return {
-                  ...market,
-                  market_outcomes: market.market_outcomes.map((o) =>
-                    o.id === outcomeId ? { ...o, ...(updated as Partial<MarketOutcome>) } : o
-                  ),
-                };
-              })
-            ),
-          };
-        }
-      );
+      queryClient.setQueriesData<InfiniteData<Market[]>>({ queryKey: ['markets'] }, (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page) =>
+            page.map((market) => {
+              if (market.id !== marketId) return market;
+              return {
+                ...market,
+                market_outcomes: market.market_outcomes.map((o) =>
+                  o.id === outcomeId ? { ...o, ...(updated as Partial<MarketOutcome>) } : o
+                ),
+              };
+            })
+          ),
+        };
+      });
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [queryClient]

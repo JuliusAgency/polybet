@@ -280,7 +280,32 @@
     "archiveConfirm": "להעביר שוק זה לארכיון?",
     "archivedAt": "הועבר לארכיון ב",
     "yourBet": "ההימור שלך",
-    "myBetsOnly": "ההימורים שלי"
+    "myBetsOnly": "ההימורים שלי",
+    "chance": "סיכוי",
+    "volumeShort": "{{value}} מחזור",
+    "showAll": "הצג את כל השווקים",
+    "showLess": "הצג פחות"
+  },
+  "events": {
+    "marketCount_one": "שוק {{count}}",
+    "marketCount_other": "{{count}} שווקים"
+  },
+  "eventDetail": {
+    "back": "חזרה לשווקים",
+    "open": "פתח פרטי אירוע",
+    "showChart": "הצג גרף",
+    "hideChart": "הסתר גרף",
+    "similar": "אירועים דומים",
+    "noMarkets": "אין שווקים עבור אירוע זה",
+    "loadError": "האירוע לא נמצא או שטעינתו נכשלה",
+    "yourActivity": "הפעילות שלך באירוע זה",
+    "betsCount": "הימורים",
+    "totalStake": "סכום כולל",
+    "openBets": "פתוח",
+    "potentialPayout": "רווח פוטנציאלי"
+  },
+  "priceHistory": {
+    "empty": "אין עדיין היסטוריית מחירים"
   },
   "settings": {
     "title": "הגדרות",

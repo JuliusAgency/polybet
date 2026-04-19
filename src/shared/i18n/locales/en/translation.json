@@ -280,7 +280,32 @@
     "archiveConfirm": "Archive this market?",
     "archivedAt": "Archived at",
     "yourBet": "Your bet",
-    "myBetsOnly": "My bets only"
+    "myBetsOnly": "My bets only",
+    "chance": "chance",
+    "volumeShort": "{{value}} Vol.",
+    "showAll": "Show all markets",
+    "showLess": "Show less"
+  },
+  "events": {
+    "marketCount_one": "{{count}} market",
+    "marketCount_other": "{{count}} markets"
+  },
+  "eventDetail": {
+    "back": "Back to markets",
+    "open": "Open event details",
+    "showChart": "Show chart",
+    "hideChart": "Hide chart",
+    "similar": "Similar events",
+    "noMarkets": "No markets for this event",
+    "loadError": "Event not found or failed to load",
+    "yourActivity": "Your activity on this event",
+    "betsCount": "Bets",
+    "totalStake": "Total stake",
+    "openBets": "Open",
+    "potentialPayout": "Potential payout"
+  },
+  "priceHistory": {
+    "empty": "No price history yet"
   },
   "settings": {
     "title": "Settings",

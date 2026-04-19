@@ -1,74 +1,30 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Market, MarketOutcome, MyBet } from '@/features/bet';
 import { useMarketRefresh } from '@/features/bet';
 import { Badge } from '@/shared/ui/Badge';
+import { ProbabilityGauge } from '@/shared/ui/ProbabilityGauge';
+import { OutcomeButtons, type OutcomeButton } from '@/shared/ui/OutcomeButtons';
+import { MarketThumbnail } from '@/shared/ui/MarketThumbnail';
 import { MARKETS_STALE_THRESHOLD_MS } from '@/shared/config/markets';
 import { useTicker } from '@/shared/hooks/useTicker';
-
-function formatSyncedAgo(
-  timestamp: string,
-  t: (key: string, opts?: Record<string, unknown>) => string
-): string {
-  const seconds = Math.floor((Date.now() - new Date(timestamp).getTime()) / 1000);
-  if (seconds < 5) return t('markets.updatedJustNow');
-  if (seconds < 60) return t('markets.updatedSecondsAgo', { seconds });
-  const minutes = Math.floor(seconds / 60);
-  return t('markets.updatedMinutesAgo', { minutes });
-}
-
-function PriceMovementIndicator({
-  currentPrice,
-  previousPrice,
-}: {
-  currentPrice: number;
-  previousPrice: number | undefined;
-}) {
-  const { t } = useTranslation();
-  if (previousPrice === undefined || currentPrice === previousPrice) return null;
-  const up = currentPrice > previousPrice;
-  return (
-    <span
-      className="ms-1 text-xs font-semibold"
-      title={up ? t('markets.priceUp') : t('markets.priceDown')}
-      style={{ color: up ? 'var(--color-win)' : 'var(--color-loss, #ef4444)' }}
-    >
-      {up ? '▲' : '▼'}
-    </span>
-  );
-}
-
-const STATUS_STYLES: Record<string, { bg: string; text: string; dot: string }> = {
-  open: {
-    bg: 'color-mix(in srgb, var(--color-win) 12%, transparent)',
-    text: 'var(--color-win)',
-    dot: 'var(--color-win)',
-  },
-  closed: {
-    bg: 'color-mix(in srgb, var(--color-text-secondary) 12%, transparent)',
-    text: 'var(--color-text-secondary)',
-    dot: 'var(--color-text-secondary)',
-  },
-  resolved: {
-    bg: 'color-mix(in srgb, #a78bfa 12%, transparent)',
-    text: '#a78bfa',
-    dot: '#a78bfa',
-  },
-  archived: {
-    bg: 'color-mix(in srgb, var(--color-text-secondary) 8%, transparent)',
-    text: 'var(--color-text-secondary)',
-    dot: 'var(--color-text-secondary)',
-  },
-};
+import { formatVolume } from '@/shared/utils';
 
 interface MarketCardProps {
   market: Market;
   userBet?: MyBet;
   mode?: 'interactive' | 'readonly';
   onOutcomeClick?: (market: Market, outcome: MarketOutcome) => void;
-  previousPrices?: Record<string, number>;
   onArchive?: (market: Market) => void;
   isArchiving?: boolean;
+}
+
+function formatClosesDate(iso: string | null, locale: string): string | null {
+  if (!iso) return null;
+  return new Date(iso).toLocaleDateString(locale === 'he' ? 'he-IL' : undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
 }
 
 export const MarketCard = ({
@@ -76,157 +32,115 @@ export const MarketCard = ({
   userBet,
   mode = 'interactive',
   onOutcomeClick,
-  previousPrices,
   onArchive,
   isArchiving = false,
 }: MarketCardProps) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { isRefreshing, lastResult, refresh } = useMarketRefresh(
     market.polymarket_id ? [market.polymarket_id] : [],
-    false // no auto-interval per card; global auto-refresh runs in useMarkets
+    false
   );
-  useTicker(10_000); // re-render every 10s so "X ago" labels stay current
+  useTicker(10_000);
+
   const isStale = market.last_synced_at
     ? Date.now() - new Date(market.last_synced_at).getTime() > MARKETS_STALE_THRESHOLD_MS
     : true;
-  const [hoveredOutcomeId, setHoveredOutcomeId] = useState<string | null>(null);
-  const isInteractive = mode === 'interactive';
   const isExpired = market.close_at != null && new Date(market.close_at).getTime() <= Date.now();
-
-  // Effective status: show 'closed' in UI when close_at has passed even if DB still says 'open'
   const effectiveStatus = isExpired && market.status === 'open' ? 'closed' : market.status;
+  const isInteractive = mode === 'interactive' && effectiveStatus === 'open' && !isExpired;
 
   const winnerOutcome = market.winning_outcome_id
     ? (market.market_outcomes.find((o) => o.id === market.winning_outcome_id) ?? null)
     : null;
 
-  const statusStyle = STATUS_STYLES[effectiveStatus] ?? STATUS_STYLES.closed;
-
-  const statusLabel = t(`markets.status.${effectiveStatus}`, {
-    defaultValue: effectiveStatus.toUpperCase(),
-  });
-
-  const closesDate = market.close_at
-    ? new Date(market.close_at).toLocaleDateString(undefined, {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-      })
+  // Leader for the gauge: highest-price outcome with a known price
+  const withPrices = market.market_outcomes.filter((o) => o.price != null);
+  const leader = withPrices.length
+    ? withPrices.reduce((best, o) => ((o.price ?? 0) > (best.price ?? 0) ? o : best), withPrices[0])
     : null;
+  const leaderProbability = leader?.price ?? 0;
+
+  const outcomeButtons: OutcomeButton[] = market.market_outcomes.map((o) => ({
+    id: o.id,
+    name: o.name,
+    price: o.price,
+    effectiveOdds: o.effective_odds,
+    isWinner: winnerOutcome?.id === o.id,
+  }));
+
+  const volumeLabel = formatVolume(market.volume ?? null);
+  const closesDate = formatClosesDate(market.close_at, i18n.language);
+  const statusLabel =
+    effectiveStatus !== 'open'
+      ? t(`markets.status.${effectiveStatus}`, { defaultValue: effectiveStatus.toUpperCase() })
+      : null;
 
   return (
-    <div
-      className="flex flex-col gap-3 rounded-xl p-4"
+    <article
+      className="flex flex-col gap-4 p-4"
       style={{
         backgroundColor: 'var(--color-bg-surface)',
         border: '1px solid var(--color-border)',
+        borderRadius: 'var(--radius-lg)',
       }}
     >
-      {/* Top row: status pill + category + actions */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          {/* Status pill */}
-          <span
-            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide"
-            style={{ backgroundColor: statusStyle.bg, color: statusStyle.text }}
+      {/* Header: thumb + title + gauge */}
+      <header className="flex items-start gap-3">
+        <MarketThumbnail src={market.image_url} title={market.question} id={market.id} size="lg" />
+
+        <div className="min-w-0 flex-1">
+          <h3
+            className="text-[15px] font-semibold leading-snug"
+            style={{ color: 'var(--color-text-primary)', fontFamily: 'var(--font-sans)' }}
           >
-            <span
-              className="h-1.5 w-1.5 rounded-full"
-              style={{ backgroundColor: statusStyle.dot }}
-            />
-            {statusLabel}
-          </span>
-          {/* Category */}
+            {market.question}
+          </h3>
           {market.category && (
-            <span className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+            <p
+              className="mt-1 text-xs font-medium uppercase tracking-wide"
+              style={{ color: 'var(--color-text-muted)' }}
+            >
               {market.category}
+            </p>
+          )}
+        </div>
+
+        {leader && (
+          <div className="flex shrink-0 flex-col items-center gap-1">
+            <ProbabilityGauge
+              probability={leaderProbability}
+              leaderName={leader.name}
+              size="lg"
+              ariaLabel={`${Math.round(leaderProbability * 100)}% ${leader.name} ${t('markets.chance')}`}
+            />
+            <span
+              className="text-[10px] font-medium uppercase tracking-wide"
+              style={{ color: 'var(--color-text-muted)' }}
+            >
+              {t('markets.chance')}
             </span>
-          )}
-        </div>
+          </div>
+        )}
+      </header>
 
-        {/* Actions */}
-        <div className="flex shrink-0 items-center gap-1">
-          {onArchive && market.status === 'resolved' && (
-            <button
-              onClick={() => onArchive(market)}
-              disabled={isArchiving}
-              className="rounded-lg p-1.5 text-xs transition-opacity disabled:opacity-40"
-              style={{
-                color: 'var(--color-loss, #ef4444)',
-                backgroundColor: 'color-mix(in srgb, var(--color-loss, #ef4444) 8%, transparent)',
-              }}
-              title={t('markets.archive')}
-            >
-              {isArchiving ? '…' : '⊗'}
-            </button>
-          )}
-          {market.polymarket_id && (
-            <button
-              onClick={() => void refresh()}
-              disabled={isRefreshing}
-              className="rounded-lg px-2 py-1 text-xs font-medium transition-opacity disabled:opacity-40"
-              style={{
-                backgroundColor:
-                  lastResult === 'ok'
-                    ? 'color-mix(in srgb, var(--color-win) 12%, transparent)'
-                    : lastResult === 'failed'
-                      ? 'color-mix(in srgb, var(--color-loss, #ef4444) 12%, transparent)'
-                      : 'var(--color-bg-base)',
-                border:
-                  lastResult === 'ok'
-                    ? '1px solid color-mix(in srgb, var(--color-win) 40%, transparent)'
-                    : lastResult === 'failed'
-                      ? '1px solid color-mix(in srgb, var(--color-loss, #ef4444) 40%, transparent)'
-                      : '1px solid var(--color-border)',
-                color:
-                  lastResult === 'ok'
-                    ? 'var(--color-win)'
-                    : lastResult === 'failed'
-                      ? 'var(--color-loss, #ef4444)'
-                      : 'var(--color-text-secondary)',
-              }}
-              title={
-                lastResult === 'failed' ? t('markets.refreshFailed') : t('markets.refreshOdds')
-              }
-            >
-              {isRefreshing
-                ? '↻'
-                : lastResult === 'ok'
-                  ? '✓'
-                  : lastResult === 'failed'
-                    ? '✗'
-                    : t('markets.refreshOdds')}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Question */}
-      <p
-        className="text-sm font-semibold leading-snug"
-        style={{ color: 'var(--color-text-primary)' }}
-      >
-        {market.question}
-      </p>
-
-      {/* User's own bet banner — shown on all market statuses */}
+      {/* User bet inline — only if present */}
       {userBet && (
         <div
-          className="flex flex-wrap items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium"
+          className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md px-3 py-2 text-xs"
           style={{
-            backgroundColor: 'color-mix(in srgb, var(--color-accent) 10%, transparent)',
-            border: '1px solid color-mix(in srgb, var(--color-accent) 30%, transparent)',
+            backgroundColor: 'color-mix(in oklch, var(--color-accent) 10%, transparent)',
+            border: '1px solid color-mix(in oklch, var(--color-accent) 30%, transparent)',
           }}
         >
           <span style={{ color: 'var(--color-text-secondary)' }}>{t('markets.yourBet')}:</span>
           <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>
             {userBet.market_outcomes?.name ?? '—'}
           </span>
-          <span style={{ color: 'var(--color-text-secondary)', fontFamily: 'monospace' }}>
+          <span className="font-mono" style={{ color: 'var(--color-text-secondary)' }}>
             {userBet.stake.toFixed(2)}
           </span>
           {userBet.status === 'open' && (
-            <span style={{ color: 'var(--color-accent)', fontFamily: 'monospace' }}>
+            <span className="font-mono" style={{ color: 'var(--color-accent)' }}>
               → {userBet.potential_payout.toFixed(2)}
             </span>
           )}
@@ -235,132 +149,133 @@ export const MarketCard = ({
               {userBet.status === 'won' ? t('bet.won') : t('bet.lost')}
             </Badge>
           )}
-          {userBet.status === 'won' && (
-            <span style={{ color: 'var(--color-win)', fontFamily: 'monospace', fontWeight: 600 }}>
-              +{userBet.potential_payout.toFixed(2)}
+        </div>
+      )}
+
+      {/* Outcome CTAs */}
+      <OutcomeButtons
+        outcomes={outcomeButtons}
+        size="lg"
+        disabled={!isInteractive}
+        onClick={
+          isInteractive && onOutcomeClick
+            ? (outcomeId) => {
+                const outcome = market.market_outcomes.find((o) => o.id === outcomeId);
+                if (outcome) onOutcomeClick(market, outcome);
+              }
+            : undefined
+        }
+      />
+
+      {/* Footer: metadata as icons + compact text */}
+      <footer
+        className="flex items-center justify-between gap-3 text-xs"
+        style={{ color: 'var(--color-text-secondary)' }}
+      >
+        <div className="flex items-center gap-3">
+          {volumeLabel && (
+            <span className="font-mono" title={t('markets.volume')}>
+              {t('markets.volumeShort', { value: volumeLabel })}
+            </span>
+          )}
+          {closesDate && (
+            <span className="font-mono">
+              {effectiveStatus === 'open' ? t('markets.closesAt') : t('markets.closedAt')}{' '}
+              {closesDate}
+            </span>
+          )}
+          {statusLabel && (
+            <span
+              className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+              style={{
+                backgroundColor: `color-mix(in oklch, var(--color-${effectiveStatus === 'resolved' ? 'resolved' : 'text-secondary'}) 14%, transparent)`,
+                color:
+                  effectiveStatus === 'resolved'
+                    ? 'var(--color-resolved)'
+                    : 'var(--color-text-secondary)',
+              }}
+            >
+              {statusLabel}
             </span>
           )}
         </div>
-      )}
 
-      {/* Winner banner */}
-      {winnerOutcome && (
-        <div
-          className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold"
-          style={{
-            backgroundColor: 'color-mix(in srgb, var(--color-win) 12%, transparent)',
-            border: '1px solid color-mix(in srgb, var(--color-win) 30%, transparent)',
-            color: 'var(--color-win)',
-          }}
-        >
-          <span>✓</span>
-          <strong>{winnerOutcome.name}</strong>
-        </div>
-      )}
-
-      {/* Outcome buttons */}
-      <div className="flex flex-wrap gap-2">
-        {market.market_outcomes.map((outcome) => {
-          const isHovered = isInteractive && hoveredOutcomeId === outcome.id;
-          const isWinner = winnerOutcome?.id === outcome.id;
-          const effectiveOddsChanged = outcome.effective_odds !== outcome.odds;
-
-          const inner = (
-            <div className="flex items-center gap-2">
-              <span
-                className="text-xs font-medium"
-                style={{ color: isWinner ? 'var(--color-win)' : 'var(--color-text-secondary)' }}
-              >
-                {outcome.name}
-              </span>
-              <span
-                className="text-sm font-bold"
-                title={effectiveOddsChanged ? t('markets.marginApplied') : undefined}
-                style={{ color: isWinner ? 'var(--color-win)' : 'var(--color-accent)' }}
-              >
-                {outcome.effective_odds.toFixed(2)}
-              </span>
-              {effectiveOddsChanged && (
-                <span
-                  className="text-xs line-through opacity-50"
-                  title={t('markets.rawOdds', { odds: outcome.odds.toFixed(2) })}
-                  style={{ color: 'var(--color-text-secondary)' }}
-                >
-                  {outcome.odds.toFixed(2)}
-                </span>
-              )}
-              {outcome.price != null && (
-                <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-                  {(outcome.price * 100).toFixed(0)}%
-                </span>
-              )}
-              {outcome.price != null && previousPrices && outcome.polymarket_token_id && (
-                <PriceMovementIndicator
-                  currentPrice={outcome.price}
-                  previousPrice={previousPrices[outcome.polymarket_token_id]}
-                />
-              )}
-            </div>
-          );
-
-          const sharedStyle = {
-            backgroundColor: isWinner
-              ? 'color-mix(in srgb, var(--color-win) 10%, var(--color-bg-base))'
-              : 'var(--color-bg-base)',
-            border: isWinner
-              ? '1px solid color-mix(in srgb, var(--color-win) 40%, transparent)'
-              : isHovered
-                ? '1px solid var(--color-accent)'
-                : '1px solid var(--color-border)',
-          };
-
-          if (!isInteractive || !onOutcomeClick || isExpired) {
-            return (
-              <div key={outcome.id} className="rounded-lg px-3 py-2" style={sharedStyle}>
-                {inner}
-              </div>
-            );
-          }
-
-          return (
+        <div className="flex items-center gap-1">
+          {isStale && (
+            <span title={t('markets.syncedStale')} style={{ color: 'var(--color-loss)' }}>
+              ⚠
+            </span>
+          )}
+          {market.polymarket_id && (
             <button
-              key={outcome.id}
-              onClick={() => onOutcomeClick(market, outcome)}
-              onMouseEnter={() => setHoveredOutcomeId(outcome.id)}
-              onMouseLeave={() => setHoveredOutcomeId(null)}
-              className="cursor-pointer rounded-lg px-3 py-2 transition-colors"
-              style={sharedStyle}
+              type="button"
+              onClick={() => void refresh()}
+              disabled={isRefreshing}
+              title={
+                lastResult === 'failed' ? t('markets.refreshFailed') : t('markets.refreshOdds')
+              }
+              aria-label={t('markets.refreshOdds')}
+              className="rounded-md p-1 transition-colors hover:opacity-80 disabled:opacity-40"
+              style={{
+                color:
+                  lastResult === 'ok'
+                    ? 'var(--color-win)'
+                    : lastResult === 'failed'
+                      ? 'var(--color-loss)'
+                      : 'var(--color-text-secondary)',
+                transitionDuration: 'var(--duration-fast)',
+                transitionTimingFunction: 'var(--ease-out-expo)',
+              }}
             >
-              {inner}
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{
+                  animation: isRefreshing ? 'spin 1s linear infinite' : undefined,
+                }}
+                aria-hidden="true"
+              >
+                <polyline points="23 4 23 10 17 10" />
+                <polyline points="1 20 1 14 7 14" />
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+              </svg>
             </button>
-          );
-        })}
-      </div>
-
-      {/* Footer: meta info */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        {market.volume != null && market.volume > 0 && (
-          <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-            Vol {market.volume.toLocaleString()}
-          </span>
-        )}
-        {closesDate && (
-          <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-            {market.status === 'open' ? t('markets.closesAt') : t('markets.closedAt')} {closesDate}
-          </span>
-        )}
-        {/* Synced-ago or stale badge */}
-        {!isStale && market.last_synced_at && (
-          <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-            {formatSyncedAgo(market.last_synced_at, t)}
-          </span>
-        )}
-        {isStale && (
-          <span className="ms-auto text-xs" style={{ color: 'var(--color-loss, #ef4444)' }}>
-            {t('markets.syncedStale')}
-          </span>
-        )}
-      </div>
-    </div>
+          )}
+          {onArchive && market.status === 'resolved' && (
+            <button
+              type="button"
+              onClick={() => onArchive(market)}
+              disabled={isArchiving}
+              title={t('markets.archive')}
+              aria-label={t('markets.archive')}
+              className="rounded-md p-1 transition-colors hover:opacity-80 disabled:opacity-40"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <polyline points="21 8 21 21 3 21 3 8" />
+                <rect x="1" y="3" width="22" height="5" />
+                <line x1="10" y1="12" x2="14" y2="12" />
+              </svg>
+            </button>
+          )}
+        </div>
+      </footer>
+    </article>
   );
 };

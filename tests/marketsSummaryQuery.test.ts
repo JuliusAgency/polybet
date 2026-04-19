@@ -11,5 +11,6 @@ test('useMarkets selects all market summary and outcome update fields', () => {
   assert.match(source, /close_at/);
   assert.match(source, /status/);
   assert.match(source, /market_outcomes[^']*updated_at/);
-  assert.match(source, /\.in\('status', \['open', 'closed', 'resolved'\]\)/);
+  // Event join now carries the aggregated volume column for the card header.
+  assert.match(source, /event:event_id\([^)]*volume[^)]*\)/);
 });

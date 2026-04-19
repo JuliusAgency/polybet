@@ -12,16 +12,21 @@ test('useMarkets selects status, sync timestamp and outcome probability fields',
 
   assert.match(source, /status, winning_outcome_id/);
   assert.match(source, /last_synced_at/);
-  assert.match(source, /market_outcomes[^']*\(id, name, price, odds, effective_odds, polymarket_token_id\)/);
-  assert.match(source, /\.in\('status', \['open', 'closed', 'resolved'\]\)/);
+  assert.match(
+    source,
+    /market_outcomes[^']*\(id, name, price, odds, effective_odds, updated_at, polymarket_token_id\)/
+  );
+  // Event join carries the new volume column for header rollup.
+  assert.match(source, /event:event_id\([^)]*volume[^)]*\)/);
 });
 
-test('MarketCard renders source, status, updatedAt and probability labels', () => {
+test('MarketCard wires status, volume, close label and core atoms', () => {
   const source = fs.readFileSync(marketCardPath, 'utf8');
 
-  assert.match(source, /t\('markets\.source'\)/);
   assert.match(source, /t\(`markets\.status\./);
-  assert.match(source, /t\('markets\.updatedAt'\)/);
-  assert.match(source, /t\('markets\.probability'\)/);
-  assert.match(source, /t\('markets\.finalOutcome'\)/);
+  assert.match(source, /t\('markets\.closesAt'\)/);
+  assert.match(source, /t\('markets\.volumeShort'/);
+  assert.match(source, /ProbabilityGauge/);
+  assert.match(source, /OutcomeButtons/);
+  assert.match(source, /MarketThumbnail/);
 });

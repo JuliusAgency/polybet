@@ -21,12 +21,14 @@ npm run dev
 
 ## Scripts
 
-| Command           | Description                    |
-| ----------------- | ------------------------------ |
-| `npm run dev`     | Start Vite dev server          |
-| `npm run build`   | Type-check & build for prod    |
-| `npm run preview` | Preview the production build   |
-| `npm run lint`    | Run ESLint                     |
+| Command                   | Description                                        |
+| ------------------------- | -------------------------------------------------- |
+| `npm run dev`             | Start Vite dev server                              |
+| `npm run build`           | Type-check (`tsc -b`) & build for production       |
+| `npm run preview`         | Preview the production build                       |
+| `npm run lint`            | Run ESLint                                         |
+| `npm test`                | Run the Node test runner over `tests/*.test.ts`    |
+| `npm run seed:prod-demo`  | Seed the production demo data (`scripts/prod-demo-seed.ts`) |
 
 ---
 

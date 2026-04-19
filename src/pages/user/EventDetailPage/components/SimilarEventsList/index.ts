@@ -1,0 +1,1 @@
+export { SimilarEventsList } from './SimilarEventsList';

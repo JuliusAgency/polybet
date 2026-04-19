@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { supabase } from '@/shared/api/supabase';
 import { Spinner } from '@/shared/ui/Spinner';
+import { CreateDemoEventModal } from './components/CreateDemoEventModal';
 
 interface Outcome {
   id: string;
@@ -63,6 +64,7 @@ export const TestLabPage = () => {
   const [settleOutcomeId, setSettleOutcomeId] = useState('');
   const [settleLoading, setSettleLoading] = useState(false);
   const [creatingMarket, setCreatingMarket] = useState(false);
+  const [showEventModal, setShowEventModal] = useState(false);
 
   const fetchData = async () => {
     setLoadingData(true);
@@ -198,7 +200,25 @@ export const TestLabPage = () => {
         >
           {creatingMarket ? <Spinner size="sm" /> : '+ Create Demo Market'}
         </button>
+        <button
+          onClick={() => setShowEventModal(true)}
+          className="rounded-lg px-3 py-1.5 text-xs font-semibold"
+          style={{
+            backgroundColor: 'var(--color-accent)',
+            border: 'none',
+            color: '#fff',
+            cursor: 'pointer',
+          }}
+        >
+          + Create Demo Event
+        </button>
       </div>
+
+      <CreateDemoEventModal
+        isOpen={showEventModal}
+        onClose={() => setShowEventModal(false)}
+        onCreated={() => void fetchData()}
+      />
 
       {loadingData ? (
         <div className="flex justify-center py-12">

@@ -34,6 +34,7 @@ const SettingsPage = lazy(() =>
 
 // User
 const MarketsFeedPage = lazy(() => import('@/pages/user/MarketsFeedPage'));
+const EventDetailPage = lazy(() => import('@/pages/user/EventDetailPage'));
 const WalletPage = lazy(() => import('@/pages/user/WalletPage'));
 const MyBetsPage = lazy(() => import('@/pages/user/MyBetsPage'));
 const StatsPage = lazy(() => import('@/pages/user/StatsPage'));
@@ -121,6 +122,7 @@ export const Router = () => {
             }
           >
             <Route path="markets" element={<MarketsFeedPage />} />
+            <Route path="events/:id" element={<EventDetailPage />} />
             <Route path="wallet" element={<WalletPage />} />
             <Route path="my-bets" element={<MyBetsPage />} />
             <Route path="stats" element={<StatsPage />} />

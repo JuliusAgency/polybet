@@ -23,6 +23,7 @@ export const ROUTES = {
 
   USER: {
     MARKETS: '/markets',
+    EVENT_DETAIL: '/events/:id',
     WALLET: '/wallet',
     MY_BETS: '/my-bets',
     STATS: '/stats',

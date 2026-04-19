@@ -1,0 +1,1 @@
+export { MarketThumbnail } from './MarketThumbnail';
