@@ -2,8 +2,11 @@ import { useTranslation } from 'react-i18next';
 import type { Market, MarketOutcome, MyBet } from '@/features/bet';
 import { useMarketRefresh } from '@/features/bet';
 import { Badge } from '@/shared/ui/Badge';
-import { ProbabilityGauge } from '@/shared/ui/ProbabilityGauge';
 import { OutcomeButtons, type OutcomeButton } from '@/shared/ui/OutcomeButtons';
+import {
+  OutcomeProbabilityBar,
+  type OutcomeProbabilityBarItem,
+} from '@/shared/ui/OutcomeProbabilityBar';
 import { MarketThumbnail } from '@/shared/ui/MarketThumbnail';
 import { MARKETS_STALE_THRESHOLD_MS } from '@/shared/config/markets';
 import { useTicker } from '@/shared/hooks/useTicker';
@@ -53,18 +56,18 @@ export const MarketCard = ({
     ? (market.market_outcomes.find((o) => o.id === market.winning_outcome_id) ?? null)
     : null;
 
-  // Leader for the gauge: highest-price outcome with a known price
-  const withPrices = market.market_outcomes.filter((o) => o.price != null);
-  const leader = withPrices.length
-    ? withPrices.reduce((best, o) => ((o.price ?? 0) > (best.price ?? 0) ? o : best), withPrices[0])
-    : null;
-  const leaderProbability = leader?.price ?? 0;
-
   const outcomeButtons: OutcomeButton[] = market.market_outcomes.map((o) => ({
     id: o.id,
     name: o.name,
     price: o.price,
     effectiveOdds: o.effective_odds,
+    isWinner: winnerOutcome?.id === o.id,
+  }));
+
+  const probabilityItems: OutcomeProbabilityBarItem[] = market.market_outcomes.map((o) => ({
+    id: o.id,
+    name: o.name,
+    price: o.price,
     isWinner: winnerOutcome?.id === o.id,
   }));
 
@@ -84,7 +87,7 @@ export const MarketCard = ({
         borderRadius: 'var(--radius-lg)',
       }}
     >
-      {/* Header: thumb + title + gauge */}
+      {/* Header: thumb + title */}
       <header className="flex items-start gap-3">
         <MarketThumbnail src={market.image_url} title={market.question} id={market.id} size="lg" />
 
@@ -104,23 +107,6 @@ export const MarketCard = ({
             </p>
           )}
         </div>
-
-        {leader && (
-          <div className="flex shrink-0 flex-col items-center gap-1">
-            <ProbabilityGauge
-              probability={leaderProbability}
-              leaderName={leader.name}
-              size="lg"
-              ariaLabel={`${Math.round(leaderProbability * 100)}% ${leader.name} ${t('markets.chance')}`}
-            />
-            <span
-              className="text-[10px] font-medium uppercase tracking-wide"
-              style={{ color: 'var(--color-text-muted)' }}
-            >
-              {t('markets.chance')}
-            </span>
-          </div>
-        )}
       </header>
 
       {/* User bet inline — only if present */}
@@ -152,20 +138,24 @@ export const MarketCard = ({
         </div>
       )}
 
-      {/* Outcome CTAs */}
-      <OutcomeButtons
-        outcomes={outcomeButtons}
-        size="lg"
-        disabled={!isInteractive}
-        onClick={
-          isInteractive && onOutcomeClick
-            ? (outcomeId) => {
-                const outcome = market.market_outcomes.find((o) => o.id === outcomeId);
-                if (outcome) onOutcomeClick(market, outcome);
-              }
-            : undefined
-        }
-      />
+      {/* Probability strip + outcome CTAs */}
+      <div className="flex flex-col gap-3">
+        <OutcomeProbabilityBar outcomes={probabilityItems} />
+        <OutcomeButtons
+          outcomes={outcomeButtons}
+          size="lg"
+          disabled={!isInteractive}
+          showPercentage={false}
+          onClick={
+            isInteractive && onOutcomeClick
+              ? (outcomeId) => {
+                  const outcome = market.market_outcomes.find((o) => o.id === outcomeId);
+                  if (outcome) onOutcomeClick(market, outcome);
+                }
+              : undefined
+          }
+        />
+      </div>
 
       {/* Footer: metadata as icons + compact text */}
       <footer

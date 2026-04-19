@@ -150,11 +150,16 @@ async function fetchGammaMarketDetails(conditionId: string): Promise<GammaMarket
 async function fetchGammaMarketsBatch(conditionIds: string[]): Promise<Map<string, GammaMarket>> {
   if (conditionIds.length === 0) return new Map();
   const params = conditionIds.map((id) => `condition_ids=${encodeURIComponent(id)}`).join('&');
+  // Gamma silently caps responses at 20 rows without an explicit `limit`.
+  const limitParam = `limit=${conditionIds.length}`;
   try {
-    const items = await fetchJsonWithRetry<GammaMarket[]>(`${GAMMA_API_BASE}/markets?${params}`, {
-      headers: { Accept: 'application/json' },
-      timeoutMs: 30_000,
-    });
+    const items = await fetchJsonWithRetry<GammaMarket[]>(
+      `${GAMMA_API_BASE}/markets?${limitParam}&${params}`,
+      {
+        headers: { Accept: 'application/json' },
+        timeoutMs: 30_000,
+      }
+    );
     if (!Array.isArray(items)) return new Map();
     return new Map(items.map((m) => [m.conditionId, m]));
   } catch (e: unknown) {

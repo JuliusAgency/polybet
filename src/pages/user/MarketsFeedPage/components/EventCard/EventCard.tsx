@@ -2,8 +2,11 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { Market, MarketEvent, MarketOutcome, MyBet } from '@/features/bet';
-import { ProbabilityGauge } from '@/shared/ui/ProbabilityGauge';
 import { OutcomeButtons, type OutcomeButton } from '@/shared/ui/OutcomeButtons';
+import {
+  OutcomeProbabilityBar,
+  type OutcomeProbabilityBarItem,
+} from '@/shared/ui/OutcomeProbabilityBar';
 import { MarketThumbnail } from '@/shared/ui/MarketThumbnail';
 import { formatVolume } from '@/shared/utils';
 
@@ -188,12 +191,6 @@ function EventMarketRow({ market, userBet, mode, onOutcomeClick, isLast }: Event
     ? (market.market_outcomes.find((o) => o.id === market.winning_outcome_id) ?? null)
     : null;
 
-  const withPrices = market.market_outcomes.filter((o) => o.price != null);
-  const leader = withPrices.length
-    ? withPrices.reduce((best, o) => ((o.price ?? 0) > (best.price ?? 0) ? o : best), withPrices[0])
-    : null;
-  const leaderProbability = leader?.price ?? 0;
-
   const outcomeButtons: OutcomeButton[] = market.market_outcomes.map((o) => ({
     id: o.id,
     name: o.name,
@@ -202,12 +199,19 @@ function EventMarketRow({ market, userBet, mode, onOutcomeClick, isLast }: Event
     isWinner: winnerOutcome?.id === o.id,
   }));
 
+  const probabilityItems: OutcomeProbabilityBarItem[] = market.market_outcomes.map((o) => ({
+    id: o.id,
+    name: o.name,
+    price: o.price,
+    isWinner: winnerOutcome?.id === o.id,
+  }));
+
   const label = market.group_label ?? market.question;
   const volumeLabel = formatVolume(market.volume ?? null);
 
   return (
     <div
-      className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,240px)] items-center gap-3 py-3"
+      className="grid grid-cols-[minmax(0,1fr)_minmax(0,300px)] items-center gap-4 py-3"
       style={{
         borderTop: isLast ? undefined : '1px solid var(--color-border-subtle)',
       }}
@@ -232,30 +236,13 @@ function EventMarketRow({ market, userBet, mode, onOutcomeClick, isLast }: Event
         </div>
       </div>
 
-      {leader ? (
-        <div className="flex flex-col items-center">
-          <ProbabilityGauge
-            probability={leaderProbability}
-            leaderName={leader.name}
-            size="sm"
-            ariaLabel={`${Math.round(leaderProbability * 100)}% ${leader.name}`}
-          />
-          <span
-            className="mt-0.5 font-mono text-[10px]"
-            style={{ color: 'var(--color-text-muted)' }}
-          >
-            {Math.round(leaderProbability * 100)}%
-          </span>
-        </div>
-      ) : (
-        <div />
-      )}
-
-      <div className="min-w-0">
+      <div className="flex min-w-0 flex-col gap-3">
+        <OutcomeProbabilityBar outcomes={probabilityItems} />
         <OutcomeButtons
           outcomes={outcomeButtons}
           size="sm"
           disabled={!isInteractive}
+          showPercentage={false}
           onClick={
             isInteractive && onOutcomeClick
               ? (outcomeId) => {

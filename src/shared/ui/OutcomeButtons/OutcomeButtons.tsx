@@ -28,6 +28,8 @@ interface OutcomeButtonsProps {
   onClick?: (outcomeId: string) => void;
   /** Custom CTA label prefix (e.g. "Buy"). If omitted, renders outcome name only. */
   ctaLabel?: string;
+  /** Show % next to outcome name. Default true. Disable when a probability bar lives next to the buttons. */
+  showPercentage?: boolean;
 }
 
 const SIZE_STYLES: Record<ButtonSize, { padY: string; padX: string; name: string; odds: string }> =
@@ -78,6 +80,7 @@ export function OutcomeButtons({
   disabled = false,
   onClick,
   ctaLabel,
+  showPercentage = true,
 }: OutcomeButtonsProps) {
   const styles = SIZE_STYLES[size];
 
@@ -86,7 +89,7 @@ export function OutcomeButtons({
     return (
       <div className="flex flex-col gap-1.5">
         {outcomes.map((o) => {
-          const pct = formatPrice(o.price);
+          const pct = showPercentage ? formatPrice(o.price) : null;
           return (
             <OutcomeRowFallback
               key={o.id}
@@ -106,7 +109,7 @@ export function OutcomeButtons({
     <div className="grid grid-cols-2 gap-2">
       {outcomes.map((o, index) => {
         const style = tintFor(index, !!o.isWinner, disabled);
-        const pct = formatPrice(o.price);
+        const pct = showPercentage ? formatPrice(o.price) : null;
 
         const body: ReactNode = (
           <div className="flex items-center justify-center gap-2">

@@ -1,9 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/shared/api/supabase';
-import {
-  getPriceHistoryRange,
-  type PriceHistoryWindow,
-} from './priceHistoryBucket';
+import { getPriceHistoryRange, type PriceHistoryWindow } from './priceHistoryBucket';
 
 export interface PriceHistoryPoint {
   outcome_id: string;

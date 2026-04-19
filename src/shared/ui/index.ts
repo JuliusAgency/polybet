@@ -6,5 +6,6 @@ export { ErrorBoundary } from './ErrorBoundary';
 export { Button } from './Button';
 export { ProbabilityGauge } from './ProbabilityGauge';
 export { OutcomeButtons, type OutcomeButton } from './OutcomeButtons';
+export { OutcomeProbabilityBar, type OutcomeProbabilityBarItem } from './OutcomeProbabilityBar';
 export { MarketThumbnail } from './MarketThumbnail';
 export { PriceHistoryChart, PriceHistoryWindowToggle } from './PriceHistoryChart';
