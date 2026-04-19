@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { Market, MarketOutcome, MyBet } from '@/features/bet';
 import { useMarketRefresh } from '@/features/bet';
@@ -19,6 +20,7 @@ interface MarketCardProps {
   onOutcomeClick?: (market: Market, outcome: MarketOutcome) => void;
   onArchive?: (market: Market) => void;
   isArchiving?: boolean;
+  linkToEvent?: boolean;
 }
 
 function formatClosesDate(iso: string | null, locale: string): string | null {
@@ -37,6 +39,7 @@ export const MarketCard = ({
   onOutcomeClick,
   onArchive,
   isArchiving = false,
+  linkToEvent = true,
 }: MarketCardProps) => {
   const { t, i18n } = useTranslation();
   const { isRefreshing, lastResult, refresh } = useMarketRefresh(
@@ -87,27 +90,65 @@ export const MarketCard = ({
         borderRadius: 'var(--radius-lg)',
       }}
     >
-      {/* Header: thumb + title */}
-      <header className="flex items-start gap-3">
-        <MarketThumbnail src={market.image_url} title={market.question} id={market.id} size="lg" />
+      {/* Header: thumb + title (clickable if linked to an event) */}
+      {linkToEvent && market.event_id ? (
+        <Link
+          to={`/events/${market.event_id}`}
+          aria-label={t('eventDetail.open', { defaultValue: 'Open event details' })}
+          className="-mx-1 -mt-1 flex items-start gap-3 rounded-md p-1 transition-opacity hover:opacity-90"
+          style={{ transitionDuration: 'var(--duration-fast)' }}
+        >
+          <MarketThumbnail
+            src={market.image_url}
+            title={market.question}
+            id={market.id}
+            size="lg"
+          />
 
-        <div className="min-w-0 flex-1">
-          <h3
-            className="text-[15px] font-semibold leading-snug"
-            style={{ color: 'var(--color-text-primary)', fontFamily: 'var(--font-sans)' }}
-          >
-            {market.question}
-          </h3>
-          {market.category && (
-            <p
-              className="mt-1 text-xs font-medium uppercase tracking-wide"
-              style={{ color: 'var(--color-text-muted)' }}
+          <div className="min-w-0 flex-1">
+            <h3
+              className="text-[15px] font-semibold leading-snug"
+              style={{ color: 'var(--color-text-primary)', fontFamily: 'var(--font-sans)' }}
             >
-              {market.category}
-            </p>
-          )}
-        </div>
-      </header>
+              {market.question}
+            </h3>
+            {market.category && (
+              <p
+                className="mt-1 text-xs font-medium uppercase tracking-wide"
+                style={{ color: 'var(--color-text-muted)' }}
+              >
+                {market.category}
+              </p>
+            )}
+          </div>
+        </Link>
+      ) : (
+        <header className="flex items-start gap-3">
+          <MarketThumbnail
+            src={market.image_url}
+            title={market.question}
+            id={market.id}
+            size="lg"
+          />
+
+          <div className="min-w-0 flex-1">
+            <h3
+              className="text-[15px] font-semibold leading-snug"
+              style={{ color: 'var(--color-text-primary)', fontFamily: 'var(--font-sans)' }}
+            >
+              {market.question}
+            </h3>
+            {market.category && (
+              <p
+                className="mt-1 text-xs font-medium uppercase tracking-wide"
+                style={{ color: 'var(--color-text-muted)' }}
+              >
+                {market.category}
+              </p>
+            )}
+          </div>
+        </header>
+      )}
 
       {/* User bet inline — only if present */}
       {userBet && (

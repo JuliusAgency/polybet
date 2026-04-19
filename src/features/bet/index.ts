@@ -25,6 +25,9 @@ export type { EventWithMarkets } from './useEventById';
 export { usePriceHistory } from './usePriceHistory';
 export type { PriceHistoryPoint } from './usePriceHistory';
 
+export { useEventPriceHistory } from './useEventPriceHistory';
+export type { EventPriceHistoryResult } from './useEventPriceHistory';
+
 export { useSimilarEvents } from './useSimilarEvents';
 
 export { getPriceHistoryRange, PRICE_HISTORY_WINDOWS } from './priceHistoryBucket';

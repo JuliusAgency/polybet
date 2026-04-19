@@ -118,6 +118,7 @@ export const EventCard = ({
             mode={mode}
             onOutcomeClick={onOutcomeClick}
             isLast={idx === visibleMarkets.length - 1}
+            detailPath={detailPath}
           />
         ))}
       </div>
@@ -178,9 +179,17 @@ interface EventMarketRowProps {
   mode: 'interactive' | 'readonly';
   onOutcomeClick?: (market: Market, outcome: MarketOutcome) => void;
   isLast: boolean;
+  detailPath: string;
 }
 
-function EventMarketRow({ market, userBet, mode, onOutcomeClick, isLast }: EventMarketRowProps) {
+function EventMarketRow({
+  market,
+  userBet,
+  mode,
+  onOutcomeClick,
+  isLast,
+  detailPath,
+}: EventMarketRowProps) {
   const { t } = useTranslation();
 
   const isExpired = market.close_at != null && new Date(market.close_at).getTime() <= Date.now();
@@ -217,9 +226,16 @@ function EventMarketRow({ market, userBet, mode, onOutcomeClick, isLast }: Event
       }}
     >
       <div className="min-w-0">
-        <p className="truncate text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+        <Link
+          to={detailPath}
+          className="block truncate text-sm font-medium transition-opacity hover:opacity-80"
+          style={{
+            color: 'var(--color-text-primary)',
+            transitionDuration: 'var(--duration-fast)',
+          }}
+        >
           {label}
-        </p>
+        </Link>
         <div
           className="mt-0.5 flex items-center gap-2 text-[11px]"
           style={{ color: 'var(--color-text-muted)' }}

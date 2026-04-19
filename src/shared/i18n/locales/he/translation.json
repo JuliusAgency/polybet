@@ -302,7 +302,10 @@
     "betsCount": "הימורים",
     "totalStake": "סכום כולל",
     "openBets": "פתוח",
-    "potentialPayout": "רווח פוטנציאלי"
+    "potentialPayout": "רווח פוטנציאלי",
+    "showMoreMarkets": "הצג עוד {{count}}",
+    "showLessMarkets": "הצג פחות",
+    "rules": "חוקים"
   },
   "priceHistory": {
     "empty": "אין עדיין היסטוריית מחירים"

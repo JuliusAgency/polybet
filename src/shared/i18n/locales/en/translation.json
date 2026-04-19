@@ -302,7 +302,10 @@
     "betsCount": "Bets",
     "totalStake": "Total stake",
     "openBets": "Open",
-    "potentialPayout": "Potential payout"
+    "potentialPayout": "Potential payout",
+    "showMoreMarkets": "Show {{count}} more",
+    "showLessMarkets": "Show less",
+    "rules": "Rules"
   },
   "priceHistory": {
     "empty": "No price history yet"
