@@ -2,10 +2,6 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { Market, MarketEvent, MarketOutcome, MyBet } from '@/features/bet';
 import { OutcomeButtons, type OutcomeButton } from '@/shared/ui/OutcomeButtons';
-import {
-  OutcomeProbabilityBar,
-  type OutcomeProbabilityBarItem,
-} from '@/shared/ui/OutcomeProbabilityBar';
 import { MarketThumbnail } from '@/shared/ui/MarketThumbnail';
 import { BookmarkButton } from '@/shared/ui/BookmarkButton';
 import { formatVolume } from '@/shared/utils';
@@ -87,28 +83,18 @@ export const EventCard = ({
           >
             {event.title}
           </h3>
-          <div
-            className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] font-medium uppercase tracking-wide"
-            style={{ color: 'var(--color-text-muted)' }}
-          >
-            {event.category && <span>{event.category}</span>}
-            {volumeLabel && (
-              <span className="font-mono">{t('markets.volumeShort', { value: volumeLabel })}</span>
-            )}
-          </div>
         </div>
       </Link>
 
       {/* Market rows */}
-      <div className="grid grid-cols-[fit-content(60%)_1fr]">
-        {visibleMarkets.map((market, idx) => (
+      <div className="flex flex-col">
+        {visibleMarkets.map((market) => (
           <EventMarketRow
             key={market.id}
             market={market}
             userBet={betByMarketId.get(market.id)}
             mode={mode}
             onOutcomeClick={onOutcomeClick}
-            isLast={idx === visibleMarkets.length - 1}
             detailPath={detailPath}
           />
         ))}
@@ -120,6 +106,9 @@ export const EventCard = ({
         style={{ color: 'var(--color-text-secondary)' }}
       >
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          {volumeLabel && (
+            <span className="font-mono">{t('markets.volumeShort', { value: volumeLabel })}</span>
+          )}
           {closesDate && (
             <span className="font-mono">
               {eventEffectiveStatus === 'open' ? t('markets.closesAt') : t('markets.closedAt')}{' '}
@@ -164,7 +153,6 @@ interface EventMarketRowProps {
   userBet: MyBet | undefined;
   mode: 'interactive' | 'readonly';
   onOutcomeClick?: (market: Market, outcome: MarketOutcome) => void;
-  isLast: boolean;
   detailPath: string;
 }
 
@@ -173,7 +161,6 @@ function EventMarketRow({
   userBet,
   mode,
   onOutcomeClick,
-  isLast,
   detailPath,
 }: EventMarketRowProps) {
   const { t } = useTranslation();
@@ -194,57 +181,39 @@ function EventMarketRow({
     isWinner: winnerOutcome?.id === o.id,
   }));
 
-  const probabilityItems: OutcomeProbabilityBarItem[] = market.market_outcomes.map((o) => ({
-    id: o.id,
-    name: o.name,
-    price: o.price,
-    isWinner: winnerOutcome?.id === o.id,
-  }));
-
   const label = market.group_label ?? market.question;
-  const volumeLabel = formatVolume(market.volume ?? null);
+  const yesOutcome = market.market_outcomes[0];
+  const yesPct = yesOutcome?.price != null ? `${Math.round(yesOutcome.price * 100)}%` : null;
 
   return (
-    <div
-      className="col-span-full grid grid-cols-subgrid items-center gap-x-3 py-2"
-      style={{
-        borderTop: isLast ? undefined : '1px solid var(--color-border-subtle)',
-      }}
-    >
-      <div className="min-w-0">
-        <Link
-          to={detailPath}
-          className="block text-sm font-medium leading-snug transition-opacity hover:opacity-80"
-          style={{
-            color: 'var(--color-text-primary)',
-            transitionDuration: 'var(--duration-fast)',
-          }}
-        >
-          {label}
-        </Link>
-        <div
-          className="mt-0.5 flex items-center gap-2 text-[11px]"
-          style={{ color: 'var(--color-text-muted)' }}
-        >
-          {volumeLabel && (
-            <span className="font-mono">{t('markets.volumeShort', { value: volumeLabel })}</span>
-          )}
-          {userBet && (
-            <span style={{ color: 'var(--color-accent)' }}>
-              {t('markets.yourBet')}: {userBet.market_outcomes?.name ?? '—'} ·{' '}
-              <span className="font-mono">{userBet.stake.toFixed(2)}</span>
-            </span>
-          )}
-        </div>
-      </div>
+    <div className="flex items-center gap-3 py-1.5">
+      <Link
+        to={detailPath}
+        className="min-w-0 flex-1 truncate text-sm font-medium transition-opacity hover:opacity-80"
+        style={{
+          color: 'var(--color-text-primary)',
+          transitionDuration: 'var(--duration-fast)',
+        }}
+      >
+        {label}
+      </Link>
 
-      <div className="flex min-w-0 flex-col gap-2">
-        <OutcomeProbabilityBar outcomes={probabilityItems} />
+      {yesPct && (
+        <span
+          className="shrink-0 text-sm font-semibold tabular-nums"
+          style={{ color: 'var(--color-text-primary)' }}
+        >
+          {yesPct}
+        </span>
+      )}
+
+      <div className="w-[140px] shrink-0">
         <OutcomeButtons
           outcomes={outcomeButtons}
           size="sm"
           disabled={!isInteractive}
           showPercentage={false}
+          hoverShowsPercentage
           onClick={
             isInteractive && onOutcomeClick
               ? (outcomeId) => {
@@ -255,6 +224,16 @@ function EventMarketRow({
           }
         />
       </div>
+
+      {userBet && (
+        <span
+          className="shrink-0 text-[11px]"
+          style={{ color: 'var(--color-accent)' }}
+          title={`${t('markets.yourBet')}: ${userBet.market_outcomes?.name ?? '—'}`}
+        >
+          ● {userBet.stake.toFixed(0)}
+        </span>
+      )}
     </div>
   );
 }

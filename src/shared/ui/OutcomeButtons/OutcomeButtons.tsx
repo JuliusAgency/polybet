@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 
 /**
  * Side-by-side outcome buttons for binary markets (Polymarket-style).
@@ -30,6 +30,10 @@ interface OutcomeButtonsProps {
   ctaLabel?: string;
   /** Show % next to outcome name. Default true. Disable when a probability bar lives next to the buttons. */
   showPercentage?: boolean;
+  /** When true, button shows outcome name by default and swaps to % on hover/focus (Polymarket style). */
+  hoverShowsPercentage?: boolean;
+  /** Price display format. Default 'percent' (e.g. 8%). Use 'cents' for Polymarket-style (e.g. 8.3¢). */
+  priceFormat?: 'percent' | 'cents';
 }
 
 const SIZE_STYLES: Record<ButtonSize, { padY: string; padX: string; name: string; odds: string }> =
@@ -69,8 +73,22 @@ function tintFor(index: number, isWinner: boolean, disabled: boolean): CSSProper
   };
 }
 
-function formatPrice(price: number | null): string | null {
+function hoverTintFor(index: number): CSSProperties {
+  const tintVar = index === 0 ? 'var(--color-win)' : 'var(--color-loss)';
+  return {
+    backgroundColor: tintVar,
+    borderColor: tintVar,
+    color: 'var(--color-text-primary)',
+  };
+}
+
+function formatPrice(price: number | null, format: 'percent' | 'cents' = 'percent'): string | null {
   if (price == null) return null;
+  if (format === 'cents') {
+    const cents = price * 100;
+    const formatted = cents >= 10 ? cents.toFixed(1) : cents.toFixed(1);
+    return `${formatted}¢`;
+  }
   return `${Math.round(price * 100)}%`;
 }
 
@@ -81,15 +99,18 @@ export function OutcomeButtons({
   onClick,
   ctaLabel,
   showPercentage = true,
+  hoverShowsPercentage = false,
+  priceFormat = 'percent',
 }: OutcomeButtonsProps) {
   const styles = SIZE_STYLES[size];
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   // Non-binary fallback: vertical list of unstyled row buttons.
   if (outcomes.length !== 2) {
     return (
       <div className="flex flex-col gap-1.5">
         {outcomes.map((o) => {
-          const pct = showPercentage ? formatPrice(o.price) : null;
+          const pct = showPercentage ? formatPrice(o.price, priceFormat) : null;
           return (
             <OutcomeRowFallback
               key={o.id}
@@ -108,12 +129,18 @@ export function OutcomeButtons({
   return (
     <div className="grid grid-cols-2 gap-2">
       {outcomes.map((o, index) => {
-        const style = tintFor(index, !!o.isWinner, disabled);
-        const pct = showPercentage ? formatPrice(o.price) : null;
+        const isHovered = hoveredId === o.id && !disabled;
+        const baseStyle = tintFor(index, !!o.isWinner, disabled);
+        const style: CSSProperties = isHovered ? hoverTintFor(index) : baseStyle;
+        const pct = showPercentage ? formatPrice(o.price, priceFormat) : null;
+        const hoverPct = hoverShowsPercentage ? formatPrice(o.price, priceFormat) : null;
+
+        const label = ctaLabel ? `${ctaLabel} ${o.name}` : o.name;
+        const displayName = hoverShowsPercentage && isHovered && hoverPct ? hoverPct : label;
 
         const body: ReactNode = (
           <div className="flex items-center justify-center gap-2">
-            <span className={styles.name}>{ctaLabel ? `${ctaLabel} ${o.name}` : o.name}</span>
+            <span className={styles.name}>{displayName}</span>
             {pct && (
               <span className={styles.odds} style={{ color: 'inherit', opacity: 0.95 }}>
                 {pct}
@@ -141,7 +168,11 @@ export function OutcomeButtons({
             key={o.id}
             type="button"
             onClick={() => onClick(o.id)}
-            className={`${baseClass} cursor-pointer hover:brightness-110 focus-visible:outline-none focus-visible:ring-2`}
+            onMouseEnter={() => setHoveredId(o.id)}
+            onMouseLeave={() => setHoveredId(null)}
+            onFocus={() => setHoveredId(o.id)}
+            onBlur={() => setHoveredId(null)}
+            className={`${baseClass} cursor-pointer focus-visible:outline-none focus-visible:ring-2`}
             style={{
               ...style,
               transitionDuration: 'var(--duration-fast)',

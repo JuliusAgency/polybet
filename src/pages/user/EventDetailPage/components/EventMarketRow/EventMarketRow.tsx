@@ -1,11 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import type { Market, MarketOutcome, MyBet } from '@/features/bet';
 import { Badge } from '@/shared/ui/Badge';
+import { BookmarkButton } from '@/shared/ui/BookmarkButton';
+import { MarketThumbnail } from '@/shared/ui/MarketThumbnail';
 import { OutcomeButtons, type OutcomeButton } from '@/shared/ui/OutcomeButtons';
-import {
-  OutcomeProbabilityBar,
-  type OutcomeProbabilityBarItem,
-} from '@/shared/ui/OutcomeProbabilityBar';
 import { formatVolume } from '@/shared/utils';
 
 interface EventMarketRowProps {
@@ -16,15 +14,6 @@ interface EventMarketRowProps {
   isFirst?: boolean;
 }
 
-function formatClosesDate(iso: string | null, locale: string): string | null {
-  if (!iso) return null;
-  return new Date(iso).toLocaleDateString(locale === 'he' ? 'he-IL' : undefined, {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-}
-
 export const EventMarketRow = ({
   market,
   userBet,
@@ -32,7 +21,7 @@ export const EventMarketRow = ({
   onOutcomeClick,
   isFirst = false,
 }: EventMarketRowProps) => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
   const isExpired = market.close_at != null && new Date(market.close_at).getTime() <= Date.now();
   const effectiveStatus = isExpired && market.status === 'open' ? 'closed' : market.status;
@@ -50,16 +39,11 @@ export const EventMarketRow = ({
     isWinner: winnerOutcome?.id === o.id,
   }));
 
-  const probabilityItems: OutcomeProbabilityBarItem[] = market.market_outcomes.map((o) => ({
-    id: o.id,
-    name: o.name,
-    price: o.price,
-    isWinner: winnerOutcome?.id === o.id,
-  }));
-
   const label = market.group_label ?? market.question;
   const volumeLabel = formatVolume(market.volume ?? null);
-  const closesDate = formatClosesDate(market.close_at, i18n.language);
+  const yesOutcome = market.market_outcomes[0];
+  const yesPct = yesOutcome?.price != null ? `${Math.round(yesOutcome.price * 100)}%` : null;
+
   const statusLabel =
     effectiveStatus !== 'open'
       ? t(`markets.status.${effectiveStatus}`, { defaultValue: effectiveStatus.toUpperCase() })
@@ -67,24 +51,38 @@ export const EventMarketRow = ({
 
   return (
     <div
-      className="flex flex-col gap-2 px-3 py-3"
+      className="flex items-center gap-3 px-4 py-3"
       style={{
         borderTop: isFirst ? undefined : '1px solid var(--color-border-subtle)',
       }}
     >
-      <div className="flex items-start justify-between gap-3">
+      <MarketThumbnail src={market.image_url} title={label} id={market.id} size="sm" />
+
+      <div className="min-w-0 flex-1">
         <p
-          className="flex-1 text-sm font-medium leading-snug"
+          className="truncate text-sm font-semibold"
           style={{ color: 'var(--color-text-primary)' }}
         >
           {label}
         </p>
         <div
-          className="flex shrink-0 items-center gap-2 text-[11px]"
+          className="mt-0.5 flex items-center gap-2 text-[11px]"
           style={{ color: 'var(--color-text-muted)' }}
         >
           {volumeLabel && (
             <span className="font-mono">{t('markets.volumeShort', { value: volumeLabel })}</span>
+          )}
+          {userBet && (
+            <span className="flex items-center gap-1" style={{ color: 'var(--color-accent)' }}>
+              <span>{t('markets.yourBet')}:</span>
+              <span style={{ fontWeight: 600 }}>{userBet.market_outcomes?.name ?? '—'}</span>
+              <span className="font-mono">{userBet.stake.toFixed(2)}</span>
+              {userBet.status !== 'open' && (
+                <Badge variant={userBet.status === 'won' ? 'win' : 'loss'}>
+                  {userBet.status === 'won' ? t('bet.won') : t('bet.lost')}
+                </Badge>
+              )}
+            </span>
           )}
           {statusLabel && (
             <span
@@ -103,54 +101,37 @@ export const EventMarketRow = ({
         </div>
       </div>
 
-      <OutcomeProbabilityBar outcomes={probabilityItems} />
-      <OutcomeButtons
-        outcomes={outcomeButtons}
-        size="sm"
-        disabled={!isInteractive}
-        showPercentage={false}
-        onClick={
-          isInteractive && onOutcomeClick
-            ? (outcomeId) => {
-                const outcome = market.market_outcomes.find((o) => o.id === outcomeId);
-                if (outcome) onOutcomeClick(market, outcome);
-              }
-            : undefined
-        }
-      />
-
-      {(userBet || closesDate) && (
-        <div
-          className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]"
-          style={{ color: 'var(--color-text-secondary)' }}
-        >
-          {closesDate && (
-            <span className="font-mono">
-              {effectiveStatus === 'open' ? t('markets.closesAt') : t('markets.closedAt')}{' '}
-              {closesDate}
-            </span>
-          )}
-          {userBet && (
-            <span className="flex items-center gap-1.5">
-              <span>{t('markets.yourBet')}:</span>
-              <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>
-                {userBet.market_outcomes?.name ?? '—'}
-              </span>
-              <span className="font-mono">{userBet.stake.toFixed(2)}</span>
-              {userBet.status === 'open' && (
-                <span className="font-mono" style={{ color: 'var(--color-accent)' }}>
-                  → {userBet.potential_payout.toFixed(2)}
-                </span>
-              )}
-              {userBet.status !== 'open' && (
-                <Badge variant={userBet.status === 'won' ? 'win' : 'loss'}>
-                  {userBet.status === 'won' ? t('bet.won') : t('bet.lost')}
-                </Badge>
-              )}
-            </span>
-          )}
+      {yesPct && (
+        <div className="shrink-0 text-center">
+          <div
+            className="text-lg font-bold tabular-nums"
+            style={{ color: 'var(--color-text-primary)' }}
+          >
+            {yesPct}
+          </div>
         </div>
       )}
+
+      <div className="w-[220px] shrink-0">
+        <OutcomeButtons
+          outcomes={outcomeButtons}
+          size="sm"
+          disabled={!isInteractive}
+          showPercentage
+          priceFormat="cents"
+          ctaLabel={t('markets.buy', { defaultValue: 'Buy' })}
+          onClick={
+            isInteractive && onOutcomeClick
+              ? (outcomeId) => {
+                  const outcome = market.market_outcomes.find((o) => o.id === outcomeId);
+                  if (outcome) onOutcomeClick(market, outcome);
+                }
+              : undefined
+          }
+        />
+      </div>
+
+      <BookmarkButton marketId={market.id} stopPropagation />
     </div>
   );
 };

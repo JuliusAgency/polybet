@@ -147,53 +147,26 @@ const EventDetailPage = () => {
                 </p>
               </section>
             )}
-            {markets.length > 3 ? (
-              <section
-                className="grid gap-3"
-                style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}
-              >
-                {markets.map((market) => (
-                  <div
-                    key={market.id}
-                    style={{
-                      backgroundColor: 'var(--color-bg-surface)',
-                      border: '1px solid var(--color-border)',
-                      borderRadius: 'var(--radius-lg)',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <EventMarketRow
-                      market={market}
-                      userBet={betByMarketId.get(market.id)}
-                      mode={market.status === 'open' ? 'interactive' : 'readonly'}
-                      onOutcomeClick={handleOutcomeClick}
-                      isFirst
-                    />
-                  </div>
-                ))}
-              </section>
-            ) : (
-              <section
-                className="flex flex-col"
-                style={{
-                  backgroundColor: 'var(--color-bg-surface)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-lg)',
-                  overflow: 'hidden',
-                }}
-              >
-                {markets.map((market, idx) => (
-                  <EventMarketRow
-                    key={market.id}
-                    market={market}
-                    userBet={betByMarketId.get(market.id)}
-                    mode={market.status === 'open' ? 'interactive' : 'readonly'}
-                    onOutcomeClick={handleOutcomeClick}
-                    isFirst={idx === 0}
-                  />
-                ))}
-              </section>
-            )}
+            <section
+              className="flex flex-col"
+              style={{
+                backgroundColor: 'var(--color-bg-surface)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-lg)',
+                overflow: 'hidden',
+              }}
+            >
+              {markets.map((market, idx) => (
+                <EventMarketRow
+                  key={market.id}
+                  market={market}
+                  userBet={betByMarketId.get(market.id)}
+                  mode={market.status === 'open' ? 'interactive' : 'readonly'}
+                  onOutcomeClick={handleOutcomeClick}
+                  isFirst={idx === 0}
+                />
+              ))}
+            </section>
           </>
         )}
 
