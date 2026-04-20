@@ -35,14 +35,14 @@ interface OutcomeButtonsProps {
 const SIZE_STYLES: Record<ButtonSize, { padY: string; padX: string; name: string; odds: string }> =
   {
     lg: {
-      padY: 'py-3',
-      padX: 'px-4',
-      name: 'text-sm font-semibold',
-      odds: 'text-sm font-mono font-semibold',
+      padY: 'py-2',
+      padX: 'px-3',
+      name: 'text-[13px] font-semibold',
+      odds: 'text-[13px] font-mono font-semibold',
     },
     sm: {
       padY: 'py-1.5',
-      padX: 'px-3',
+      padX: 'px-2.5',
       name: 'text-xs font-medium',
       odds: 'text-xs font-mono font-semibold',
     },

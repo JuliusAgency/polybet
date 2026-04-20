@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { Market, MarketEvent, MarketOutcome, MyBet } from '@/features/bet';
@@ -8,9 +7,12 @@ import {
   type OutcomeProbabilityBarItem,
 } from '@/shared/ui/OutcomeProbabilityBar';
 import { MarketThumbnail } from '@/shared/ui/MarketThumbnail';
+import { BookmarkButton } from '@/shared/ui/BookmarkButton';
 import { formatVolume } from '@/shared/utils';
 
-const COLLAPSED_LIMIT = 3;
+// Polymarket-style: at most 2 outcome rows visible in the feed card.
+// Users drill into /events/:id to see the full list — no inline expansion.
+const VISIBLE_MARKET_LIMIT = 2;
 
 interface EventCardProps {
   event: MarketEvent;
@@ -37,7 +39,6 @@ export const EventCard = ({
   onOutcomeClick,
 }: EventCardProps) => {
   const { t, i18n } = useTranslation();
-  const [expanded, setExpanded] = useState(false);
   const detailPath = `/events/${event.id}`;
 
   const closesDate = formatClosesDate(event.close_at, i18n.language);
@@ -54,57 +55,47 @@ export const EventCard = ({
         })
       : null;
 
-  const visibleMarkets = expanded ? markets : markets.slice(0, COLLAPSED_LIMIT);
-  const canExpand = markets.length > COLLAPSED_LIMIT;
+  const visibleMarkets = markets.slice(0, VISIBLE_MARKET_LIMIT);
+  const hiddenMarketCount = Math.max(0, markets.length - VISIBLE_MARKET_LIMIT);
+  // Pick the most liquid market as the bookmark anchor (same rule
+  // the feed uses to pick the primary market for an event).
+  const primaryMarket =
+    markets.find((m) => (m.volume ?? 0) > 0) ?? markets[0] ?? null;
 
   return (
     <article
-      className="flex flex-col gap-4 p-4"
+      className="flex flex-col gap-3 p-3"
       style={{
         backgroundColor: 'var(--color-bg-surface)',
         border: '1px solid var(--color-border)',
         borderRadius: 'var(--radius-lg)',
       }}
     >
-      {/* Header: thumb + title + description (clickable to detail) */}
+      {/* Header: thumb + title (clickable to detail) */}
       <Link
         to={detailPath}
         aria-label={t('eventDetail.open', { defaultValue: 'Open event details' })}
-        className="-mx-1 -mt-1 flex items-start gap-3 rounded-md p-1 transition-colors hover:opacity-90"
+        className="-mx-1 -mt-1 flex items-start gap-2.5 rounded-md p-1 transition-colors hover:opacity-90"
         style={{ transitionDuration: 'var(--duration-fast)' }}
       >
-        <MarketThumbnail src={event.image_url} title={event.title} id={event.id} size="lg" />
+        <MarketThumbnail src={event.image_url} title={event.title} id={event.id} size="md" />
 
         <div className="min-w-0 flex-1">
           <h3
-            className="text-base font-semibold leading-snug"
+            className="line-clamp-2 text-sm font-semibold leading-snug"
             style={{ color: 'var(--color-text-primary)', fontFamily: 'var(--font-sans)' }}
           >
             {event.title}
           </h3>
           <div
-            className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] font-medium uppercase tracking-wide"
+            className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] font-medium uppercase tracking-wide"
             style={{ color: 'var(--color-text-muted)' }}
           >
             {event.category && <span>{event.category}</span>}
-            <span>
-              {t('events.marketCount', {
-                count: markets.length,
-                defaultValue: '{{count}} markets',
-              })}
-            </span>
             {volumeLabel && (
               <span className="font-mono">{t('markets.volumeShort', { value: volumeLabel })}</span>
             )}
           </div>
-          {event.description && (
-            <p
-              className="mt-2 line-clamp-2 text-xs leading-relaxed"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
-              {event.description}
-            </p>
-          )}
         </div>
       </Link>
 
@@ -123,35 +114,29 @@ export const EventCard = ({
         ))}
       </div>
 
-      {/* Progressive disclosure */}
-      {canExpand && (
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => !v)}
-          className="self-start rounded-md px-2 py-1 text-xs font-medium transition-colors hover:opacity-80"
-          style={{
-            color: 'var(--color-accent)',
-            transitionDuration: 'var(--duration-fast)',
-            transitionTimingFunction: 'var(--ease-out-expo)',
-          }}
-        >
-          {expanded
-            ? t('markets.showLess')
-            : `${t('markets.showAll')} (${markets.length - COLLAPSED_LIMIT})`}
-        </button>
-      )}
-
-      {/* Footer */}
-      {(closesDate || statusLabel) && (
-        <footer
-          className="flex items-center gap-3 text-xs"
-          style={{ color: 'var(--color-text-secondary)' }}
-        >
+      {/* Footer: meta + bookmark */}
+      <footer
+        className="flex items-center justify-between gap-3 text-xs"
+        style={{ color: 'var(--color-text-secondary)' }}
+      >
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           {closesDate && (
             <span className="font-mono">
               {eventEffectiveStatus === 'open' ? t('markets.closesAt') : t('markets.closedAt')}{' '}
               {closesDate}
             </span>
+          )}
+          {hiddenMarketCount > 0 && (
+            <Link
+              to={detailPath}
+              className="font-medium transition-opacity hover:opacity-80"
+              style={{ color: 'var(--color-accent)' }}
+            >
+              {t('events.moreMarkets', {
+                count: hiddenMarketCount,
+                defaultValue: '+{{count}} more',
+              })}
+            </Link>
           )}
           {statusLabel && (
             <span
@@ -167,8 +152,9 @@ export const EventCard = ({
               {statusLabel}
             </span>
           )}
-        </footer>
-      )}
+        </div>
+        {primaryMarket && <BookmarkButton marketId={primaryMarket.id} stopPropagation={false} />}
+      </footer>
     </article>
   );
 };
@@ -220,7 +206,7 @@ function EventMarketRow({
 
   return (
     <div
-      className="col-span-full grid grid-cols-subgrid items-center gap-x-4 py-3"
+      className="col-span-full grid grid-cols-subgrid items-center gap-x-3 py-2"
       style={{
         borderTop: isLast ? undefined : '1px solid var(--color-border-subtle)',
       }}
@@ -252,7 +238,7 @@ function EventMarketRow({
         </div>
       </div>
 
-      <div className="flex min-w-0 flex-col gap-3">
+      <div className="flex min-w-0 flex-col gap-2">
         <OutcomeProbabilityBar outcomes={probabilityItems} />
         <OutcomeButtons
           outcomes={outcomeButtons}

@@ -250,6 +250,8 @@
       "weather": "Weather",
       "elections": "Elections"
     },
+    "favorite": "Save market",
+    "unfavorite": "Remove from saved",
     "searchPlaceholder": "Search markets…",
     "loadingMore": "Loading more markets…",
     "allLoaded": "All markets loaded",
@@ -304,7 +306,9 @@
   },
   "events": {
     "marketCount_one": "{{count}} market",
-    "marketCount_other": "{{count}} markets"
+    "marketCount_other": "{{count}} markets",
+    "moreMarkets_one": "+{{count}} more",
+    "moreMarkets_other": "+{{count}} more"
   },
   "eventDetail": {
     "back": "Back to markets",

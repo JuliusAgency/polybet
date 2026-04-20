@@ -9,6 +9,7 @@ import {
   type OutcomeProbabilityBarItem,
 } from '@/shared/ui/OutcomeProbabilityBar';
 import { MarketThumbnail } from '@/shared/ui/MarketThumbnail';
+import { BookmarkButton } from '@/shared/ui/BookmarkButton';
 import { MARKETS_STALE_THRESHOLD_MS } from '@/shared/config/markets';
 import { useTicker } from '@/shared/hooks/useTicker';
 import { formatVolume } from '@/shared/utils';
@@ -83,25 +84,25 @@ export const MarketCard = ({
 
   return (
     <article
-      className="flex flex-col gap-4 p-4"
+      className="flex flex-col gap-3 p-3"
       style={{
         backgroundColor: 'var(--color-bg-surface)',
         border: '1px solid var(--color-border)',
         borderRadius: 'var(--radius-lg)',
       }}
     >
-      {/* Header: thumb + title + meta + description (same structure as EventCard). */}
+      {/* Header: thumb + title + meta (same structure as EventCard). */}
       {linkToEvent && market.event_id ? (
         <Link
           to={`/events/${market.event_id}`}
           aria-label={t('eventDetail.open', { defaultValue: 'Open event details' })}
-          className="-mx-1 -mt-1 flex items-start gap-3 rounded-md p-1 transition-opacity hover:opacity-90"
+          className="-mx-1 -mt-1 flex items-start gap-2.5 rounded-md p-1 transition-opacity hover:opacity-90"
           style={{ transitionDuration: 'var(--duration-fast)' }}
         >
           <MarketCardHeaderContent market={market} volumeLabel={volumeLabel} />
         </Link>
       ) : (
-        <header className="flex items-start gap-3">
+        <header className="flex items-start gap-2.5">
           <MarketCardHeaderContent market={market} volumeLabel={volumeLabel} />
         </header>
       )}
@@ -136,11 +137,11 @@ export const MarketCard = ({
       )}
 
       {/* Probability strip + outcome CTAs */}
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2">
         <OutcomeProbabilityBar outcomes={probabilityItems} />
         <OutcomeButtons
           outcomes={outcomeButtons}
-          size="lg"
+          size="sm"
           disabled={!isInteractive}
           showPercentage={false}
           onClick={
@@ -188,6 +189,7 @@ export const MarketCard = ({
               ⚠
             </span>
           )}
+          <BookmarkButton marketId={market.id} />
           {market.polymarket_id && (
             <button
               type="button"
@@ -269,25 +271,21 @@ interface MarketCardHeaderContentProps {
 
 function MarketCardHeaderContent({ market, volumeLabel }: MarketCardHeaderContentProps) {
   const { t } = useTranslation();
-  // Individual markets don't carry their own description — the parent event
-  // does. Fall back to the event description so a solo market card mirrors
-  // the EventCard layout exactly.
-  const description = market.event?.description ?? null;
   const category = market.category ?? market.event?.category ?? null;
 
   return (
     <>
-      <MarketThumbnail src={market.image_url} title={market.question} id={market.id} size="lg" />
+      <MarketThumbnail src={market.image_url} title={market.question} id={market.id} size="md" />
       <div className="min-w-0 flex-1">
         <h3
-          className="text-base font-semibold leading-snug"
+          className="line-clamp-2 text-sm font-semibold leading-snug"
           style={{ color: 'var(--color-text-primary)', fontFamily: 'var(--font-sans)' }}
         >
           {market.question}
         </h3>
         {(category || volumeLabel) && (
           <div
-            className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] font-medium uppercase tracking-wide"
+            className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] font-medium uppercase tracking-wide"
             style={{ color: 'var(--color-text-muted)' }}
           >
             {category && <span>{category}</span>}
@@ -295,14 +293,6 @@ function MarketCardHeaderContent({ market, volumeLabel }: MarketCardHeaderConten
               <span className="font-mono">{t('markets.volumeShort', { value: volumeLabel })}</span>
             )}
           </div>
-        )}
-        {description && (
-          <p
-            className="mt-2 line-clamp-2 text-xs leading-relaxed"
-            style={{ color: 'var(--color-text-secondary)' }}
-          >
-            {description}
-          </p>
         )}
       </div>
     </>

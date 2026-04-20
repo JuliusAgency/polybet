@@ -250,6 +250,8 @@
       "weather": "מזג אוויר",
       "elections": "בחירות"
     },
+    "favorite": "שמור שוק",
+    "unfavorite": "הסר מהשמורים",
     "searchPlaceholder": "חיפוש שווקים…",
     "loadingMore": "טוען עוד שווקים…",
     "allLoaded": "כל השווקים נטענו",
@@ -304,7 +306,9 @@
   },
   "events": {
     "marketCount_one": "שוק {{count}}",
-    "marketCount_other": "{{count}} שווקים"
+    "marketCount_other": "{{count}} שווקים",
+    "moreMarkets_one": "+{{count}} נוסף",
+    "moreMarkets_other": "+{{count}} נוספים"
   },
   "eventDetail": {
     "back": "חזרה לשווקים",

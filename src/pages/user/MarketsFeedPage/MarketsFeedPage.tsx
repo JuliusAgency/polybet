@@ -199,7 +199,7 @@ const MarketsFeedPage = () => {
 
       {/* Feed grid: events grouped + standalone markets */}
       {!isLoading && !isError && feedItems.length > 0 && (
-        <div className="columns-1 gap-4 md:columns-2 lg:columns-3">
+        <div className="columns-1 gap-3 md:columns-2 lg:columns-3 xl:columns-4">
           {feedItems.map((item) => {
             const card =
               item.type === 'event' ? (
@@ -225,7 +225,7 @@ const MarketsFeedPage = () => {
             return (
               <div
                 key={item.key}
-                className="mb-4 break-inside-avoid"
+                className="mb-3 break-inside-avoid"
                 style={{
                   contentVisibility: 'auto',
                   containIntrinsicSize: 'auto 500px',
