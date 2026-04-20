@@ -10,10 +10,10 @@ export const UnseenBadge = ({ count }: UnseenBadgeProps) => {
       className=""
       style={{
         position: 'absolute',
-        top: '-2px',
-        insetInlineEnd: '-4px',
-        width: '7px',
-        height: '7px',
+        top: '2px',
+        insetInlineEnd: '-6px',
+        width: '6px',
+        height: '6px',
         borderRadius: '50%',
         backgroundColor: 'var(--color-loss)',
         pointerEvents: 'none',

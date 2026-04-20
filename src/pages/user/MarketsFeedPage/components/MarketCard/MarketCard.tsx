@@ -81,7 +81,7 @@ export const MarketCard = ({
 
   return (
     <article
-      className="flex h-full min-h-[256px] flex-col gap-3 p-3 sm:p-4"
+      className="flex h-full flex-col gap-3 p-3"
       style={{
         backgroundColor: 'var(--color-bg-surface)',
         border: '1px solid var(--color-border)',
@@ -134,10 +134,10 @@ export const MarketCard = ({
       )}
 
       {/* Outcome CTAs — Polymarket style with big % and hover-shows-percentage buttons */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         {yesPct && (
           <span
-            className="shrink-0 text-xl font-bold tabular-nums"
+            className="shrink-0 text-base font-bold tabular-nums"
             style={{ color: 'var(--color-text-primary)' }}
           >
             {yesPct}
@@ -193,7 +193,7 @@ export const MarketCard = ({
         </div>
 
         <div className="flex items-center gap-1">
-          {isStale && (
+          {showRefreshAction && isStale && (
             <span title={t('markets.syncedStale')} style={{ color: 'var(--color-loss)' }}>
               ⚠
             </span>

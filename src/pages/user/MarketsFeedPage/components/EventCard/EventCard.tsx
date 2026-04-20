@@ -49,7 +49,7 @@ export const EventCard = ({
 
   return (
     <article
-      className="flex h-full min-h-[256px] flex-col gap-3 p-3 sm:p-4"
+      className="flex h-full flex-col gap-3 p-3"
       style={{
         backgroundColor: 'var(--color-bg-surface)',
         border: '1px solid var(--color-border)',
@@ -184,7 +184,7 @@ function EventMarketRow({
         </span>
       )}
 
-      <div className="relative z-10 w-[168px] shrink-0">
+      <div className="relative z-10 w-[128px] shrink-0">
         <OutcomeButtons
           outcomes={outcomeButtons}
           size="sm"
