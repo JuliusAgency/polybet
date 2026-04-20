@@ -8,6 +8,7 @@ import { Badge } from '@/shared/ui/Badge';
 import { supabase } from '@/shared/api/supabase';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { Spinner } from '@/shared/ui/Spinner';
+import { UnseenBadge } from '@/shared/ui/UnseenBadge';
 
 const CopyIdCell = ({ id }: { id: string }) => {
   const [copied, setCopied] = useState(false);
@@ -154,7 +155,7 @@ const MyBetsPage = () => {
   const pnl = totalWon - totalWagered;
 
   return (
-    <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--color-bg-base)' }}>
+    <div>
       <h1 className="mb-6 text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
         {t('myBets.title')}
       </h1>
@@ -178,21 +179,10 @@ const MyBetsPage = () => {
               outline: 'none',
             }}
           >
-            {tab.label}
-            {tab.key === 'resolved' && unseenCount > 0 && (
-              <span
-                style={{
-                  position: 'absolute',
-                  top: '-2px',
-                  insetInlineEnd: '-4px',
-                  width: '7px',
-                  height: '7px',
-                  borderRadius: '50%',
-                  backgroundColor: 'var(--color-loss)',
-                  pointerEvents: 'none',
-                }}
-              />
-            )}
+            <span className="relative inline-block">
+              {tab.label}
+              {tab.key === 'resolved' && <UnseenBadge count={unseenCount} />}
+            </span>
           </button>
         ))}
       </div>

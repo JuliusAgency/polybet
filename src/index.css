@@ -13,13 +13,13 @@
 html {
   background-color: var(--color-bg-base);
   color: var(--color-text-primary);
-  font-family: var(--font-latin);
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 html[lang='he'] {
-  font-family: var(--font-hebrew);
+  font-family: var(--font-sans);
   direction: rtl;
 }
 

@@ -7,7 +7,8 @@ interface EventUserActivityProps {
 }
 
 export const EventUserActivity = ({ markets, bets }: EventUserActivityProps) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isHebrew = i18n.language === 'he';
   const marketIds = new Set(markets.map((m) => m.id));
   const relevant = bets.filter((b) => marketIds.has(b.market_id));
   if (relevant.length === 0) return null;
@@ -28,7 +29,7 @@ export const EventUserActivity = ({ markets, bets }: EventUserActivityProps) => 
       }}
     >
       <h2
-        className="text-sm font-semibold uppercase tracking-wide"
+        className={`text-sm font-semibold ${isHebrew ? '' : 'uppercase tracking-wide'}`}
         style={{ color: 'var(--color-accent)' }}
       >
         {t('eventDetail.yourActivity', { defaultValue: 'Your activity on this event' })}
@@ -40,27 +41,42 @@ export const EventUserActivity = ({ markets, bets }: EventUserActivityProps) => 
         <Stat
           label={t('eventDetail.betsCount', { defaultValue: 'Bets' })}
           value={relevant.length.toString()}
+          isHebrew={isHebrew}
         />
         <Stat
           label={t('eventDetail.totalStake', { defaultValue: 'Total stake' })}
           value={totalStake.toFixed(2)}
+          isHebrew={isHebrew}
         />
         <Stat
           label={t('eventDetail.openBets', { defaultValue: 'Open' })}
           value={openCount.toString()}
+          isHebrew={isHebrew}
         />
         <Stat
           label={t('eventDetail.potentialPayout', { defaultValue: 'Potential payout' })}
           value={openPotential.toFixed(2)}
+          isHebrew={isHebrew}
         />
       </dl>
     </section>
   );
 };
 
-const Stat = ({ label, value }: { label: string; value: string }) => (
+const Stat = ({
+  label,
+  value,
+  isHebrew,
+}: {
+  label: string;
+  value: string;
+  isHebrew: boolean;
+}) => (
   <div>
-    <dt className="text-[11px] uppercase" style={{ color: 'var(--color-text-secondary)' }}>
+    <dt
+      className={`text-[11px] ${isHebrew ? '' : 'uppercase'}`}
+      style={{ color: 'var(--color-text-secondary)' }}
+    >
       {label}
     </dt>
     <dd className="mt-0.5 font-mono text-base">{value}</dd>

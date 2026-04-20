@@ -72,7 +72,7 @@ const WalletPage = () => {
   }, [userId, queryClient]);
 
   return (
-    <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--color-bg-base)' }}>
+    <div>
       {/* Page title */}
       <h1 className="mb-6 text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
         {t('wallet.title')}

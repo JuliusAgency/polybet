@@ -18,6 +18,8 @@ interface MarketCardProps {
   onArchive?: (market: Market) => void;
   isArchiving?: boolean;
   linkToEvent?: boolean;
+  showRefreshAction?: boolean;
+  showCloseDate?: boolean;
 }
 
 function formatClosesDate(iso: string | null, locale: string): string | null {
@@ -37,8 +39,11 @@ export const MarketCard = ({
   onArchive,
   isArchiving = false,
   linkToEvent = true,
+  showRefreshAction = true,
+  showCloseDate = true,
 }: MarketCardProps) => {
   const { t, i18n } = useTranslation();
+  const isHebrew = i18n.language === 'he';
   const { isRefreshing, lastResult, refresh } = useMarketRefresh(
     market.polymarket_id ? [market.polymarket_id] : [],
     false
@@ -76,7 +81,7 @@ export const MarketCard = ({
 
   return (
     <article
-      className="flex flex-col gap-3 p-3"
+      className="flex h-full min-h-[256px] flex-col gap-3 p-3 sm:p-4"
       style={{
         backgroundColor: 'var(--color-bg-surface)',
         border: '1px solid var(--color-border)',
@@ -159,11 +164,11 @@ export const MarketCard = ({
 
       {/* Footer: metadata as icons + compact text */}
       <footer
-        className="flex items-center justify-between gap-3 text-xs"
+        className="mt-auto flex items-center justify-between gap-3 text-xs"
         style={{ color: 'var(--color-text-secondary)' }}
       >
         <div className="flex items-center gap-3">
-          {closesDate && (
+          {showCloseDate && closesDate && (
             <span className="font-mono">
               {effectiveStatus === 'open' ? t('markets.closesAt') : t('markets.closedAt')}{' '}
               {closesDate}
@@ -171,7 +176,9 @@ export const MarketCard = ({
           )}
           {statusLabel && (
             <span
-              className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                isHebrew ? '' : 'uppercase tracking-wide'
+              }`}
               style={{
                 backgroundColor: `color-mix(in oklch, var(--color-${effectiveStatus === 'resolved' ? 'resolved' : 'text-secondary'}) 14%, transparent)`,
                 color:
@@ -192,7 +199,7 @@ export const MarketCard = ({
             </span>
           )}
           <BookmarkButton marketId={market.id} />
-          {market.polymarket_id && (
+          {showRefreshAction && market.polymarket_id && (
             <button
               type="button"
               onClick={() => void refresh()}
@@ -272,7 +279,8 @@ interface MarketCardHeaderContentProps {
 }
 
 function MarketCardHeaderContent({ market, volumeLabel }: MarketCardHeaderContentProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isHebrew = i18n.language === 'he';
   const category = market.category ?? market.event?.category ?? null;
 
   return (
@@ -287,7 +295,9 @@ function MarketCardHeaderContent({ market, volumeLabel }: MarketCardHeaderConten
         </h3>
         {(category || volumeLabel) && (
           <div
-            className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] font-medium uppercase tracking-wide"
+            className={`mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] font-medium ${
+              isHebrew ? '' : 'uppercase tracking-wide'
+            }`}
             style={{ color: 'var(--color-text-muted)' }}
           >
             {category && <span>{category}</span>}

@@ -21,7 +21,8 @@ export const EventMarketRow = ({
   onOutcomeClick,
   isFirst = false,
 }: EventMarketRowProps) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isHebrew = i18n.language === 'he';
 
   const isExpired = market.close_at != null && new Date(market.close_at).getTime() <= Date.now();
   const effectiveStatus = isExpired && market.status === 'open' ? 'closed' : market.status;
@@ -86,7 +87,9 @@ export const EventMarketRow = ({
           )}
           {statusLabel && (
             <span
-              className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                isHebrew ? '' : 'uppercase tracking-wide'
+              }`}
               style={{
                 backgroundColor: `color-mix(in oklch, var(--color-${effectiveStatus === 'resolved' ? 'resolved' : 'text-secondary'}) 14%, transparent)`,
                 color:

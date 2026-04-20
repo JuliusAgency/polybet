@@ -1,24 +1,25 @@
 /*
  * Typography:
- *   UI/body: Geist Sans (Vercel, SIL OFL)
+ *   UI/body Latin: Geist Sans (Vercel, SIL OFL)
+ *   UI/body Hebrew: Heebo
  *   Numbers/odds/volume: Geist Mono
- *   Hebrew fallback: system Hebrew stack (Arial Hebrew / Noto Sans Hebrew) — Geist does not cover Hebrew
+ *   Hebrew fallback: Noto Sans Hebrew / Arial Hebrew
  */
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Heebo:wght@400;500;600;700;800&display=swap');
 
 :root {
-  --font-sans:
-    'Geist', 'Noto Sans Hebrew', 'Arial Hebrew', system-ui, -apple-system, sans-serif;
+  --font-latin: 'Geist', system-ui, -apple-system, sans-serif;
+  --font-hebrew: 'Heebo', 'Noto Sans Hebrew', 'Arial Hebrew', system-ui, -apple-system,
+    sans-serif;
+  --font-sans: var(--font-latin);
   --font-mono:
     'Geist Mono', 'SF Mono', 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
-
-  /* Back-compat aliases — some legacy code references these */
-  --font-latin: var(--font-sans);
-  --font-hebrew: var(--font-sans);
 }
 
-:root,
-:root:not([lang='he']),
 :root[lang='he'] {
-  font-family: var(--font-sans);
+  --font-sans: var(--font-hebrew);
+}
+
+:root:not([lang='he']) {
+  --font-sans: var(--font-latin);
 }

@@ -39,7 +39,7 @@ const EventDetailPage = () => {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-[50vh] items-center justify-center">
         <Spinner size="lg" />
       </div>
     );
@@ -47,7 +47,7 @@ const EventDetailPage = () => {
 
   if (isError || !eventData) {
     return (
-      <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--color-bg-base)' }}>
+      <div>
         <BackLink />
         <p className="mt-4 text-sm" style={{ color: 'var(--color-loss)' }}>
           {t('eventDetail.loadError', {
@@ -71,16 +71,19 @@ const EventDetailPage = () => {
     : null;
 
   const isSingleMarket = markets.length === 1;
+  const isHebrew = i18n.language === 'he';
 
   return (
-    <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--color-bg-base)' }}>
+    <div>
       <BackLink />
 
       <header className="mt-4 flex items-start gap-4">
         <MarketThumbnail src={event.image_url} title={event.title} id={event.id} size="lg" />
         <div className="min-w-0 flex-1">
           <div
-            className="mb-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-medium uppercase tracking-wide"
+            className={`mb-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-medium ${
+              isHebrew ? '' : 'uppercase tracking-wide'
+            }`}
             style={{ color: 'var(--color-text-muted)' }}
           >
             {event.category && <span>{event.category}</span>}

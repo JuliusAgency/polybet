@@ -18,15 +18,6 @@ interface EventCardProps {
   onOutcomeClick?: (market: Market, outcome: MarketOutcome) => void;
 }
 
-function formatClosesDate(iso: string | null, locale: string): string | null {
-  if (!iso) return null;
-  return new Date(iso).toLocaleDateString(locale === 'he' ? 'he-IL' : undefined, {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-}
-
 export const EventCard = ({
   event,
   markets,
@@ -35,9 +26,9 @@ export const EventCard = ({
   onOutcomeClick,
 }: EventCardProps) => {
   const { t, i18n } = useTranslation();
+  const isHebrew = i18n.language === 'he';
   const detailPath = `/events/${event.id}`;
 
-  const closesDate = formatClosesDate(event.close_at, i18n.language);
   const volumeLabel = formatVolume(event.volume ?? null);
   const betByMarketId = new Map((bets ?? []).map((b) => [b.market_id, b]));
 
@@ -52,15 +43,13 @@ export const EventCard = ({
       : null;
 
   const visibleMarkets = markets.slice(0, VISIBLE_MARKET_LIMIT);
-  const hiddenMarketCount = Math.max(0, markets.length - VISIBLE_MARKET_LIMIT);
   // Pick the most liquid market as the bookmark anchor (same rule
   // the feed uses to pick the primary market for an event).
-  const primaryMarket =
-    markets.find((m) => (m.volume ?? 0) > 0) ?? markets[0] ?? null;
+  const primaryMarket = markets.find((m) => (m.volume ?? 0) > 0) ?? markets[0] ?? null;
 
   return (
     <article
-      className="flex flex-col gap-3 p-3"
+      className="flex h-full min-h-[256px] flex-col gap-3 p-3 sm:p-4"
       style={{
         backgroundColor: 'var(--color-bg-surface)',
         border: '1px solid var(--color-border)',
@@ -87,7 +76,7 @@ export const EventCard = ({
       </Link>
 
       {/* Market rows */}
-      <div className="flex flex-col">
+      <div className="flex flex-1 flex-col">
         {visibleMarkets.map((market) => (
           <EventMarketRow
             key={market.id}
@@ -102,34 +91,18 @@ export const EventCard = ({
 
       {/* Footer: meta + bookmark */}
       <footer
-        className="flex items-center justify-between gap-3 text-xs"
+        className="mt-auto flex items-center justify-between gap-3 text-xs"
         style={{ color: 'var(--color-text-secondary)' }}
       >
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           {volumeLabel && (
             <span className="font-mono">{t('markets.volumeShort', { value: volumeLabel })}</span>
           )}
-          {closesDate && (
-            <span className="font-mono">
-              {eventEffectiveStatus === 'open' ? t('markets.closesAt') : t('markets.closedAt')}{' '}
-              {closesDate}
-            </span>
-          )}
-          {hiddenMarketCount > 0 && (
-            <Link
-              to={detailPath}
-              className="font-medium transition-opacity hover:opacity-80"
-              style={{ color: 'var(--color-accent)' }}
-            >
-              {t('events.moreMarkets', {
-                count: hiddenMarketCount,
-                defaultValue: '+{{count}} more',
-              })}
-            </Link>
-          )}
           {statusLabel && (
             <span
-              className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                isHebrew ? '' : 'uppercase tracking-wide'
+              }`}
               style={{
                 backgroundColor: `color-mix(in oklch, var(--color-${eventEffectiveStatus === 'resolved' ? 'resolved' : 'text-secondary'}) 14%, transparent)`,
                 color:
@@ -186,17 +159,21 @@ function EventMarketRow({
   const yesPct = yesOutcome?.price != null ? `${Math.round(yesOutcome.price * 100)}%` : null;
 
   return (
-    <div className="flex items-center gap-3 py-1.5">
+    <div className="relative flex items-center gap-3 py-1.5">
+      {/* Full-row click target — covers label, pct, and whitespace */}
       <Link
         to={detailPath}
-        className="min-w-0 flex-1 truncate text-sm font-medium transition-opacity hover:opacity-80"
-        style={{
-          color: 'var(--color-text-primary)',
-          transitionDuration: 'var(--duration-fast)',
-        }}
+        aria-label={label}
+        className="absolute inset-0 rounded transition-opacity hover:opacity-80"
+        style={{ transitionDuration: 'var(--duration-fast)' }}
+      />
+
+      <span
+        className="min-w-0 flex-1 line-clamp-2 text-sm font-medium leading-snug"
+        style={{ color: 'var(--color-text-primary)' }}
       >
         {label}
-      </Link>
+      </span>
 
       {yesPct && (
         <span
@@ -207,7 +184,7 @@ function EventMarketRow({
         </span>
       )}
 
-      <div className="w-[140px] shrink-0">
+      <div className="relative z-10 w-[168px] shrink-0">
         <OutcomeButtons
           outcomes={outcomeButtons}
           size="sm"
@@ -227,7 +204,7 @@ function EventMarketRow({
 
       {userBet && (
         <span
-          className="shrink-0 text-[11px]"
+          className="relative z-10 shrink-0 text-[11px]"
           style={{ color: 'var(--color-accent)' }}
           title={`${t('markets.yourBet')}: ${userBet.market_outcomes?.name ?? '—'}`}
         >

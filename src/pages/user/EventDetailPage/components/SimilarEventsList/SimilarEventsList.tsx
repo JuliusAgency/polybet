@@ -10,7 +10,8 @@ interface SimilarEventsListProps {
 }
 
 export const SimilarEventsList = ({ events, isLoading = false }: SimilarEventsListProps) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isHebrew = i18n.language === 'he';
 
   if (!isLoading && events.length === 0) return null;
 
@@ -64,7 +65,7 @@ export const SimilarEventsList = ({ events, isLoading = false }: SimilarEventsLi
                     >
                       {e.tag_label && (
                         <span
-                          className="rounded px-1.5 py-0.5 uppercase"
+                          className={`rounded px-1.5 py-0.5 ${isHebrew ? '' : 'uppercase'}`}
                           style={{
                             backgroundColor: 'var(--color-bg-elevated)',
                             color: 'var(--color-text-secondary)',
@@ -73,7 +74,7 @@ export const SimilarEventsList = ({ events, isLoading = false }: SimilarEventsLi
                           {e.tag_label}
                         </span>
                       )}
-                      {e.category && <span className="uppercase">{e.category}</span>}
+                      {e.category && <span className={isHebrew ? '' : 'uppercase'}>{e.category}</span>}
                       {vol && (
                         <span className="font-mono">
                           {t('markets.volumeShort', { value: vol })}

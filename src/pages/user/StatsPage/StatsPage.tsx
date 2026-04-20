@@ -9,7 +9,7 @@ const StatsPage = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--color-bg-base)' }}>
+      <div>
         <div className="flex justify-center py-12">
           <Spinner size="md" />
         </div>
@@ -19,7 +19,7 @@ const StatsPage = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--color-bg-base)' }}>
+      <div>
         <p style={{ color: 'var(--color-error)' }}>{error.message}</p>
       </div>
     );
@@ -39,7 +39,7 @@ const StatsPage = () => {
   ];
 
   return (
-    <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--color-bg-base)' }}>
+    <div>
       <h1 className="mb-6 text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
         {t('stats.title')}
       </h1>

@@ -1,8 +1,8 @@
 import type { Market, MarketEvent } from './useMarkets';
 
 /**
- * A feed item is either a single standalone market (event_id is null or only child of its event)
- * or an event with multiple child markets rendered as a grouped card.
+ * A feed item is either a standalone market (event_id is null)
+ * or an event with one or more child markets rendered as a grouped card.
  */
 export type FeedItem =
   | { type: 'market'; key: string; market: Market }
@@ -14,8 +14,8 @@ export type FeedItem =
  * Preserves the input order (which is cursor-sorted by markets.created_at DESC in useMarkets),
  * so the first occurrence of an event_id fixes the event's position in the feed.
  *
- * An event is rendered as a grouped card only when ≥ 2 child markets are in the feed.
- * A lone child is rendered as a standalone market card (same UX as pre-hierarchy markets).
+ * Any market with a parent event renders through the event card, even if only one child market
+ * is currently visible in the feed. Only truly standalone markets remain market cards.
  */
 export function groupMarketsByEvent(markets: Market[]): FeedItem[] {
   const eventBuckets = new Map<string, { event: MarketEvent; markets: Market[]; order: number }>();
@@ -41,16 +41,10 @@ export function groupMarketsByEvent(markets: Market[]): FeedItem[] {
   const items: Array<{ order: number; item: FeedItem }> = [];
 
   for (const { event, markets: children, order } of eventBuckets.values()) {
-    if (children.length >= 2) {
-      items.push({
-        order,
-        item: { type: 'event', key: `event:${event.id}`, event, markets: children },
-      });
-    } else {
-      for (const m of children) {
-        items.push({ order, item: { type: 'market', key: `market:${m.id}`, market: m } });
-      }
-    }
+    items.push({
+      order,
+      item: { type: 'event', key: `event:${event.id}`, event, markets: children },
+    });
   }
 
   for (const entry of standaloneOrder) {

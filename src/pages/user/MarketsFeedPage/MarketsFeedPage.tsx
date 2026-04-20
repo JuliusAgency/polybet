@@ -88,7 +88,7 @@ const MarketsFeedPage = () => {
   const feedItems = groupMarketsByEvent(visibleMarkets);
 
   return (
-    <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--color-bg-base)' }}>
+    <div>
       {/* Header */}
       <h1 className="mb-6 text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
         {t('markets.title')}
@@ -181,7 +181,7 @@ const MarketsFeedPage = () => {
       </div>
 
       {/* Loading state — initial load */}
-      {isLoading && <CardGridSkeleton count={4} />}
+      {isLoading && <CardGridSkeleton count={6} />}
 
       {/* Error state */}
       {isError && (
@@ -199,7 +199,7 @@ const MarketsFeedPage = () => {
 
       {/* Feed grid: events grouped + standalone markets */}
       {!isLoading && !isError && feedItems.length > 0 && (
-        <div className="columns-1 gap-3 md:columns-2 lg:columns-3 xl:columns-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {feedItems.map((item) => {
             const card =
               item.type === 'event' ? (
@@ -219,16 +219,18 @@ const MarketsFeedPage = () => {
                       ? 'interactive'
                       : 'readonly'
                   }
+                  showRefreshAction={false}
+                  showCloseDate={false}
                   onOutcomeClick={handleOutcomeClick}
                 />
               );
             return (
               <div
                 key={item.key}
-                className="mb-3 break-inside-avoid"
+                className="h-full"
                 style={{
                   contentVisibility: 'auto',
-                  containIntrinsicSize: 'auto 500px',
+                  containIntrinsicSize: 'auto 260px',
                 }}
               >
                 {card}
