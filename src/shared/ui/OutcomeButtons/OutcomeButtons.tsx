@@ -19,7 +19,7 @@ export interface OutcomeButton {
   isWinner?: boolean;
 }
 
-type ButtonSize = 'sm' | 'lg';
+type ButtonSize = 'sm' | 'lg' | 'xl';
 
 interface OutcomeButtonsProps {
   outcomes: OutcomeButton[];
@@ -38,6 +38,12 @@ interface OutcomeButtonsProps {
 
 const SIZE_STYLES: Record<ButtonSize, { padY: string; padX: string; name: string; odds: string }> =
   {
+    xl: {
+      padY: 'py-3',
+      padX: 'px-4',
+      name: 'text-sm font-semibold',
+      odds: 'text-sm font-mono font-semibold',
+    },
     lg: {
       padY: 'py-2',
       padX: 'px-3',

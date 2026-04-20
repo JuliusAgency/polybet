@@ -105,10 +105,10 @@ export const EventCard = ({
 
       {/* Body: single market → big buttons; multi → compact rows */}
       {singleMarket ? (
-        <div className="flex items-center gap-3">
+        <div className="flex min-h-20 items-center gap-3">
           {singleYesPct && (
             <span
-              className="shrink-0 text-base font-bold tabular-nums"
+              className="shrink-0 text-lg font-bold tabular-nums"
               style={{ color: 'var(--color-text-primary)' }}
             >
               {singleYesPct}
@@ -117,7 +117,7 @@ export const EventCard = ({
           <div className="min-w-0 flex-1">
             <OutcomeButtons
               outcomes={singleOutcomeButtons}
-              size="sm"
+              size="xl"
               disabled={!singleIsInteractive}
               showPercentage={false}
               hoverShowsPercentage

@@ -134,10 +134,10 @@ export const MarketCard = ({
       )}
 
       {/* Outcome CTAs — Polymarket style with big % and hover-shows-percentage buttons */}
-      <div className="flex items-center gap-3">
+      <div className="flex min-h-20 items-center gap-3">
         {yesPct && (
           <span
-            className="shrink-0 text-base font-bold tabular-nums"
+            className="shrink-0 text-lg font-bold tabular-nums"
             style={{ color: 'var(--color-text-primary)' }}
           >
             {yesPct}
@@ -146,7 +146,7 @@ export const MarketCard = ({
         <div className="min-w-0 flex-1">
           <OutcomeButtons
             outcomes={outcomeButtons}
-            size="sm"
+            size="xl"
             disabled={!isInteractive}
             showPercentage={false}
             hoverShowsPercentage
