@@ -102,7 +102,7 @@ export const EventMarketRow = ({
       </div>
 
       {yesPct && (
-        <div className="shrink-0 text-center">
+        <div className="shrink-0 ps-4 pe-6 text-center">
           <div
             className="text-lg font-bold tabular-nums"
             style={{ color: 'var(--color-text-primary)' }}
@@ -112,7 +112,7 @@ export const EventMarketRow = ({
         </div>
       )}
 
-      <div className="w-[220px] shrink-0">
+      <div className="w-[320px] shrink-0">
         <OutcomeButtons
           outcomes={outcomeButtons}
           size="sm"

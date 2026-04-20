@@ -4,10 +4,6 @@ import type { Market, MarketOutcome, MyBet } from '@/features/bet';
 import { useMarketRefresh } from '@/features/bet';
 import { Badge } from '@/shared/ui/Badge';
 import { OutcomeButtons, type OutcomeButton } from '@/shared/ui/OutcomeButtons';
-import {
-  OutcomeProbabilityBar,
-  type OutcomeProbabilityBarItem,
-} from '@/shared/ui/OutcomeProbabilityBar';
 import { MarketThumbnail } from '@/shared/ui/MarketThumbnail';
 import { BookmarkButton } from '@/shared/ui/BookmarkButton';
 import { MARKETS_STALE_THRESHOLD_MS } from '@/shared/config/markets';
@@ -68,12 +64,8 @@ export const MarketCard = ({
     isWinner: winnerOutcome?.id === o.id,
   }));
 
-  const probabilityItems: OutcomeProbabilityBarItem[] = market.market_outcomes.map((o) => ({
-    id: o.id,
-    name: o.name,
-    price: o.price,
-    isWinner: winnerOutcome?.id === o.id,
-  }));
+  const yesOutcome = market.market_outcomes[0];
+  const yesPct = yesOutcome?.price != null ? `${Math.round(yesOutcome.price * 100)}%` : null;
 
   const volumeLabel = formatVolume(market.volume ?? null);
   const closesDate = formatClosesDate(market.close_at, i18n.language);
@@ -136,23 +128,33 @@ export const MarketCard = ({
         </div>
       )}
 
-      {/* Probability strip + outcome CTAs */}
-      <div className="flex flex-col gap-2">
-        <OutcomeProbabilityBar outcomes={probabilityItems} />
-        <OutcomeButtons
-          outcomes={outcomeButtons}
-          size="sm"
-          disabled={!isInteractive}
-          showPercentage={false}
-          onClick={
-            isInteractive && onOutcomeClick
-              ? (outcomeId) => {
-                  const outcome = market.market_outcomes.find((o) => o.id === outcomeId);
-                  if (outcome) onOutcomeClick(market, outcome);
-                }
-              : undefined
-          }
-        />
+      {/* Outcome CTAs — Polymarket style with big % and hover-shows-percentage buttons */}
+      <div className="flex items-center gap-4">
+        {yesPct && (
+          <span
+            className="shrink-0 text-xl font-bold tabular-nums"
+            style={{ color: 'var(--color-text-primary)' }}
+          >
+            {yesPct}
+          </span>
+        )}
+        <div className="min-w-0 flex-1">
+          <OutcomeButtons
+            outcomes={outcomeButtons}
+            size="sm"
+            disabled={!isInteractive}
+            showPercentage={false}
+            hoverShowsPercentage
+            onClick={
+              isInteractive && onOutcomeClick
+                ? (outcomeId) => {
+                    const outcome = market.market_outcomes.find((o) => o.id === outcomeId);
+                    if (outcome) onOutcomeClick(market, outcome);
+                  }
+                : undefined
+            }
+          />
+        </div>
       </div>
 
       {/* Footer: metadata as icons + compact text */}

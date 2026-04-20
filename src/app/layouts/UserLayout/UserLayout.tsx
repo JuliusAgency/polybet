@@ -46,8 +46,10 @@ export const UserLayout = () => {
                   }`
                 }
               >
-                {t('nav.myBets')}
-                <UnseenBadge count={unseenCount} />
+                <span className="relative inline-block">
+                  {t('nav.myBets')}
+                  <UnseenBadge count={unseenCount} />
+                </span>
               </NavLink>
               <NavLink
                 to={ROUTES.USER.WALLET}
@@ -78,12 +80,10 @@ export const UserLayout = () => {
 
           {/* Right: balance + sign out */}
           <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-400">
-              {profile?.username ?? ''}
-            </span>
+            <span className="text-sm text-gray-400">{profile?.username ?? ''}</span>
             {balance != null && (
               <span className="text-sm font-mono font-semibold text-green-400">
-                {(balance.available).toFixed(2)}
+                {balance.available.toFixed(2)}
               </span>
             )}
             <button
