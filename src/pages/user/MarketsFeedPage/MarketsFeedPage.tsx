@@ -199,7 +199,7 @@ const MarketsFeedPage = () => {
 
       {/* Feed grid: events grouped + standalone markets */}
       {!isLoading && !isError && feedItems.length > 0 && (
-        <div className="grid auto-rows-fr grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {feedItems.map((item) => {
             const card =
               item.type === 'event' ? (
@@ -227,7 +227,6 @@ const MarketsFeedPage = () => {
             return (
               <div
                 key={item.key}
-                className="h-full"
                 style={{
                   contentVisibility: 'auto',
                   containIntrinsicSize: 'auto 260px',

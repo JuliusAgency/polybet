@@ -46,10 +46,38 @@ export const EventCard = ({
   // Pick the most liquid market as the bookmark anchor (same rule
   // the feed uses to pick the primary market for an event).
   const primaryMarket = markets.find((m) => (m.volume ?? 0) > 0) ?? markets[0] ?? null;
+  const isSingle = visibleMarkets.length === 1;
+  const singleMarket = isSingle ? visibleMarkets[0] : null;
+
+  const singleIsExpired =
+    singleMarket?.close_at != null && new Date(singleMarket.close_at).getTime() <= Date.now();
+  const singleEffectiveStatus =
+    singleMarket && singleIsExpired && singleMarket.status === 'open'
+      ? 'closed'
+      : (singleMarket?.status ?? null);
+  const singleIsInteractive =
+    !!singleMarket &&
+    mode === 'interactive' &&
+    singleEffectiveStatus === 'open' &&
+    !singleIsExpired;
+  const singleWinner = singleMarket?.winning_outcome_id
+    ? (singleMarket.market_outcomes.find((o) => o.id === singleMarket.winning_outcome_id) ?? null)
+    : null;
+  const singleOutcomeButtons: OutcomeButton[] = singleMarket
+    ? singleMarket.market_outcomes.map((o) => ({
+        id: o.id,
+        name: o.name,
+        price: o.price,
+        effectiveOdds: o.effective_odds,
+        isWinner: singleWinner?.id === o.id,
+      }))
+    : [];
+  const singleYes = singleMarket?.market_outcomes[0];
+  const singleYesPct = singleYes?.price != null ? `${Math.round(singleYes.price * 100)}%` : null;
 
   return (
     <article
-      className="flex h-full flex-col gap-3 p-3"
+      className="flex flex-col gap-3 p-3"
       style={{
         backgroundColor: 'var(--color-bg-surface)',
         border: '1px solid var(--color-border)',
@@ -75,23 +103,53 @@ export const EventCard = ({
         </div>
       </Link>
 
-      {/* Market rows */}
-      <div className="flex flex-1 flex-col">
-        {visibleMarkets.map((market) => (
-          <EventMarketRow
-            key={market.id}
-            market={market}
-            userBet={betByMarketId.get(market.id)}
-            mode={mode}
-            onOutcomeClick={onOutcomeClick}
-            detailPath={detailPath}
-          />
-        ))}
-      </div>
+      {/* Body: single market → big buttons; multi → compact rows */}
+      {singleMarket ? (
+        <div className="flex items-center gap-3">
+          {singleYesPct && (
+            <span
+              className="shrink-0 text-base font-bold tabular-nums"
+              style={{ color: 'var(--color-text-primary)' }}
+            >
+              {singleYesPct}
+            </span>
+          )}
+          <div className="min-w-0 flex-1">
+            <OutcomeButtons
+              outcomes={singleOutcomeButtons}
+              size="sm"
+              disabled={!singleIsInteractive}
+              showPercentage={false}
+              hoverShowsPercentage
+              onClick={
+                singleIsInteractive && onOutcomeClick
+                  ? (outcomeId) => {
+                      const outcome = singleMarket.market_outcomes.find((o) => o.id === outcomeId);
+                      if (outcome) onOutcomeClick(singleMarket, outcome);
+                    }
+                  : undefined
+              }
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col">
+          {visibleMarkets.map((market) => (
+            <EventMarketRow
+              key={market.id}
+              market={market}
+              userBet={betByMarketId.get(market.id)}
+              mode={mode}
+              onOutcomeClick={onOutcomeClick}
+              detailPath={detailPath}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Footer: meta + bookmark */}
       <footer
-        className="mt-auto flex items-center justify-between gap-3 text-xs"
+        className="flex items-center justify-between gap-3 text-xs"
         style={{ color: 'var(--color-text-secondary)' }}
       >
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">

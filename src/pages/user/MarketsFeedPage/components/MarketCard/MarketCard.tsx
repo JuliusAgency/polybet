@@ -81,14 +81,14 @@ export const MarketCard = ({
 
   return (
     <article
-      className="flex h-full flex-col gap-3 p-3"
+      className="flex flex-col gap-3 p-3"
       style={{
         backgroundColor: 'var(--color-bg-surface)',
         border: '1px solid var(--color-border)',
         borderRadius: 'var(--radius-lg)',
       }}
     >
-      {/* Header: thumb + title + meta (same structure as EventCard). */}
+      {/* Header: thumb + title + category (volume moved to footer). */}
       {linkToEvent && market.event_id ? (
         <Link
           to={`/events/${market.event_id}`}
@@ -96,11 +96,11 @@ export const MarketCard = ({
           className="-mx-1 -mt-1 flex items-start gap-2.5 rounded-md p-1 transition-opacity hover:opacity-90"
           style={{ transitionDuration: 'var(--duration-fast)' }}
         >
-          <MarketCardHeaderContent market={market} volumeLabel={volumeLabel} />
+          <MarketCardHeaderContent market={market} />
         </Link>
       ) : (
         <header className="flex items-start gap-2.5">
-          <MarketCardHeaderContent market={market} volumeLabel={volumeLabel} />
+          <MarketCardHeaderContent market={market} />
         </header>
       )}
 
@@ -164,10 +164,13 @@ export const MarketCard = ({
 
       {/* Footer: metadata as icons + compact text */}
       <footer
-        className="mt-auto flex items-center justify-between gap-3 text-xs"
+        className="flex items-center justify-between gap-3 text-xs"
         style={{ color: 'var(--color-text-secondary)' }}
       >
         <div className="flex items-center gap-3">
+          {volumeLabel && (
+            <span className="font-mono">{t('markets.volumeShort', { value: volumeLabel })}</span>
+          )}
           {showCloseDate && closesDate && (
             <span className="font-mono">
               {effectiveStatus === 'open' ? t('markets.closesAt') : t('markets.closedAt')}{' '}
@@ -275,11 +278,10 @@ export const MarketCard = ({
 
 interface MarketCardHeaderContentProps {
   market: Market;
-  volumeLabel: string | null;
 }
 
-function MarketCardHeaderContent({ market, volumeLabel }: MarketCardHeaderContentProps) {
-  const { t, i18n } = useTranslation();
+function MarketCardHeaderContent({ market }: MarketCardHeaderContentProps) {
+  const { i18n } = useTranslation();
   const isHebrew = i18n.language === 'he';
   const category = market.category ?? market.event?.category ?? null;
 
@@ -293,17 +295,14 @@ function MarketCardHeaderContent({ market, volumeLabel }: MarketCardHeaderConten
         >
           {market.question}
         </h3>
-        {(category || volumeLabel) && (
+        {category && (
           <div
             className={`mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] font-medium ${
               isHebrew ? '' : 'uppercase tracking-wide'
             }`}
             style={{ color: 'var(--color-text-muted)' }}
           >
-            {category && <span>{category}</span>}
-            {volumeLabel && (
-              <span className="font-mono">{t('markets.volumeShort', { value: volumeLabel })}</span>
-            )}
+            <span>{category}</span>
           </div>
         )}
       </div>
