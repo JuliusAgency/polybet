@@ -35,6 +35,8 @@ export interface MarketEvent {
   close_at: string | null;
   status: 'open' | 'closed' | 'resolved' | 'archived';
   volume?: number | null;
+  tag_slug: string | null;
+  tag_label: string | null;
 }
 
 export interface Market {
@@ -49,6 +51,7 @@ export interface Market {
   last_synced_at: string | null;
   created_at: string;
   volume?: number | null;
+  sort_volume?: number | null;
   event_id: string | null;
   group_label: string | null;
   event: MarketEvent | null;
@@ -56,6 +59,7 @@ export interface Market {
 }
 
 interface Cursor {
+  lastSortVolume: number;
   lastCreatedAt: string;
   lastId: string;
 }
@@ -63,10 +67,11 @@ interface Cursor {
 export function useMarkets(
   statusFilter: MarketStatusFilter = 'all',
   searchQuery = '',
-  categoryFilter: string | null = null
+  categoryFilter: string | null = null,
+  tagSlugFilter: string | null = null
 ) {
   const queryClient = useQueryClient();
-  const queryKey = ['markets', statusFilter, searchQuery, categoryFilter] as const;
+  const queryKey = ['markets', statusFilter, searchQuery, categoryFilter, tagSlugFilter] as const;
 
   const result = useInfiniteQuery<
     Market[],
@@ -79,16 +84,31 @@ export function useMarkets(
     initialPageParam: undefined,
     staleTime: 5 * 60 * 1000,
     queryFn: async ({ pageParam }) => {
+      // When filtering by tag we need an inner join on events so the eq()
+      // applies as a SQL-level filter (not a post-fetch client trim). The
+      // default left join keeps standalone legacy markets visible.
+      const eventJoin = tagSlugFilter
+        ? 'event:event_id!inner(id, title, description, category, image_url, close_at, status, volume, tag_slug, tag_label)'
+        : 'event:event_id(id, title, description, category, image_url, close_at, status, volume, tag_slug, tag_label)';
+
       let query = supabase
         .from('markets')
         .select(
-          'id, polymarket_id, question, status, winning_outcome_id, category, image_url, close_at, last_synced_at, created_at, volume, event_id, group_label, event:event_id(id, title, description, category, image_url, close_at, status, volume), market_outcomes!market_outcomes_market_id_fkey(id, name, price, odds, effective_odds, updated_at, polymarket_token_id)'
+          `id, polymarket_id, question, status, winning_outcome_id, category, image_url, close_at, last_synced_at, created_at, volume, sort_volume, event_id, group_label, ${eventJoin}, market_outcomes!market_outcomes_market_id_fkey(id, name, price, odds, effective_odds, updated_at, polymarket_token_id)`
         )
         .eq('is_visible', true);
 
       // For 'all' the IN covers the full status domain, which tricks the planner
       // into a Seq Scan. Skip the predicate so it walks idx_markets_visible_feed.
-      if (statusFilter !== 'all') {
+      // For 'open'/'closed' we also align with the UI's effectiveStatus rule:
+      // a market with status='open' but close_at in the past renders as closed.
+      if (statusFilter === 'open') {
+        const nowIso = new Date().toISOString();
+        query = query.eq('status', 'open').or(`close_at.is.null,close_at.gt.${nowIso}`);
+      } else if (statusFilter === 'closed') {
+        const nowIso = new Date().toISOString();
+        query = query.or(`status.eq.closed,and(status.eq.open,close_at.lte.${nowIso})`);
+      } else if (statusFilter !== 'all') {
         query = query.in('status', STATUS_MAP[statusFilter]);
       }
 
@@ -100,14 +120,24 @@ export function useMarkets(
         query = query.eq('category', categoryFilter);
       }
 
-      // Cursor: fetch rows after the last item of the previous page
+      if (tagSlugFilter) {
+        query = query.eq('event.tag_slug', tagSlugFilter);
+      }
+
+      // Cursor: fetch rows after the last item of the previous page.
+      // Sort key is (sort_volume DESC, created_at DESC, id DESC) — so "after"
+      // means strictly less on the compound key (keyset pagination).
       if (pageParam) {
+        const { lastSortVolume: v, lastCreatedAt: c, lastId: i } = pageParam;
         query = query.or(
-          `created_at.lt.${pageParam.lastCreatedAt},and(created_at.eq.${pageParam.lastCreatedAt},id.lt.${pageParam.lastId})`
+          `sort_volume.lt.${v},` +
+            `and(sort_volume.eq.${v},created_at.lt.${c}),` +
+            `and(sort_volume.eq.${v},created_at.eq.${c},id.lt.${i})`
         );
       }
 
       query = query
+        .order('sort_volume', { ascending: false })
         .order('created_at', { ascending: false })
         .order('id', { ascending: false })
         .limit(MARKETS_PAGE_LIMIT);
@@ -127,7 +157,11 @@ export function useMarkets(
     getNextPageParam: (lastPage): Cursor | undefined => {
       if (lastPage.length < MARKETS_PAGE_LIMIT) return undefined;
       const last = lastPage[lastPage.length - 1];
-      return { lastCreatedAt: last.created_at, lastId: last.id };
+      return {
+        lastSortVolume: last.sort_volume ?? 0,
+        lastCreatedAt: last.created_at,
+        lastId: last.id,
+      };
     },
   });
 

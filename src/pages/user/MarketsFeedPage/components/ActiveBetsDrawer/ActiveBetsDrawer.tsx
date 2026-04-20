@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMyBets } from '@/features/bet';
 import { Spinner } from '@/shared/ui/Spinner';
@@ -89,74 +90,97 @@ export const ActiveBetsDrawer = ({ isOpen, onClose }: ActiveBetsDrawerProps) => 
 
           {!isLoading && openBets.length > 0 && (
             <div className="flex flex-col gap-3">
-              {openBets.map((bet) => (
-                <div
-                  key={bet.id}
-                  className="rounded-lg p-3"
-                  style={{
-                    backgroundColor: 'var(--color-bg-surface)',
-                    border: '1px solid var(--color-border)',
-                  }}
-                >
-                  {/* Market question */}
-                  <p
-                    className="mb-2 text-sm font-medium"
-                    style={{ color: 'var(--color-text-primary)' }}
-                  >
-                    {bet.markets?.question ?? '—'}
-                  </p>
+              {openBets.map((bet) => {
+                const eventId = bet.markets?.event_id ?? null;
+                const cardStyle = {
+                  backgroundColor: 'var(--color-bg-surface)',
+                  border: '1px solid var(--color-border)',
+                  color: 'inherit',
+                  textDecoration: 'none',
+                  display: 'block',
+                } as const;
+                const cardContent = (
+                  <>
+                    {/* Market question */}
+                    <p
+                      className="mb-2 text-sm font-medium"
+                      style={{ color: 'var(--color-text-primary)' }}
+                    >
+                      {bet.markets?.question ?? '—'}
+                    </p>
 
-                  {/* Outcome */}
-                  <p className="mb-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-                    {bet.market_outcomes?.name ?? '—'}
-                  </p>
+                    {/* Outcome */}
+                    <p className="mb-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                      {bet.market_outcomes?.name ?? '—'}
+                    </p>
 
-                  {/* Stake / Odds / Payout row */}
-                  <div className="flex flex-wrap gap-x-4 gap-y-1">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                        {t('myBets.wager')}
-                      </span>
-                      <span
-                        className="font-mono text-xs font-semibold"
-                        style={{ color: 'var(--color-text-primary)' }}
-                      >
-                        {bet.stake.toFixed(2)}
-                      </span>
+                    {/* Stake / Odds / Payout row */}
+                    <div className="flex flex-wrap gap-x-4 gap-y-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                          {t('myBets.wager')}
+                        </span>
+                        <span
+                          className="font-mono text-xs font-semibold"
+                          style={{ color: 'var(--color-text-primary)' }}
+                        >
+                          {bet.stake.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                          @
+                        </span>
+                        <span
+                          className="font-mono text-xs font-semibold"
+                          style={{ color: 'var(--color-accent)' }}
+                        >
+                          {bet.locked_odds.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                          {t('myBets.potentialPayout')}
+                        </span>
+                        <span
+                          className="font-mono text-xs font-semibold"
+                          style={{ color: 'var(--color-win)' }}
+                        >
+                          {bet.potential_payout.toFixed(2)}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                        @
-                      </span>
-                      <span
-                        className="font-mono text-xs font-semibold"
-                        style={{ color: 'var(--color-accent)' }}
-                      >
-                        {bet.locked_odds.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                        {t('myBets.potentialPayout')}
-                      </span>
-                      <span
-                        className="font-mono text-xs font-semibold"
-                        style={{ color: 'var(--color-win)' }}
-                      >
-                        {bet.potential_payout.toFixed(2)}
-                      </span>
-                    </div>
+
+                    {/* Placed at */}
+                    <p className="mt-2 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                      {new Date(bet.placed_at).toLocaleString(i18n.language, {
+                        dateStyle: 'short',
+                        timeStyle: 'short',
+                      })}
+                    </p>
+                  </>
+                );
+
+                if (eventId) {
+                  return (
+                    <Link
+                      key={bet.id}
+                      to={`/events/${eventId}`}
+                      onClick={onClose}
+                      className="rounded-lg p-3 transition-colors hover:brightness-110"
+                      style={cardStyle}
+                    >
+                      {cardContent}
+                    </Link>
+                  );
+                }
+
+                return (
+                  <div key={bet.id} className="rounded-lg p-3" style={cardStyle}>
+                    {cardContent}
                   </div>
-
-                  {/* Placed at */}
-                  <p className="mt-2 text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                    {new Date(bet.placed_at).toLocaleString(i18n.language, {
-                      dateStyle: 'short',
-                      timeStyle: 'short',
-                    })}
-                  </p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

@@ -1,0 +1,93 @@
+/*
+ * Trending chip — keeps the chip silhouette in the row but shifts hue toward
+ * cyan (still inside the blue family) and adds a slow ambient pulse + subtle
+ * accent glow so the eye is drawn without breaking the dark/blue palette.
+ *
+ * No gradient text, no gradient borders, no left-stripe — all palette
+ * movement is through solid tokens and layered box-shadow.
+ */
+
+.trending-chip {
+  --trending-hue: color-mix(in oklch, var(--color-accent) 70%, oklch(78% 0.14 205));
+
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.125rem 0.7rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  isolation: isolate;
+
+  color: color-mix(in srgb, var(--trending-hue) 78%, var(--color-text-primary));
+  background-color: color-mix(in srgb, var(--trending-hue) 8%, var(--color-bg-elevated));
+  border: 1px solid color-mix(in srgb, var(--trending-hue) 35%, var(--color-border));
+  box-shadow:
+    0 0 0 0 color-mix(in srgb, var(--trending-hue) 0%, transparent),
+    inset 0 0 0 0 color-mix(in srgb, var(--trending-hue) 0%, transparent);
+
+  transition:
+    background-color 180ms cubic-bezier(0.33, 1, 0.68, 1),
+    border-color 180ms cubic-bezier(0.33, 1, 0.68, 1),
+    color 180ms cubic-bezier(0.33, 1, 0.68, 1),
+    transform 180ms cubic-bezier(0.33, 1, 0.68, 1),
+    box-shadow 220ms cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+.trending-chip:hover {
+  background-color: color-mix(in srgb, var(--trending-hue) 14%, var(--color-bg-elevated));
+  border-color: color-mix(in srgb, var(--trending-hue) 55%, var(--color-border));
+  color: color-mix(in srgb, var(--trending-hue) 92%, var(--color-text-primary));
+  transform: translateY(-0.5px);
+  box-shadow:
+    0 0 14px -4px color-mix(in srgb, var(--trending-hue) 45%, transparent),
+    inset 0 0 0 0 transparent;
+}
+
+.trending-chip:active {
+  transform: translateY(0);
+}
+
+.trending-chip--active {
+  color: var(--color-bg-base);
+  background-color: var(--trending-hue);
+  border-color: var(--trending-hue);
+  box-shadow:
+    0 0 18px -2px color-mix(in srgb, var(--trending-hue) 55%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, white 22%, transparent);
+}
+
+.trending-chip--active:hover {
+  background-color: var(--trending-hue);
+  color: var(--color-bg-base);
+  transform: translateY(-0.5px);
+}
+
+.trending-chip__flame {
+  flex-shrink: 0;
+  transform-origin: 50% 80%;
+  animation: trending-chip-flicker 2.8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+@keyframes trending-chip-flicker {
+  0%,   100% { transform: scale(1);    opacity: 1;   }
+  35%        { transform: scale(1.08); opacity: 0.88; }
+  55%        { transform: scale(0.96); opacity: 1;   }
+  75%        { transform: scale(1.04); opacity: 0.92; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trending-chip__flame {
+    animation: none;
+  }
+  .trending-chip,
+  .trending-chip:hover,
+  .trending-chip--active:hover {
+    transform: none;
+    transition-duration: 0ms;
+  }
+}

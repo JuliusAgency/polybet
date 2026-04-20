@@ -6,6 +6,9 @@ export type { FeedItem } from './groupMarketsByEvent';
 
 export { useMarketCategories } from './useMarketCategories';
 
+export { useAllowedCategoryTags } from './useAllowedCategoryTags';
+export type { AllowedCategoryTag } from './useAllowedCategoryTags';
+
 export { useUserBalance } from './useUserBalance';
 export type { UserBalance } from './useUserBalance';
 

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/shared/api/supabase';
-import { getPriceHistoryRange, type PriceHistoryWindow } from './priceHistoryBucket';
+import { invokeSupabaseFunction } from '@/shared/api/supabase';
+import type { PriceHistoryWindow } from './priceHistoryBucket';
 
 export interface PriceHistoryPoint {
   outcome_id: string;
@@ -8,10 +8,8 @@ export interface PriceHistoryPoint {
   price: number;
 }
 
-interface RpcRow {
-  outcome_id: string;
-  bucket_ts: string;
-  price: number | string;
+interface FunctionResponse {
+  points?: Array<{ outcome_id: string; bucket_ts: string; price: number | string }>;
 }
 
 export function usePriceHistory(
@@ -25,15 +23,16 @@ export function usePriceHistory(
     staleTime: 30_000,
     queryFn: async () => {
       if (!marketId) return [];
-      const { since, until, bucket } = getPriceHistoryRange(window);
-      const { data, error } = await supabase.rpc('get_market_price_history', {
-        p_market_id: marketId,
-        p_since: since.toISOString(),
-        p_until: until.toISOString(),
-        p_bucket: bucket,
-      });
-      if (error) throw new Error(error.message);
-      return (data ?? []).map((row: RpcRow) => ({
+      const { data, error } = await invokeSupabaseFunction<FunctionResponse>(
+        'market-price-history',
+        { body: { market_id: marketId, window } }
+      );
+      if (error) {
+        const message = error instanceof Error ? error.message : 'Failed to load price history';
+        throw new Error(message);
+      }
+      const rows = data?.points ?? [];
+      return rows.map((row) => ({
         outcome_id: row.outcome_id,
         bucket_ts: row.bucket_ts,
         price: typeof row.price === 'string' ? Number(row.price) : row.price,

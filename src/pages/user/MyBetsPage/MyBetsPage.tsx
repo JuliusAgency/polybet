@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -236,7 +237,17 @@ const MyBetsPage = () => {
                         <CopyIdCell id={bet.id} />
                       </td>
                       <td className="px-4 py-3" style={{ color: 'var(--color-text-primary)' }}>
-                        <div>{bet.markets?.question ?? '—'}</div>
+                        {bet.markets?.event_id ? (
+                          <Link
+                            to={`/events/${bet.markets.event_id}`}
+                            className="hover:underline"
+                            style={{ color: 'inherit', textDecoration: 'none' }}
+                          >
+                            {bet.markets?.question ?? '—'}
+                          </Link>
+                        ) : (
+                          <div>{bet.markets?.question ?? '—'}</div>
+                        )}
                         {renderBetMarketMeta(t, bet) && (
                           <div
                             className="text-xs mt-1"
@@ -332,7 +343,17 @@ const MyBetsPage = () => {
                         <CopyIdCell id={bet.id} />
                       </td>
                       <td className="px-4 py-3" style={{ color: 'var(--color-text-primary)' }}>
-                        <div>{bet.markets?.question ?? '—'}</div>
+                        {bet.markets?.event_id ? (
+                          <Link
+                            to={`/events/${bet.markets.event_id}`}
+                            className="hover:underline"
+                            style={{ color: 'inherit', textDecoration: 'none' }}
+                          >
+                            {bet.markets?.question ?? '—'}
+                          </Link>
+                        ) : (
+                          <div>{bet.markets?.question ?? '—'}</div>
+                        )}
                         {renderBetMarketMeta(t, bet) && (
                           <div
                             className="text-xs mt-1"

@@ -7,10 +7,10 @@ interface StatusFilterProps {
 }
 
 const OPTIONS: { key: MarketStatusFilter; i18nKey: string }[] = [
-  { key: 'all', i18nKey: 'markets.filterAll' },
   { key: 'open', i18nKey: 'markets.filterOpen' },
-  { key: 'closed', i18nKey: 'markets.filterClosed' },
   { key: 'resolved', i18nKey: 'markets.filterResolved' },
+  { key: 'closed', i18nKey: 'markets.filterClosed' },
+  { key: 'all', i18nKey: 'markets.filterAll' },
   { key: 'archived', i18nKey: 'markets.filterArchived' },
 ];
 

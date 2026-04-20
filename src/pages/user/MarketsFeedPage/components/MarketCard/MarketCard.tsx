@@ -90,7 +90,7 @@ export const MarketCard = ({
         borderRadius: 'var(--radius-lg)',
       }}
     >
-      {/* Header: thumb + title (clickable if linked to an event) */}
+      {/* Header: thumb + title + meta + description (same structure as EventCard). */}
       {linkToEvent && market.event_id ? (
         <Link
           to={`/events/${market.event_id}`}
@@ -98,55 +98,11 @@ export const MarketCard = ({
           className="-mx-1 -mt-1 flex items-start gap-3 rounded-md p-1 transition-opacity hover:opacity-90"
           style={{ transitionDuration: 'var(--duration-fast)' }}
         >
-          <MarketThumbnail
-            src={market.image_url}
-            title={market.question}
-            id={market.id}
-            size="lg"
-          />
-
-          <div className="min-w-0 flex-1">
-            <h3
-              className="text-[15px] font-semibold leading-snug"
-              style={{ color: 'var(--color-text-primary)', fontFamily: 'var(--font-sans)' }}
-            >
-              {market.question}
-            </h3>
-            {market.category && (
-              <p
-                className="mt-1 text-xs font-medium uppercase tracking-wide"
-                style={{ color: 'var(--color-text-muted)' }}
-              >
-                {market.category}
-              </p>
-            )}
-          </div>
+          <MarketCardHeaderContent market={market} volumeLabel={volumeLabel} />
         </Link>
       ) : (
         <header className="flex items-start gap-3">
-          <MarketThumbnail
-            src={market.image_url}
-            title={market.question}
-            id={market.id}
-            size="lg"
-          />
-
-          <div className="min-w-0 flex-1">
-            <h3
-              className="text-[15px] font-semibold leading-snug"
-              style={{ color: 'var(--color-text-primary)', fontFamily: 'var(--font-sans)' }}
-            >
-              {market.question}
-            </h3>
-            {market.category && (
-              <p
-                className="mt-1 text-xs font-medium uppercase tracking-wide"
-                style={{ color: 'var(--color-text-muted)' }}
-              >
-                {market.category}
-              </p>
-            )}
-          </div>
+          <MarketCardHeaderContent market={market} volumeLabel={volumeLabel} />
         </header>
       )}
 
@@ -204,11 +160,6 @@ export const MarketCard = ({
         style={{ color: 'var(--color-text-secondary)' }}
       >
         <div className="flex items-center gap-3">
-          {volumeLabel && (
-            <span className="font-mono" title={t('markets.volume')}>
-              {t('markets.volumeShort', { value: volumeLabel })}
-            </span>
-          )}
           {closesDate && (
             <span className="font-mono">
               {effectiveStatus === 'open' ? t('markets.closesAt') : t('markets.closedAt')}{' '}
@@ -310,3 +261,50 @@ export const MarketCard = ({
     </article>
   );
 };
+
+interface MarketCardHeaderContentProps {
+  market: Market;
+  volumeLabel: string | null;
+}
+
+function MarketCardHeaderContent({ market, volumeLabel }: MarketCardHeaderContentProps) {
+  const { t } = useTranslation();
+  // Individual markets don't carry their own description — the parent event
+  // does. Fall back to the event description so a solo market card mirrors
+  // the EventCard layout exactly.
+  const description = market.event?.description ?? null;
+  const category = market.category ?? market.event?.category ?? null;
+
+  return (
+    <>
+      <MarketThumbnail src={market.image_url} title={market.question} id={market.id} size="lg" />
+      <div className="min-w-0 flex-1">
+        <h3
+          className="text-base font-semibold leading-snug"
+          style={{ color: 'var(--color-text-primary)', fontFamily: 'var(--font-sans)' }}
+        >
+          {market.question}
+        </h3>
+        {(category || volumeLabel) && (
+          <div
+            className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] font-medium uppercase tracking-wide"
+            style={{ color: 'var(--color-text-muted)' }}
+          >
+            {category && <span>{category}</span>}
+            {volumeLabel && (
+              <span className="font-mono">{t('markets.volumeShort', { value: volumeLabel })}</span>
+            )}
+          </div>
+        )}
+        {description && (
+          <p
+            className="mt-2 line-clamp-2 text-xs leading-relaxed"
+            style={{ color: 'var(--color-text-secondary)' }}
+          >
+            {description}
+          </p>
+        )}
+      </div>
+    </>
+  );
+}

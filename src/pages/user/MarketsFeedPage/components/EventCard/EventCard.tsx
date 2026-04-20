@@ -10,7 +10,7 @@ import {
 import { MarketThumbnail } from '@/shared/ui/MarketThumbnail';
 import { formatVolume } from '@/shared/utils';
 
-const COLLAPSED_LIMIT = 6;
+const COLLAPSED_LIMIT = 3;
 
 interface EventCardProps {
   event: MarketEvent;
@@ -109,7 +109,7 @@ export const EventCard = ({
       </Link>
 
       {/* Market rows */}
-      <div className="flex flex-col">
+      <div className="grid grid-cols-[fit-content(60%)_1fr]">
         {visibleMarkets.map((market, idx) => (
           <EventMarketRow
             key={market.id}
@@ -220,7 +220,7 @@ function EventMarketRow({
 
   return (
     <div
-      className="grid grid-cols-[minmax(0,1fr)_minmax(0,300px)] items-center gap-4 py-3"
+      className="col-span-full grid grid-cols-subgrid items-center gap-x-4 py-3"
       style={{
         borderTop: isLast ? undefined : '1px solid var(--color-border-subtle)',
       }}
@@ -228,7 +228,7 @@ function EventMarketRow({
       <div className="min-w-0">
         <Link
           to={detailPath}
-          className="block truncate text-sm font-medium transition-opacity hover:opacity-80"
+          className="block text-sm font-medium leading-snug transition-opacity hover:opacity-80"
           style={{
             color: 'var(--color-text-primary)',
             transitionDuration: 'var(--duration-fast)',

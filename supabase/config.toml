@@ -380,6 +380,9 @@ verify_jwt = false
 [functions.refresh-markets]
 verify_jwt = false
 
+[functions.market-price-history]
+verify_jwt = false
+
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 

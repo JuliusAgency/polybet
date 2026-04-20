@@ -4,7 +4,7 @@ import {
   useMarkets,
   useUserBalance,
   useMyBets,
-  useMarketCategories,
+  useAllowedCategoryTags,
   groupMarketsByEvent,
 } from '@/features/bet';
 import type { Market, MarketOutcome, MarketStatusFilter } from '@/features/bet';
@@ -18,7 +18,7 @@ import { EventCard } from './components/EventCard';
 import { BalanceWidget } from './components/BalanceWidget';
 import { ActiveBetsDrawer } from './components/ActiveBetsDrawer';
 import { StatusFilter } from './components/StatusFilter';
-import { CategoryFilter } from './components/CategoryFilter';
+import { TagFilter } from './components/TagFilter';
 
 interface SelectedBet {
   market: Market;
@@ -27,16 +27,16 @@ interface SelectedBet {
 
 const MarketsFeedPage = () => {
   const { t } = useTranslation();
-  const [statusFilter, setStatusFilter] = useState<MarketStatusFilter>('all');
+  const [statusFilter, setStatusFilter] = useState<MarketStatusFilter>('open');
   const [searchQuery, setSearchQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [tagSlug, setTagSlug] = useState<string | null>('trending');
   const [myBetsOnly, setMyBetsOnly] = useState(false);
   const debouncedSearch = useDebounce(searchQuery, 300);
 
-  const { data: categories = [] } = useMarketCategories();
+  const { data: allowedTags = [] } = useAllowedCategoryTags();
 
   const { markets, isLoading, isError, error, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useMarkets(statusFilter, debouncedSearch, categoryFilter);
+    useMarkets(statusFilter, debouncedSearch, null, tagSlug);
 
   const { data: balance } = useUserBalance();
   const { data: bets } = useMyBets();
@@ -68,7 +68,23 @@ const MarketsFeedPage = () => {
 
   const userBetForMarket = (marketId: string) => (bets ?? []).find((b) => b.market_id === marketId);
 
-  const visibleMarkets = myBetsOnly ? markets.filter((m) => myBetMarketIds.has(m.id)) : markets;
+  // Mirror UI's effectiveStatus rule (see MarketCard/EventCard): a record counts
+  // as "open" only if its own status is open, its close_at is in the future, and —
+  // for markets attached to an event — the parent event is also effectively open.
+  const filteredByStatus =
+    statusFilter === 'open'
+      ? markets.filter((m) => {
+          if (!m.event) return true;
+          const ev = m.event;
+          if (ev.status !== 'open') return false;
+          if (ev.close_at != null && new Date(ev.close_at).getTime() <= Date.now()) return false;
+          return true;
+        })
+      : markets;
+
+  const visibleMarkets = myBetsOnly
+    ? filteredByStatus.filter((m) => myBetMarketIds.has(m.id))
+    : filteredByStatus;
   const feedItems = groupMarketsByEvent(visibleMarkets);
 
   return (
@@ -160,12 +176,8 @@ const MarketsFeedPage = () => {
             </div>
           </div>
         </div>
-        {/* Category filter — below status row */}
-        <CategoryFilter
-          value={categoryFilter}
-          onChange={setCategoryFilter}
-          categories={categories}
-        />
+        {/* Tag filter — curated popular categories from Polymarket */}
+        <TagFilter value={tagSlug} onChange={setTagSlug} tags={allowedTags} />
       </div>
 
       {/* Loading state — initial load */}
@@ -187,33 +199,40 @@ const MarketsFeedPage = () => {
 
       {/* Feed grid: events grouped + standalone markets */}
       {!isLoading && !isError && feedItems.length > 0 && (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="columns-1 gap-4 md:columns-2 lg:columns-3">
           {feedItems.map((item) => {
-            if (item.type === 'event') {
-              return (
+            const card =
+              item.type === 'event' ? (
                 <EventCard
-                  key={item.key}
                   event={item.event}
                   markets={item.markets}
                   bets={bets ?? []}
                   mode={item.event.status === 'archived' ? 'readonly' : 'interactive'}
                   onOutcomeClick={handleOutcomeClick}
                 />
+              ) : (
+                <MarketCard
+                  market={item.market}
+                  userBet={userBetForMarket(item.market.id)}
+                  mode={
+                    item.market.status === 'open' || item.market.status === 'closed'
+                      ? 'interactive'
+                      : 'readonly'
+                  }
+                  onOutcomeClick={handleOutcomeClick}
+                />
               );
-            }
-            const market = item.market;
             return (
-              <MarketCard
+              <div
                 key={item.key}
-                market={market}
-                userBet={userBetForMarket(market.id)}
-                mode={
-                  market.status === 'open' || market.status === 'closed'
-                    ? 'interactive'
-                    : 'readonly'
-                }
-                onOutcomeClick={handleOutcomeClick}
-              />
+                className="mb-4 break-inside-avoid"
+                style={{
+                  contentVisibility: 'auto',
+                  containIntrinsicSize: 'auto 500px',
+                }}
+              >
+                {card}
+              </div>
             );
           })}
         </div>

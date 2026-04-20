@@ -59,9 +59,20 @@ export const SimilarEventsList = ({ events, isLoading = false }: SimilarEventsLi
                       {e.title}
                     </p>
                     <div
-                      className="mt-1 flex items-center gap-2 text-[11px]"
+                      className="mt-1 flex flex-wrap items-center gap-2 text-[11px]"
                       style={{ color: 'var(--color-text-muted)' }}
                     >
+                      {e.tag_label && (
+                        <span
+                          className="rounded px-1.5 py-0.5 uppercase"
+                          style={{
+                            backgroundColor: 'var(--color-bg-elevated)',
+                            color: 'var(--color-text-secondary)',
+                          }}
+                        >
+                          {e.tag_label}
+                        </span>
+                      )}
                       {e.category && <span className="uppercase">{e.category}</span>}
                       {vol && (
                         <span className="font-mono">

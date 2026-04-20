@@ -25,10 +25,11 @@ const EventDetailPage = () => {
   const { data: eventData, isLoading, isError, error } = useEventById(id);
   const { data: bets = [] } = useMyBets();
   const { data: balance } = useUserBalance();
-  const { data: similar = [], isLoading: isSimilarLoading } = useSimilarEvents(
-    eventData?.event.category ?? null,
-    eventData?.event.id
-  );
+  const { data: similar = [], isLoading: isSimilarLoading } = useSimilarEvents({
+    eventId: eventData?.event.id,
+    tagSlug: eventData?.event.tag_slug ?? null,
+    category: eventData?.event.category ?? null,
+  });
 
   const [selectedBet, setSelectedBet] = useState<SelectedBet | null>(null);
 

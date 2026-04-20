@@ -1,12 +1,10 @@
 import { useQueries } from '@tanstack/react-query';
-import { supabase } from '@/shared/api/supabase';
-import { getPriceHistoryRange, type PriceHistoryWindow } from './priceHistoryBucket';
+import { invokeSupabaseFunction } from '@/shared/api/supabase';
+import type { PriceHistoryWindow } from './priceHistoryBucket';
 import type { PriceHistoryPoint } from './usePriceHistory';
 
-interface RpcRow {
-  outcome_id: string;
-  bucket_ts: string;
-  price: number | string;
+interface FunctionResponse {
+  points?: Array<{ outcome_id: string; bucket_ts: string; price: number | string }>;
 }
 
 export interface EventPriceHistoryResult {
@@ -17,7 +15,8 @@ export interface EventPriceHistoryResult {
 
 /**
  * Load price history for many markets in parallel (one query per market).
- * Uses the same RPC + bucketing as `usePriceHistory`, so cache keys are compatible.
+ * Uses the same edge function + cache keys as `usePriceHistory`, so cached
+ * data is shared across the single-market and multi-market charts.
  */
 export function useEventPriceHistory(
   marketIds: string[],
@@ -30,15 +29,16 @@ export function useEventPriceHistory(
       enabled: enabled && !!marketId,
       staleTime: 30_000,
       queryFn: async (): Promise<PriceHistoryPoint[]> => {
-        const { since, until, bucket } = getPriceHistoryRange(window);
-        const { data, error } = await supabase.rpc('get_market_price_history', {
-          p_market_id: marketId,
-          p_since: since.toISOString(),
-          p_until: until.toISOString(),
-          p_bucket: bucket,
-        });
-        if (error) throw new Error(error.message);
-        return (data ?? []).map((row: RpcRow) => ({
+        const { data, error } = await invokeSupabaseFunction<FunctionResponse>(
+          'market-price-history',
+          { body: { market_id: marketId, window } }
+        );
+        if (error) {
+          const message = error instanceof Error ? error.message : 'Failed to load price history';
+          throw new Error(message);
+        }
+        const rows = data?.points ?? [];
+        return rows.map((row) => ({
           outcome_id: row.outcome_id,
           bucket_ts: row.bucket_ts,
           price: typeof row.price === 'string' ? Number(row.price) : row.price,
