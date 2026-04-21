@@ -1,6 +1,5 @@
 import { PDFDocument, rgb, type PDFPage, type PDFFont } from 'npm:pdf-lib@1.17.1';
 import fontkit from 'npm:@pdf-lib/fontkit@1.1.1';
-import bidiFactory from 'npm:bidi-js@1.0.3';
 import type { ReportDocument, KpiRow } from './reportBuilders.ts';
 
 import { NOTO_SANS_HEBREW_B64 } from './hebrewFontB64.ts';
@@ -17,27 +16,12 @@ function loadHebrewFont(): ArrayBuffer {
   return _fontCache;
 }
 
-// ─── Bidi (UAX #9) visual-order transform ────────────────────────────────────
-//
-// pdf-lib draws glyphs left-to-right at the explicit (x, y) we give it and
-// does NOT apply the Unicode Bidirectional Algorithm — PDFs store text with
-// positional drawing, there is no BiDi pass at view time. So when we hand it
-// Hebrew text in logical order ("שלום"), it walks the code points left-to-
-// right and the result reads "םולש", which is backwards for a human.
-//
-// The fix is to compute the visual-ordered string ourselves via UAX #9 and
-// pass THAT to drawText. `bidi-js` is a small, zero-dep implementation.
-//
-// Fast path: if a string has no Hebrew at all (table cells with just numbers,
-// dates, ASCII usernames), skip the reorder — it is a no-op anyway but this
-// avoids loading the bidi state machine for thousands of cells.
-const _bidi = bidiFactory();
-const HEBREW_CHAR_RE = /[\u0590-\u05FF]/;
-
+// UAX #9 bidi reordering for RTL scripts. We pass logical-order Hebrew to
+// drawText directly; fontkit returns visual-order glyphs and pdf-lib draws
+// them LTR from (x, y). Pre-reordering here would double-reverse and render
+// Hebrew backwards. Kept as identity for call-site stability.
 function toVisual(text: string): string {
-  if (!text || !HEBREW_CHAR_RE.test(text)) return text;
-  const embeddingLevels = _bidi.getEmbeddingLevels(text, 'rtl');
-  return _bidi.getReorderedString(text, embeddingLevels);
+  return text;
 }
 
 // Wrap text into lines fitting maxWidth. Wraps at character level (handles long words).
