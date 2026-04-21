@@ -8,20 +8,19 @@
     <script>
       // Resolve theme before paint to avoid flash of wrong theme.
       // Mirror logic in ThemeProvider; keep the storage key in sync with
-      // THEME_STORAGE_KEY in src/shared/theme/const.ts.
+      // THEME_STORAGE_KEY and the default with THEME_DEFAULT in
+      // src/shared/theme/const.ts.
       (function () {
+        var theme = 'light';
         try {
           var stored = localStorage.getItem('polybet-theme');
-          var theme =
-            stored === 'light' || stored === 'dark'
-              ? stored
-              : 'dark';
-          if (theme === 'light') {
-            document.documentElement.setAttribute('data-theme', 'light');
+          if (stored === 'light' || stored === 'dark') {
+            theme = stored;
           }
         } catch (_e) {
-          // localStorage may be unavailable (private mode, SSR) — fall through to dark default.
+          // localStorage may be unavailable (private mode, sandbox) — fall through to default.
         }
+        document.documentElement.setAttribute('data-theme', theme);
       })();
     </script>
   </head>

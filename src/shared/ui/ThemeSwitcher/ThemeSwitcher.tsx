@@ -1,92 +1,132 @@
-import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/shared/hooks/useTheme';
-import type { ThemeName } from '@/shared/theme';
+
+const ICON_SIZE = 18;
 
 const SunIcon = () => (
-    <svg
-        width="12"
-        height="12"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-    >
-        <circle cx="12" cy="12" r="4" />
-        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
-    </svg>
+  <svg
+    width={ICON_SIZE}
+    height={ICON_SIZE}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <circle cx="12" cy="12" r="4" />
+    <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+  </svg>
 );
 
 const MoonIcon = () => (
-    <svg
-        width="12"
-        height="12"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-    >
-        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" />
-    </svg>
+  <svg
+    width={ICON_SIZE}
+    height={ICON_SIZE}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" />
+  </svg>
 );
 
-const ICONS: Record<ThemeName, ReactElement> = {
-    light: <SunIcon />,
-    dark: <MoonIcon />,
-};
-
 export const ThemeSwitcher = () => {
-    const { t } = useTranslation();
-    const { theme, setTheme } = useTheme();
+  const { t } = useTranslation();
+  const { theme, toggleTheme } = useTheme();
 
-    const options: Array<{ value: ThemeName; label: string }> = [
-        { value: 'dark', label: t('theme.dark') },
-        { value: 'light', label: t('theme.light') },
-    ];
+  const isLight = theme === 'light';
+  const nextLabel = isLight ? t('theme.switchToDark') : t('theme.switchToLight');
 
-    return (
-        <div
-            role="group"
-            aria-label={t('theme.label')}
-            className="flex overflow-hidden border"
-            style={{
-                borderColor: 'var(--color-border)',
-                borderRadius: 'var(--radius-sm)',
-            }}
-        >
-            {options.map((option) => {
-                const active = option.value === theme;
-                return (
-                    <button
-                        key={option.value}
-                        type="button"
-                        onClick={() => setTheme(option.value)}
-                        aria-pressed={active}
-                        aria-label={
-                            option.value === 'dark'
-                                ? t('theme.switchToDark')
-                                : t('theme.switchToLight')
-                        }
-                        className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium uppercase"
-                        style={{
-                            backgroundColor: active ? 'var(--color-accent)' : 'transparent',
-                            color: active
-                                ? 'var(--color-accent-contrast)'
-                                : 'var(--color-text-secondary)',
-                            transition: `background-color var(--transition-fast), color var(--transition-fast)`,
-                        }}
-                    >
-                        {ICONS[option.value]}
-                        <span>{option.label}</span>
-                    </button>
-                );
-            })}
-        </div>
-    );
+  return (
+    <>
+      <style>{`
+                .theme-switcher {
+                    position: relative;
+                    inline-size: 34px;
+                    block-size: 34px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    background-color: transparent;
+                    border: 1px solid var(--color-border);
+                    border-radius: var(--radius-full);
+                    color: var(--color-text-secondary);
+                    cursor: pointer;
+                    overflow: hidden;
+                    transition:
+                        background-color var(--duration-base) var(--ease-out-expo),
+                        color var(--duration-base) var(--ease-out-expo),
+                        border-color var(--duration-base) var(--ease-out-expo);
+                }
+                .theme-switcher:hover {
+                    color: var(--color-text-primary);
+                    background-color: var(--color-hover);
+                    border-color: var(--color-border-strong);
+                }
+                .theme-switcher:focus-visible {
+                    outline: none;
+                    box-shadow: 0 0 0 3px var(--color-focus-ring);
+                }
+
+                .theme-switcher__icon {
+                    position: absolute;
+                    inset: 0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition:
+                        opacity 260ms var(--ease-out-expo),
+                        transform 320ms var(--ease-out-expo);
+                    will-change: opacity, transform;
+                }
+
+                /* Dark theme: show moon, hide sun */
+                .theme-switcher[data-state='dark'] .theme-switcher__icon--sun {
+                    opacity: 0;
+                    transform: rotate(-90deg) scale(0.5);
+                }
+                .theme-switcher[data-state='dark'] .theme-switcher__icon--moon {
+                    opacity: 1;
+                    transform: rotate(0deg) scale(1);
+                }
+
+                /* Light theme: show sun, hide moon */
+                .theme-switcher[data-state='light'] .theme-switcher__icon--sun {
+                    opacity: 1;
+                    transform: rotate(0deg) scale(1);
+                }
+                .theme-switcher[data-state='light'] .theme-switcher__icon--moon {
+                    opacity: 0;
+                    transform: rotate(90deg) scale(0.5);
+                }
+
+                @media (prefers-reduced-motion: reduce) {
+                    .theme-switcher__icon {
+                        transition-duration: 1ms;
+                    }
+                }
+            `}</style>
+      <button
+        type="button"
+        onClick={toggleTheme}
+        className="theme-switcher"
+        data-state={theme}
+        aria-label={nextLabel}
+        title={nextLabel}
+      >
+        <span className="theme-switcher__icon theme-switcher__icon--sun">
+          <SunIcon />
+        </span>
+        <span className="theme-switcher__icon theme-switcher__icon--moon">
+          <MoonIcon />
+        </span>
+      </button>
+    </>
+  );
 };
