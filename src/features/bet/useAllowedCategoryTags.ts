@@ -8,20 +8,20 @@ export interface AllowedCategoryTag {
 }
 
 // Fallback whitelist — used when system_settings hasn't been seeded yet
-// (e.g. local DB running an older snapshot). Mirrors migration 053.
+// (e.g. local DB running an older snapshot). Mirrors migration 062 and
+// services/market-tracker/src/config.ts CATEGORY_WHITELIST.
 const FALLBACK_TAGS: AllowedCategoryTag[] = [
   { slug: 'trending', label: 'Trending', mode: 'featured' },
   { slug: 'politics', label: 'Politics', mode: 'tag' },
-  { slug: 'geopolitics', label: 'Geopolitics', mode: 'tag' },
+  { slug: 'world', label: 'World', mode: 'tag' },
   { slug: 'sports', label: 'Sports', mode: 'tag' },
+  { slug: 'trump', label: 'Trump', mode: 'tag' },
+  { slug: 'elections', label: 'Elections', mode: 'tag' },
   { slug: 'crypto', label: 'Crypto', mode: 'tag' },
+  { slug: 'tech', label: 'Tech', mode: 'tag' },
   { slug: 'finance', label: 'Finance', mode: 'tag' },
   { slug: 'culture', label: 'Culture', mode: 'tag' },
-  { slug: 'tech', label: 'Tech', mode: 'tag' },
   { slug: 'economy', label: 'Economy', mode: 'tag' },
-  { slug: 'mentions', label: 'Mentions', mode: 'tag' },
-  { slug: 'weather', label: 'Weather', mode: 'tag' },
-  { slug: 'elections', label: 'Elections', mode: 'tag' },
 ];
 
 /** Reads the curated category whitelist from system_settings. */

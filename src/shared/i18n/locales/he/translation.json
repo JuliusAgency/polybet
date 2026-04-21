@@ -239,16 +239,15 @@
     "tags": {
       "trending": "פופולרי",
       "politics": "פוליטיקה",
-      "geopolitics": "גאופוליטיקה",
+      "world": "עולם",
       "sports": "ספורט",
+      "trump": "טראמפ",
+      "elections": "בחירות",
       "crypto": "קריפטו",
+      "tech": "טכנולוגיה",
       "finance": "פיננסים",
       "culture": "תרבות",
-      "tech": "טכנולוגיה",
-      "economy": "כלכלה",
-      "mentions": "אזכורים",
-      "weather": "מזג אוויר",
-      "elections": "בחירות"
+      "economy": "כלכלה"
     },
     "favorite": "שמור שוק",
     "unfavorite": "הסר מהשמורים",

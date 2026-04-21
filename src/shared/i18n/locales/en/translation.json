@@ -239,16 +239,15 @@
     "tags": {
       "trending": "Trending",
       "politics": "Politics",
-      "geopolitics": "Geopolitics",
+      "world": "World",
       "sports": "Sports",
+      "trump": "Trump",
+      "elections": "Elections",
       "crypto": "Crypto",
+      "tech": "Tech",
       "finance": "Finance",
       "culture": "Culture",
-      "tech": "Tech",
-      "economy": "Economy",
-      "mentions": "Mentions",
-      "weather": "Weather",
-      "elections": "Elections"
+      "economy": "Economy"
     },
     "favorite": "Save market",
     "unfavorite": "Remove from saved",
