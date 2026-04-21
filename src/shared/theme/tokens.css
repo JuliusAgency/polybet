@@ -1,13 +1,15 @@
 /*
  * Design tokens — OKLCH palette, neutrals tinted toward brand hue 230 (electric blue).
- * Single dark theme. Depth comes from surface tinting and 1px borders — no glass, no glow.
+ * Two themes: dark (default, `:root`) and light (`[data-theme="light"]`).
+ * Depth comes from surface tinting and 1px borders — no glass, no glow.
+ * Rules followed (impeccable):
+ *   - OKLCH only.
+ *   - Chroma reduced near extreme lightness (light bg → tiny chroma on neutrals).
+ *   - Neutrals tinted toward brand hue 230 at chroma ~0.008 for subconscious cohesion.
+ *   - Accent deepened on light bg to preserve contrast against near-white surfaces.
  */
 :root {
-  /* --- Brand hue reference ---
-   * All neutrals carry a tiny chroma (0.008) pointed at this hue for subconscious cohesion.
-   */
-
-  /* Background surfaces (lightness ladder 13 → 19 → 24) */
+  /* Background surfaces (dark — lightness ladder 13 → 19 → 24) */
   --color-bg-base: oklch(13% 0.012 230);
   --color-bg-surface: oklch(17% 0.012 230);
   --color-bg-elevated: oklch(22% 0.014 230);
@@ -16,6 +18,7 @@
   --color-accent: oklch(68% 0.17 230);
   --color-accent-hover: oklch(74% 0.17 230);
   --color-accent-muted: oklch(68% 0.17 230 / 0.14);
+  --color-accent-contrast: oklch(99% 0 0);
 
   /* Win — cool green, hue 150 */
   --color-win: oklch(72% 0.17 150);
@@ -43,7 +46,7 @@
   --color-border-subtle: oklch(20% 0.012 230);
   --color-border-strong: oklch(34% 0.016 230);
 
-  /* Interactive tint overlays */
+  /* Interactive tint overlays — light tint on dark */
   --color-hover: oklch(96% 0.008 230 / 0.06);
   --color-active: oklch(96% 0.008 230 / 0.09);
 
@@ -90,4 +93,76 @@
   --color-input-bg: oklch(17% 0.012 230);
   --color-input-border: oklch(26% 0.014 230);
   --color-input-border-focus: oklch(68% 0.17 230);
+
+  /* Color scheme hint for native UI (scrollbars, form controls) */
+  color-scheme: dark;
+}
+
+/*
+ * Light theme override.
+ * Reference: Polymarket feed — near-white base, white cards, deep blue accent,
+ * generous whitespace. Chroma on neutrals reduced to 0.003–0.008 because high
+ * lightness with higher chroma looks garish. Accent is DEEPENED (lower L, higher C)
+ * so contrast against white surfaces stays strong.
+ */
+[data-theme='light'] {
+  /* Backgrounds — three-step ladder 98.5 → 100 → 96 (surface sits brighter than base) */
+  --color-bg-base: oklch(98.5% 0.003 230);
+  --color-bg-surface: oklch(100% 0 0);
+  --color-bg-elevated: oklch(96% 0.005 230);
+
+  /* Accent — deep brand blue, high chroma, same hue 230 */
+  --color-accent: oklch(52% 0.22 255);
+  --color-accent-hover: oklch(46% 0.22 255);
+  --color-accent-muted: oklch(52% 0.22 255 / 0.1);
+  --color-accent-contrast: oklch(100% 0 0);
+
+  /* Win — deeper green for contrast on white */
+  --color-win: oklch(48% 0.16 150);
+  --color-win-muted: oklch(72% 0.14 150 / 0.16);
+
+  /* Loss — deeper red for contrast on white */
+  --color-loss: oklch(54% 0.22 25);
+  --color-loss-muted: oklch(66% 0.18 25 / 0.12);
+
+  /* Status */
+  --color-pending: oklch(60% 0.16 70);
+  --color-pending-muted: oklch(76% 0.14 70 / 0.16);
+  --color-open: oklch(52% 0.18 230);
+  --color-open-muted: oklch(70% 0.15 230 / 0.12);
+  --color-resolved: oklch(52% 0.17 290);
+  --color-resolved-muted: oklch(72% 0.14 290 / 0.12);
+
+  /* Text */
+  --color-text-primary: oklch(18% 0.012 230);
+  --color-text-secondary: oklch(46% 0.012 230);
+  --color-text-muted: oklch(62% 0.01 230);
+
+  /* Borders — very subtle on white */
+  --color-border: oklch(91% 0.005 230);
+  --color-border-subtle: oklch(95% 0.003 230);
+  --color-border-strong: oklch(85% 0.007 230);
+
+  /* Interactive overlays — darken on light (inverse of dark theme) */
+  --color-hover: oklch(18% 0.012 230 / 0.04);
+  --color-active: oklch(18% 0.012 230 / 0.08);
+
+  /* Shadows — real drop shadows, tinted toward brand hue */
+  --shadow-sm: 0 1px 2px oklch(18% 0.012 230 / 0.06);
+  --shadow-md: 0 4px 12px oklch(18% 0.012 230 / 0.08);
+  --shadow-lg: 0 12px 32px oklch(18% 0.012 230 / 0.12);
+
+  /* Component states */
+  --color-disabled: oklch(94% 0.003 230);
+  --color-disabled-text: oklch(62% 0.01 230);
+  --color-focus-ring: oklch(52% 0.22 255 / 0.35);
+  --color-error: oklch(54% 0.22 25);
+  --color-error-muted: oklch(66% 0.2 25 / 0.1);
+  --color-success: oklch(48% 0.16 150);
+  --color-success-muted: oklch(72% 0.14 150 / 0.12);
+  --color-input-bg: oklch(100% 0 0);
+  --color-input-border: oklch(91% 0.005 230);
+  --color-input-border-focus: oklch(52% 0.22 255);
+
+  color-scheme: light;
 }

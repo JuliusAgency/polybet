@@ -21,6 +21,13 @@
     "noData": "אין נתונים",
     "superAdminAlias": "מנהל על"
   },
+  "theme": {
+    "label": "ערכת נושא",
+    "dark": "כהה",
+    "light": "בהיר",
+    "switchToDark": "עבור לערכת נושא כהה",
+    "switchToLight": "עבור לערכת נושא בהירה"
+  },
   "nav": {
     "dashboard": "לוח בקרה",
     "managers": "מנהלים",

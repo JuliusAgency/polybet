@@ -9,3 +9,4 @@ export { OutcomeButtons, type OutcomeButton } from './OutcomeButtons';
 export { OutcomeProbabilityBar, type OutcomeProbabilityBarItem } from './OutcomeProbabilityBar';
 export { MarketThumbnail } from './MarketThumbnail';
 export { PriceHistoryChart, PriceHistoryWindowToggle } from './PriceHistoryChart';
+export { ThemeSwitcher } from './ThemeSwitcher';

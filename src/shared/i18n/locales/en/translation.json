@@ -21,6 +21,13 @@
     "noData": "No data",
     "superAdminAlias": "Super Admin"
   },
+  "theme": {
+    "label": "Theme",
+    "dark": "Dark",
+    "light": "Light",
+    "switchToDark": "Switch to dark theme",
+    "switchToLight": "Switch to light theme"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "managers": "Managers",

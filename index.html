@@ -5,6 +5,25 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>polybet</title>
+    <script>
+      // Resolve theme before paint to avoid flash of wrong theme.
+      // Mirror logic in ThemeProvider; keep the storage key in sync with
+      // THEME_STORAGE_KEY in src/shared/theme/const.ts.
+      (function () {
+        try {
+          var stored = localStorage.getItem('polybet-theme');
+          var theme =
+            stored === 'light' || stored === 'dark'
+              ? stored
+              : 'dark';
+          if (theme === 'light') {
+            document.documentElement.setAttribute('data-theme', 'light');
+          }
+        } catch (_e) {
+          // localStorage may be unavailable (private mode, SSR) — fall through to dark default.
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

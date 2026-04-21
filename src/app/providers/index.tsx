@@ -2,6 +2,7 @@ import { type ReactNode } from 'react';
 import { QueryProvider } from './QueryProvider';
 import { AuthProvider } from './AuthProvider';
 import { RTLProvider } from './RTLProvider';
+import { ThemeProvider } from './ThemeProvider';
 
 interface AppProvidersProps {
     children: ReactNode;
@@ -9,14 +10,17 @@ interface AppProvidersProps {
 
 export const AppProviders = ({ children }: AppProvidersProps) => {
     return (
-        <QueryProvider>
-            <AuthProvider>
-                <RTLProvider>{children}</RTLProvider>
-            </AuthProvider>
-        </QueryProvider>
+        <ThemeProvider>
+            <QueryProvider>
+                <AuthProvider>
+                    <RTLProvider>{children}</RTLProvider>
+                </AuthProvider>
+            </QueryProvider>
+        </ThemeProvider>
     );
 };
 
 export { AuthProvider } from './AuthProvider';
 export { QueryProvider } from './QueryProvider';
 export { RTLProvider } from './RTLProvider';
+export { ThemeProvider } from './ThemeProvider';

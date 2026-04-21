@@ -5,7 +5,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Base dark theme */
+/* Base — tokens flip via [data-theme] on <html> */
 *, *::before, *::after {
   box-sizing: border-box;
 }
@@ -27,9 +27,12 @@ body {
   margin: 0;
   min-height: 100vh;
   background-color: var(--color-bg-base);
+  /* Soften the switch — tokens retint their own descendants instantly, this masks the root repaint */
+  transition: background-color var(--duration-base) var(--ease-out-expo),
+              color var(--duration-base) var(--ease-out-expo);
 }
 
-/* Inputs inherit dark theme (browsers don't inherit color into form elements) */
+/* Form controls inherit theme — browsers don't propagate colour into native form elements */
 input, textarea, select {
   background-color: var(--color-input-bg);
   color: var(--color-text-primary);
@@ -48,7 +51,7 @@ input, textarea, select {
   transform: translate(-35%, -35%) !important;
 }
 
-/* Scrollbar styling */
+/* Scrollbar — token-driven so light/dark both look intentional */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;

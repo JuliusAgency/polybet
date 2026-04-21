@@ -2,4 +2,12 @@
 // import '@/shared/theme/tokens.css'
 // import '@/shared/theme/fonts.css'
 
-export { colors, zIndex, radius } from './const';
+export {
+    colors,
+    colorsByTheme,
+    zIndex,
+    radius,
+    THEME_STORAGE_KEY,
+    THEME_DEFAULT,
+    type ThemeName,
+} from './const';
