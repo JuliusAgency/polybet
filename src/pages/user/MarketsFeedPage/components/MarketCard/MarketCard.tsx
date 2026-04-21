@@ -81,11 +81,13 @@ export const MarketCard = ({
 
   return (
     <article
-      className="flex flex-col gap-3 p-3"
+      className="flex flex-col gap-3 p-3 transition-[transform,box-shadow] motion-reduce:transition-none hover:-translate-y-0.5 hover:[box-shadow:var(--shadow-md)] motion-reduce:hover:translate-y-0"
       style={{
         backgroundColor: 'var(--color-bg-surface)',
         border: '1px solid var(--color-border)',
         borderRadius: 'var(--radius-lg)',
+        transitionDuration: 'var(--duration-base)',
+        transitionTimingFunction: 'var(--ease-out-expo)',
       }}
     >
       {/* Header: thumb + title + category (volume moved to footer). */}
@@ -93,10 +95,9 @@ export const MarketCard = ({
         <Link
           to={`/events/${market.event_id}`}
           aria-label={t('eventDetail.open', { defaultValue: 'Open event details' })}
-          className="-mx-1 -mt-1 flex items-start gap-2.5 rounded-md p-1 transition-opacity hover:opacity-90"
-          style={{ transitionDuration: 'var(--duration-fast)' }}
+          className="group/title -mx-1 -mt-1 flex items-start gap-2.5 rounded-md p-1"
         >
-          <MarketCardHeaderContent market={market} />
+          <MarketCardHeaderContent market={market} withTitleHover />
         </Link>
       ) : (
         <header className="flex items-start gap-2.5">
@@ -278,9 +279,10 @@ export const MarketCard = ({
 
 interface MarketCardHeaderContentProps {
   market: Market;
+  withTitleHover?: boolean;
 }
 
-function MarketCardHeaderContent({ market }: MarketCardHeaderContentProps) {
+function MarketCardHeaderContent({ market, withTitleHover = false }: MarketCardHeaderContentProps) {
   const { i18n } = useTranslation();
   const isHebrew = i18n.language === 'he';
   const category = market.category ?? market.event?.category ?? null;
@@ -290,7 +292,9 @@ function MarketCardHeaderContent({ market }: MarketCardHeaderContentProps) {
       <MarketThumbnail src={market.image_url} title={market.question} id={market.id} size="md" />
       <div className="min-w-0 flex-1">
         <h3
-          className="line-clamp-2 text-sm font-semibold leading-snug"
+          className={`line-clamp-2 text-sm font-semibold leading-snug underline-offset-2 decoration-1 ${
+            withTitleHover ? 'group-hover/title:underline' : ''
+          }`}
           style={{ color: 'var(--color-text-primary)', fontFamily: 'var(--font-sans)' }}
         >
           {market.question}

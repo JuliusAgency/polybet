@@ -37,6 +37,7 @@ export interface MarketEvent {
   volume?: number | null;
   tag_slug: string | null;
   tag_label: string | null;
+  tag_slugs: string[] | null;
 }
 
 export interface Market {
@@ -88,8 +89,8 @@ export function useMarkets(
       // applies as a SQL-level filter (not a post-fetch client trim). The
       // default left join keeps standalone legacy markets visible.
       const eventJoin = tagSlugFilter
-        ? 'event:event_id!inner(id, title, description, category, image_url, close_at, status, volume, tag_slug, tag_label)'
-        : 'event:event_id(id, title, description, category, image_url, close_at, status, volume, tag_slug, tag_label)';
+        ? 'event:event_id!inner(id, title, description, category, image_url, close_at, status, volume, tag_slug, tag_label, tag_slugs)'
+        : 'event:event_id(id, title, description, category, image_url, close_at, status, volume, tag_slug, tag_label, tag_slugs)';
 
       let query = supabase
         .from('markets')
@@ -121,7 +122,10 @@ export function useMarkets(
       }
 
       if (tagSlugFilter) {
-        query = query.eq('event.tag_slug', tagSlugFilter);
+        // Array containment: event.tag_slugs @> '{slug}'. An event can belong
+        // to multiple whitelisted categories, so filtering by the single
+        // tag_slug column used to hide it from all but its primary category.
+        query = query.contains('event.tag_slugs', [tagSlugFilter]);
       }
 
       // Cursor: fetch rows after the last item of the previous page.

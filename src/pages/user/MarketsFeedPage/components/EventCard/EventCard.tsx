@@ -77,25 +77,26 @@ export const EventCard = ({
 
   return (
     <article
-      className="flex flex-col gap-3 p-3"
+      className="flex flex-col gap-3 p-3 transition-[transform,box-shadow] motion-reduce:transition-none hover:-translate-y-0.5 hover:[box-shadow:var(--shadow-md)] motion-reduce:hover:translate-y-0"
       style={{
         backgroundColor: 'var(--color-bg-surface)',
         border: '1px solid var(--color-border)',
         borderRadius: 'var(--radius-lg)',
+        transitionDuration: 'var(--duration-base)',
+        transitionTimingFunction: 'var(--ease-out-expo)',
       }}
     >
       {/* Header: thumb + title (clickable to detail) */}
       <Link
         to={detailPath}
         aria-label={t('eventDetail.open', { defaultValue: 'Open event details' })}
-        className="-mx-1 -mt-1 flex items-start gap-2.5 rounded-md p-1 transition-colors hover:opacity-90"
-        style={{ transitionDuration: 'var(--duration-fast)' }}
+        className="group/title -mx-1 -mt-1 flex items-start gap-2.5 rounded-md p-1"
       >
         <MarketThumbnail src={event.image_url} title={event.title} id={event.id} size="md" />
 
         <div className="min-w-0 flex-1">
           <h3
-            className="line-clamp-2 text-sm font-semibold leading-snug"
+            className="line-clamp-2 text-sm font-semibold leading-snug underline-offset-2 decoration-1 group-hover/title:underline"
             style={{ color: 'var(--color-text-primary)', fontFamily: 'var(--font-sans)' }}
           >
             {event.title}
@@ -217,17 +218,12 @@ function EventMarketRow({
   const yesPct = yesOutcome?.price != null ? `${Math.round(yesOutcome.price * 100)}%` : null;
 
   return (
-    <div className="relative flex items-center gap-3 py-1.5">
+    <div className="group/row relative flex items-center gap-3 py-1.5">
       {/* Full-row click target — covers label, pct, and whitespace */}
-      <Link
-        to={detailPath}
-        aria-label={label}
-        className="absolute inset-0 rounded transition-opacity hover:opacity-80"
-        style={{ transitionDuration: 'var(--duration-fast)' }}
-      />
+      <Link to={detailPath} aria-label={label} className="absolute inset-0 rounded" />
 
       <span
-        className="min-w-0 flex-1 line-clamp-2 text-sm font-medium leading-snug"
+        className="min-w-0 flex-1 line-clamp-2 text-sm font-medium leading-snug underline-offset-2 decoration-1 group-hover/row:underline"
         style={{ color: 'var(--color-text-primary)' }}
       >
         {label}

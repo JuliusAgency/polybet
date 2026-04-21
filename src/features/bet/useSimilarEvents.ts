@@ -27,13 +27,15 @@ export function useSimilarEvents({
       if (!eventId || !hasFilter) return [];
 
       const orParts: string[] = [];
-      if (tagSlug) orParts.push(`tag_slug.eq.${tagSlug}`);
+      // cs = contains (PostgREST array @> {slug}). Matches any event whose
+      // tag_slugs array includes the filter tag, not just the primary one.
+      if (tagSlug) orParts.push(`tag_slugs.cs.{${tagSlug}}`);
       if (category) orParts.push(`category.eq.${category}`);
 
       const { data, error } = await supabase
         .from('events')
         .select(
-          'id, title, description, category, image_url, close_at, status, volume, tag_slug, tag_label'
+          'id, title, description, category, image_url, close_at, status, volume, tag_slug, tag_label, tag_slugs'
         )
         .eq('is_visible', true)
         .neq('status', 'resolved')
@@ -49,8 +51,8 @@ export function useSimilarEvents({
 
       // Rank: same tag first, then same category, volume as tie-breaker.
       return rows.slice().sort((a, b) => {
-        const aTag = tagSlug && a.tag_slug === tagSlug ? 1 : 0;
-        const bTag = tagSlug && b.tag_slug === tagSlug ? 1 : 0;
+        const aTag = tagSlug && a.tag_slugs?.includes(tagSlug) ? 1 : 0;
+        const bTag = tagSlug && b.tag_slugs?.includes(tagSlug) ? 1 : 0;
         if (aTag !== bTag) return bTag - aTag;
         const aCat = category && a.category === category ? 1 : 0;
         const bCat = category && b.category === category ? 1 : 0;

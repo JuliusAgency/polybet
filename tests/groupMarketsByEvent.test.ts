@@ -25,6 +25,7 @@ function createEvent(id: string): MarketEvent {
     volume: 1000,
     tag_slug: 'politics',
     tag_label: 'Politics',
+    tag_slugs: ['politics'],
   };
 }
 

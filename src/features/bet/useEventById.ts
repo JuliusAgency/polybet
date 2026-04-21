@@ -21,7 +21,7 @@ export function useEventById(eventId: string | undefined) {
       const { data: eventRow, error: eventError } = await supabase
         .from('events')
         .select(
-          'id, title, description, category, image_url, close_at, status, volume, tag_slug, tag_label'
+          'id, title, description, category, image_url, close_at, status, volume, tag_slug, tag_label, tag_slugs'
         )
         .eq('id', eventId)
         .maybeSingle();
