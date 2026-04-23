@@ -63,7 +63,10 @@ export const EventMarketRow = ({
       <div className="min-w-0 flex-1">
         <p
           className="truncate text-sm font-semibold"
-          style={{ color: 'var(--color-text-primary)' }}
+          style={{
+            color: 'var(--color-text-primary)',
+            ...(isHebrew && { direction: 'ltr' as const, textAlign: 'right' as const }),
+          }}
         >
           {label}
         </p>

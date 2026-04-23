@@ -144,7 +144,12 @@ const EventDetailPage = () => {
                 </h3>
                 <p
                   className="whitespace-pre-line text-sm leading-relaxed"
-                  style={{ color: 'var(--color-text-secondary)' }}
+                  style={{
+                    color: 'var(--color-text-secondary)',
+                    // Polymarket rules text is English; LTR flow + end-aligned
+                    // keeps punctuation correct inside the RTL layout.
+                    ...(isHebrew && { direction: 'ltr' as const, textAlign: 'right' as const }),
+                  }}
                 >
                   {event.description}
                 </p>

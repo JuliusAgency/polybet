@@ -86,14 +86,14 @@ export function ChanceGauge({ value, size = 56, label, className }: ChanceGaugeP
         {/* Percentage — tight under the arc baseline */}
         <text
           x={cx}
-          y={cy + 8}
+          y={cy + 6}
           textAnchor="middle"
           dominantBaseline="middle"
           style={{
             fill: 'var(--color-text-primary)',
             fontFamily: 'var(--font-sans)',
             fontWeight: 700,
-            fontSize: 13,
+            fontSize: 16,
             fontVariantNumeric: 'tabular-nums',
           }}
         >
@@ -103,13 +103,13 @@ export function ChanceGauge({ value, size = 56, label, className }: ChanceGaugeP
             so the two share a single layout box (no CSS negative margin trick). */}
         <text
           x={cx}
-          y={cy + 18}
+          y={cy + 15}
           textAnchor="middle"
           dominantBaseline="middle"
           style={{
             fill: 'var(--color-text-secondary)',
             fontFamily: 'var(--font-sans)',
-            fontSize: 9,
+            fontSize: 10,
             letterSpacing: 0.3,
           }}
         >

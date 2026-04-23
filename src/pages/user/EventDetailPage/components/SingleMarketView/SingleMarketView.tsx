@@ -18,7 +18,8 @@ export const SingleMarketView = ({
   description,
   onOutcomeClick,
 }: SingleMarketViewProps) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isHebrew = i18n.language === 'he';
   const [window, setWindow] = useState<PriceHistoryWindow>('ALL');
   const { data: points = [], isLoading } = usePriceHistory(market.id, window, true);
 
@@ -67,7 +68,10 @@ export const SingleMarketView = ({
           </h3>
           <p
             className="whitespace-pre-line text-sm leading-relaxed"
-            style={{ color: 'var(--color-text-secondary)' }}
+            style={{
+              color: 'var(--color-text-secondary)',
+              ...(isHebrew && { direction: 'ltr' as const, textAlign: 'right' as const }),
+            }}
           >
             {description}
           </p>

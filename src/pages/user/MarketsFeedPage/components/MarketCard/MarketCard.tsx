@@ -113,7 +113,7 @@ export const MarketCard = ({
         )}
         {yesProbability != null && (
           <div className="shrink-0">
-            <ChanceGauge value={yesProbability} size={52} />
+            <ChanceGauge value={yesProbability} size={64} />
           </div>
         )}
       </header>
@@ -272,7 +272,14 @@ function MarketCardHeaderContent({ market, withTitleHover = false }: MarketCardH
           className={`line-clamp-2 text-sm font-semibold leading-snug underline-offset-2 decoration-1 ${
             withTitleHover ? 'group-hover/title:underline' : ''
           }`}
-          style={{ color: 'var(--color-text-primary)', fontFamily: 'var(--font-sans)' }}
+          style={{
+            color: 'var(--color-text-primary)',
+            fontFamily: 'var(--font-sans)',
+            // Market questions come from Polymarket as English; in Hebrew UI we
+            // flip the flow to LTR so punctuation/numbers land on the natural
+            // side, but keep alignment to the inline-end of the card.
+            ...(isHebrew && { direction: 'ltr' as const, textAlign: 'right' as const }),
+          }}
         >
           {market.question}
         </h3>

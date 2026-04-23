@@ -109,7 +109,14 @@ export const EventCard = ({
           <div className="min-w-0 flex-1">
             <h3
               className="line-clamp-2 text-sm font-semibold leading-snug underline-offset-2 decoration-1 group-hover/title:underline"
-              style={{ color: 'var(--color-text-primary)', fontFamily: 'var(--font-sans)' }}
+              style={{
+                color: 'var(--color-text-primary)',
+                fontFamily: 'var(--font-sans)',
+                // Event titles come from Polymarket as English; LTR flow fixes
+                // punctuation placement inside the Hebrew layout while keeping
+                // the block aligned to the inline-end edge.
+                ...(isHebrew && { direction: 'ltr' as const, textAlign: 'right' as const }),
+              }}
             >
               {event.title}
             </h3>
@@ -117,7 +124,7 @@ export const EventCard = ({
         </Link>
         {singleYesProbability != null && (
           <div className="shrink-0">
-            <ChanceGauge value={singleYesProbability} size={52} />
+            <ChanceGauge value={singleYesProbability} size={64} />
           </div>
         )}
       </header>
@@ -208,7 +215,8 @@ function EventMarketRow({
   onOutcomeClick,
   detailPath,
 }: EventMarketRowProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isHebrew = i18n.language === 'he';
 
   const isExpired = market.close_at != null && new Date(market.close_at).getTime() <= Date.now();
   const effectiveStatus = isExpired && market.status === 'open' ? 'closed' : market.status;
@@ -237,7 +245,10 @@ function EventMarketRow({
 
       <span
         className="min-w-0 flex-1 line-clamp-2 text-sm font-medium leading-snug underline-offset-2 decoration-1 group-hover/row:underline"
-        style={{ color: 'var(--color-text-primary)' }}
+        style={{
+          color: 'var(--color-text-primary)',
+          ...(isHebrew && { direction: 'ltr' as const, textAlign: 'right' as const }),
+        }}
       >
         {label}
       </span>
