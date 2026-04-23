@@ -6,6 +6,9 @@ interface TagFilterProps {
   value: string | null;
   onChange: (value: string | null) => void;
   tags: AllowedCategoryTag[];
+  myBetsActive?: boolean;
+  onMyBetsToggle?: () => void;
+  showMyBets?: boolean;
 }
 
 /**
@@ -17,7 +20,14 @@ interface TagFilterProps {
  * cyan hue-shift, a small flame glyph, and a slow ambient pulse so it reads
  * as "alive" without breaking the dark/blue palette.
  */
-export function TagFilter({ value, onChange, tags }: TagFilterProps) {
+export function TagFilter({
+  value,
+  onChange,
+  tags,
+  myBetsActive = false,
+  onMyBetsToggle,
+  showMyBets = false,
+}: TagFilterProps) {
   const { t } = useTranslation();
 
   if (tags.length === 0) return null;
@@ -79,6 +89,24 @@ export function TagFilter({ value, onChange, tags }: TagFilterProps) {
       >
         {t('markets.categoryAll')}
       </button>
+      {showMyBets && onMyBetsToggle && (
+        <button
+          onClick={onMyBetsToggle}
+          aria-pressed={myBetsActive}
+          className="rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors"
+          style={{
+            backgroundColor: myBetsActive
+              ? 'var(--color-accent)'
+              : 'color-mix(in srgb, var(--color-accent) 3%, var(--color-bg-elevated))',
+            color: myBetsActive
+              ? 'var(--color-bg-base)'
+              : 'color-mix(in srgb, var(--color-accent) 25%, var(--color-text-secondary))',
+            border: `1px solid ${myBetsActive ? 'var(--color-accent)' : 'color-mix(in srgb, var(--color-accent) 12%, var(--color-border))'}`,
+          }}
+        >
+          {t('markets.myBets')}
+        </button>
+      )}
     </div>
   );
 }

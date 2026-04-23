@@ -1,6 +1,8 @@
 export { useMarkets } from './useMarkets';
 export type { Market, MarketOutcome, MarketEvent, MarketStatusFilter } from './useMarkets';
 
+export { useMarketsByIds } from './useMarketsByIds';
+
 export { groupMarketsByEvent } from './groupMarketsByEvent';
 export type { FeedItem } from './groupMarketsByEvent';
 

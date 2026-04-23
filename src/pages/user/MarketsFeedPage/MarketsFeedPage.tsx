@@ -2,6 +2,7 @@ import { useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   useMarkets,
+  useMarketsByIds,
   useUserBalance,
   useMyBets,
   useAllowedCategoryTags,
@@ -40,6 +41,14 @@ const MarketsFeedPage = () => {
 
   const { data: balance } = useUserBalance();
   const { data: bets } = useMyBets();
+
+  const myBetMarketIds = Array.from(new Set((bets ?? []).map((b) => b.market_id)));
+  const {
+    data: myBetsMarkets,
+    isLoading: isLoadingMyBets,
+    isError: isErrorMyBets,
+    error: errorMyBets,
+  } = useMarketsByIds(myBetMarketIds, statusFilter, myBetsOnly);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedBet, setSelectedBet] = useState<SelectedBet | null>(null);
 
@@ -63,29 +72,31 @@ const MarketsFeedPage = () => {
   const inPlay = balance?.in_play ?? 0;
   const openBetsCount = (bets ?? []).filter((b) => b.status === 'open').length;
 
-  const myBetMarketIds = new Set((bets ?? []).map((b) => b.market_id));
-  const hasBets = myBetMarketIds.size > 0;
+  const hasBets = myBetMarketIds.length > 0;
 
   const userBetForMarket = (marketId: string) => (bets ?? []).find((b) => b.market_id === marketId);
+
+  const sourceMarkets = myBetsOnly ? (myBetsMarkets ?? []) : markets;
 
   // Mirror UI's effectiveStatus rule (see MarketCard/EventCard): a record counts
   // as "open" only if its own status is open, its close_at is in the future, and —
   // for markets attached to an event — the parent event is also effectively open.
-  const filteredByStatus =
+  const visibleMarkets =
     statusFilter === 'open'
-      ? markets.filter((m) => {
+      ? sourceMarkets.filter((m) => {
           if (!m.event) return true;
           const ev = m.event;
           if (ev.status !== 'open') return false;
           if (ev.close_at != null && new Date(ev.close_at).getTime() <= Date.now()) return false;
           return true;
         })
-      : markets;
+      : sourceMarkets;
 
-  const visibleMarkets = myBetsOnly
-    ? filteredByStatus.filter((m) => myBetMarketIds.has(m.id))
-    : filteredByStatus;
   const feedItems = groupMarketsByEvent(visibleMarkets);
+
+  const feedIsLoading = myBetsOnly ? isLoadingMyBets : isLoading;
+  const feedIsError = myBetsOnly ? isErrorMyBets : isError;
+  const feedError = myBetsOnly ? errorMyBets : error;
 
   return (
     <div>
@@ -111,94 +122,79 @@ const MarketsFeedPage = () => {
             <StatusFilter value={statusFilter} onChange={setStatusFilter} />
           </div>
           <div className="flex items-center gap-2">
-            {hasBets && (
-              <button
-                onClick={() => setMyBetsOnly((v) => !v)}
-                className="flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium transition-all"
-                style={{
-                  backgroundColor: myBetsOnly ? 'var(--color-accent)' : 'var(--color-bg-elevated)',
-                  color: myBetsOnly ? '#fff' : 'var(--color-text-secondary)',
-                  border: `1px solid ${myBetsOnly ? 'var(--color-accent)' : 'var(--color-border)'}`,
-                  boxShadow: myBetsOnly ? '0 0 0 2px var(--color-accent-muted)' : 'none',
-                  cursor: 'pointer',
-                }}
-              >
-                <svg
-                  width="13"
-                  height="13"
-                  viewBox="0 0 24 24"
-                  fill={myBetsOnly ? 'currentColor' : 'none'}
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={{ flexShrink: 0 }}
+            {!myBetsOnly && (
+              <div className="relative flex items-center">
+                <div
+                  className="pointer-events-none absolute inset-y-0 flex items-center"
+                  style={{ insetInlineStart: '10px' }}
                 >
-                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                </svg>
-                {t('markets.myBetsOnly')}
-              </button>
-            )}
-            <div className="relative flex items-center">
-              <div
-                className="pointer-events-none absolute inset-y-0 flex items-center"
-                style={{ insetInlineStart: '10px' }}
-              >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={{ color: 'var(--color-text-muted)' }}
-                >
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{ color: 'var(--color-text-muted)' }}
+                  >
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={t('markets.searchPlaceholder')}
+                  className="rounded-full border py-1 text-sm outline-none"
+                  style={{
+                    backgroundColor: 'var(--color-bg-elevated)',
+                    borderColor: 'var(--color-border)',
+                    color: 'var(--color-text-primary)',
+                    paddingInlineStart: '2rem',
+                    paddingInlineEnd: '0.75rem',
+                  }}
+                />
               </div>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={t('markets.searchPlaceholder')}
-                className="rounded-full border py-1 text-sm outline-none"
-                style={{
-                  backgroundColor: 'var(--color-bg-elevated)',
-                  borderColor: 'var(--color-border)',
-                  color: 'var(--color-text-primary)',
-                  paddingInlineStart: '2rem',
-                  paddingInlineEnd: '0.75rem',
-                }}
-              />
-            </div>
+            )}
           </div>
         </div>
         {/* Tag filter — curated popular categories from Polymarket */}
-        <TagFilter value={tagSlug} onChange={setTagSlug} tags={allowedTags} />
+        <TagFilter
+          value={tagSlug}
+          onChange={setTagSlug}
+          tags={allowedTags}
+          showMyBets={hasBets}
+          myBetsActive={myBetsOnly}
+          onMyBetsToggle={() => setMyBetsOnly((v) => !v)}
+        />
       </div>
 
       {/* Loading state — initial load */}
-      {isLoading && <CardGridSkeleton count={6} />}
+      {feedIsLoading && <CardGridSkeleton count={6} />}
 
       {/* Error state */}
-      {isError && (
+      {feedIsError && (
         <p className="text-sm" style={{ color: 'var(--color-error)' }}>
-          {t('common.error')}: {error?.message}
+          {t('common.error')}: {feedError?.message}
         </p>
       )}
 
       {/* Empty state — no markets at all */}
-      {!isLoading && !isError && feedItems.length === 0 && (
+      {!feedIsLoading && !feedIsError && feedItems.length === 0 && (
         <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-          {debouncedSearch ? t('markets.noResults') : t('markets.noMarkets')}
+          {myBetsOnly
+            ? t('markets.noMyBets')
+            : debouncedSearch
+              ? t('markets.noResults')
+              : t('markets.noMarkets')}
         </p>
       )}
 
       {/* Feed grid: events grouped + standalone markets */}
-      {!isLoading && !isError && feedItems.length > 0 && (
+      {!feedIsLoading && !feedIsError && feedItems.length > 0 && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {feedItems.map((item) => {
             const card =
@@ -239,18 +235,18 @@ const MarketsFeedPage = () => {
         </div>
       )}
 
-      {/* Infinite scroll sentinel */}
-      <div ref={sentinelRef} className="h-4" />
+      {/* Infinite scroll sentinel (disabled in my-bets view — fixed result set) */}
+      {!myBetsOnly && <div ref={sentinelRef} className="h-4" />}
 
       {/* Loading next page */}
-      {isFetchingNextPage && (
+      {!myBetsOnly && isFetchingNextPage && (
         <div className="mt-4 flex justify-center">
           <Spinner size="sm" />
         </div>
       )}
 
       {/* All pages loaded */}
-      {!hasNextPage && markets.length > 0 && !isLoading && (
+      {!myBetsOnly && !hasNextPage && markets.length > 0 && !isLoading && (
         <p className="mt-4 text-center text-sm" style={{ color: 'var(--color-text-secondary)' }}>
           {t('markets.allLoaded')}
         </p>
