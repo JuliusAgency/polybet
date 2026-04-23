@@ -36,18 +36,23 @@ export function TagFilter({
   // "All categories" fallback should look active.
   const effectiveValue = myBetsActive ? undefined : value;
 
+  // Pull Trending out so we can slot "Closing today" directly after it;
+  // the rest keeps Polymarket's original ordering.
+  const trendingTag = tags.find((tag) => tag.slug === 'trending') ?? null;
+  const restTags = tags.filter((tag) => tag.slug !== 'trending');
+
   return (
     <div className="mt-2 flex flex-wrap gap-1.5">
-      {tags.map((tag) => {
-        const isActive = effectiveValue === tag.slug;
-        const isTrending = tag.slug === 'trending';
-        const label = t(`markets.tags.${tag.slug}`, { defaultValue: tag.label });
-
-        if (isTrending) {
+      {trendingTag &&
+        (() => {
+          const isActive = effectiveValue === trendingTag.slug;
+          const label = t(`markets.tags.${trendingTag.slug}`, {
+            defaultValue: trendingTag.label,
+          });
           return (
             <button
-              key={tag.slug}
-              onClick={() => onChange(isActive ? null : tag.slug)}
+              key={trendingTag.slug}
+              onClick={() => onChange(isActive ? null : trendingTag.slug)}
               className={`trending-chip ${isActive ? 'trending-chip--active' : ''}`}
               aria-pressed={isActive}
             >
@@ -55,27 +60,7 @@ export function TagFilter({
               <span>{label}</span>
             </button>
           );
-        }
-
-        return (
-          <button
-            key={tag.slug}
-            onClick={() => onChange(isActive ? null : tag.slug)}
-            className="rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors"
-            style={{
-              backgroundColor: isActive
-                ? 'var(--color-accent)'
-                : 'color-mix(in srgb, var(--color-accent) 3%, var(--color-bg-elevated))',
-              color: isActive
-                ? 'var(--color-bg-base)'
-                : 'color-mix(in srgb, var(--color-accent) 25%, var(--color-text-secondary))',
-              border: `1px solid ${isActive ? 'var(--color-accent)' : 'color-mix(in srgb, var(--color-accent) 12%, var(--color-border))'}`,
-            }}
-          >
-            {label}
-          </button>
-        );
-      })}
+        })()}
       {(() => {
         const isActive = effectiveValue === CLOSING_TODAY_TAG_SLUG;
         return (
@@ -98,6 +83,29 @@ export function TagFilter({
           </button>
         );
       })()}
+      {restTags.map((tag) => {
+        const isActive = effectiveValue === tag.slug;
+        const label = t(`markets.tags.${tag.slug}`, { defaultValue: tag.label });
+
+        return (
+          <button
+            key={tag.slug}
+            onClick={() => onChange(isActive ? null : tag.slug)}
+            className="rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors"
+            style={{
+              backgroundColor: isActive
+                ? 'var(--color-accent)'
+                : 'color-mix(in srgb, var(--color-accent) 3%, var(--color-bg-elevated))',
+              color: isActive
+                ? 'var(--color-bg-base)'
+                : 'color-mix(in srgb, var(--color-accent) 25%, var(--color-text-secondary))',
+              border: `1px solid ${isActive ? 'var(--color-accent)' : 'color-mix(in srgb, var(--color-accent) 12%, var(--color-border))'}`,
+            }}
+          >
+            {label}
+          </button>
+        );
+      })}
       {(() => {
         const isActive = effectiveValue === null;
         return (

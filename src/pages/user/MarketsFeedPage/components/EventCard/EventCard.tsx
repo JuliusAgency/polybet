@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { Market, MarketEvent, MarketOutcome, MyBet } from '@/features/bet';
-import { Badge } from '@/shared/ui/Badge';
 import { OutcomeButtons, type OutcomeButton } from '@/shared/ui/OutcomeButtons';
 import { MarketThumbnail } from '@/shared/ui/MarketThumbnail';
 import { BookmarkButton } from '@/shared/ui/BookmarkButton';
@@ -57,7 +56,6 @@ export const EventCard = ({
   const primaryMarket = markets.find((m) => (m.volume ?? 0) > 0) ?? markets[0] ?? null;
   const isSingle = visibleMarkets.length === 1;
   const singleMarket = isSingle ? visibleMarkets[0] : null;
-  const singleUserBet = singleMarket ? betByMarketId.get(singleMarket.id) : undefined;
 
   const singleIsExpired =
     singleMarket?.close_at != null && new Date(singleMarket.close_at).getTime() <= Date.now();
@@ -123,37 +121,6 @@ export const EventCard = ({
           </div>
         )}
       </header>
-
-      {/* User bet inline — mirrors MarketCard so the "My bets" view shows
-          the stake, locked odds, and result even when the event reduces to
-          a single sub-market under the filter. */}
-      {singleMarket && singleUserBet && (
-        <div
-          className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md px-3 py-2 text-xs"
-          style={{
-            backgroundColor: 'color-mix(in oklch, var(--color-accent) 10%, transparent)',
-            border: '1px solid color-mix(in oklch, var(--color-accent) 30%, transparent)',
-          }}
-        >
-          <span style={{ color: 'var(--color-text-secondary)' }}>{t('markets.yourBet')}:</span>
-          <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>
-            {singleUserBet.market_outcomes?.name ?? '—'}
-          </span>
-          <span className="font-mono" style={{ color: 'var(--color-text-secondary)' }}>
-            {singleUserBet.stake.toFixed(2)}
-          </span>
-          {singleUserBet.status === 'open' && (
-            <span className="font-mono" style={{ color: 'var(--color-accent)' }}>
-              → {singleUserBet.potential_payout.toFixed(2)}
-            </span>
-          )}
-          {singleUserBet.status !== 'open' && (
-            <Badge variant={singleUserBet.status === 'won' ? 'win' : 'loss'}>
-              {singleUserBet.status === 'won' ? t('bet.won') : t('bet.lost')}
-            </Badge>
-          )}
-        </div>
-      )}
 
       {/* Body: single market → full-width buttons (gauge is in header); multi → compact rows */}
       {singleMarket ? (

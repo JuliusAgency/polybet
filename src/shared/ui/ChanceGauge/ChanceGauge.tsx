@@ -56,20 +56,12 @@ export function ChanceGauge({ value, size = 56, label, className }: ChanceGaugeP
       style={{
         width: size,
         display: 'inline-flex',
-        flexDirection: 'column',
-        alignItems: 'center',
         lineHeight: 1,
       }}
       role="img"
       aria-label={`${percentInt}% ${resolvedLabel}`}
     >
-      <svg
-        viewBox={`0 0 ${vb} ${vb}`}
-        width={size}
-        height={size}
-        style={{ overflow: 'visible' }}
-        aria-hidden="true"
-      >
+      <svg viewBox={`0 0 ${vb} ${vb}`} width={size} height={size} aria-hidden="true">
         {/* Background track */}
         <path
           d={bgPath}
@@ -91,33 +83,39 @@ export function ChanceGauge({ value, size = 56, label, className }: ChanceGaugeP
         {/* Leading dot — anchors the eye at the start of the track, same as Polymarket */}
         <circle cx={cx - r} cy={cy} r={stroke / 2 + 0.5} fill={fillColor} />
 
-        {/* Percentage text, centered under the arc */}
+        {/* Percentage — tight under the arc baseline */}
         <text
           x={cx}
-          y={cy + 12}
+          y={cy + 8}
           textAnchor="middle"
           dominantBaseline="middle"
           style={{
             fill: 'var(--color-text-primary)',
             fontFamily: 'var(--font-sans)',
             fontWeight: 700,
-            fontSize: 14,
+            fontSize: 13,
             fontVariantNumeric: 'tabular-nums',
           }}
         >
           {percentInt}%
         </text>
+        {/* Caption — stacked directly under the percentage, inside the SVG
+            so the two share a single layout box (no CSS negative margin trick). */}
+        <text
+          x={cx}
+          y={cy + 18}
+          textAnchor="middle"
+          dominantBaseline="middle"
+          style={{
+            fill: 'var(--color-text-secondary)',
+            fontFamily: 'var(--font-sans)',
+            fontSize: 9,
+            letterSpacing: 0.3,
+          }}
+        >
+          {resolvedLabel}
+        </text>
       </svg>
-      <span
-        style={{
-          marginTop: -8,
-          fontSize: 10,
-          letterSpacing: 0.2,
-          color: 'var(--color-text-secondary)',
-        }}
-      >
-        {resolvedLabel}
-      </span>
     </div>
   );
 }

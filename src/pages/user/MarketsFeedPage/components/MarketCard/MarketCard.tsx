@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { Market, MarketOutcome, MyBet } from '@/features/bet';
 import { useMarketRefresh } from '@/features/bet';
-import { Badge } from '@/shared/ui/Badge';
 import { OutcomeButtons, type OutcomeButton } from '@/shared/ui/OutcomeButtons';
 import { MarketThumbnail } from '@/shared/ui/MarketThumbnail';
 import { BookmarkButton } from '@/shared/ui/BookmarkButton';
@@ -118,35 +117,6 @@ export const MarketCard = ({
           </div>
         )}
       </header>
-
-      {/* User bet inline — only if present */}
-      {userBet && (
-        <div
-          className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md px-3 py-2 text-xs"
-          style={{
-            backgroundColor: 'color-mix(in oklch, var(--color-accent) 10%, transparent)',
-            border: '1px solid color-mix(in oklch, var(--color-accent) 30%, transparent)',
-          }}
-        >
-          <span style={{ color: 'var(--color-text-secondary)' }}>{t('markets.yourBet')}:</span>
-          <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>
-            {userBet.market_outcomes?.name ?? '—'}
-          </span>
-          <span className="font-mono" style={{ color: 'var(--color-text-secondary)' }}>
-            {userBet.stake.toFixed(2)}
-          </span>
-          {userBet.status === 'open' && (
-            <span className="font-mono" style={{ color: 'var(--color-accent)' }}>
-              → {userBet.potential_payout.toFixed(2)}
-            </span>
-          )}
-          {userBet.status !== 'open' && (
-            <Badge variant={userBet.status === 'won' ? 'win' : 'loss'}>
-              {userBet.status === 'won' ? t('bet.won') : t('bet.lost')}
-            </Badge>
-          )}
-        </div>
-      )}
 
       {/* Outcome CTAs — full-width, gauge moved to the header. */}
       <div className="flex min-h-20 items-center">

@@ -9,8 +9,8 @@ interface BetMarkerProps {
 /**
  * Minimal at-a-glance indicator that the current user has a bet on this card.
  * Carries no bet details on purpose — the intent is fast scanning across the
- * feed. Uses the accent color so it reads as a small filled pill next to the
- * bookmark / action buttons in a card footer.
+ * feed. Uses the same bullseye glyph and accent color as the "My bets" tag
+ * chip so the two UI elements read as a matched pair.
  */
 export function BetMarker({ title, className }: BetMarkerProps) {
   const { t } = useTranslation();
@@ -28,24 +28,24 @@ export function BetMarker({ title, className }: BetMarkerProps) {
         justifyContent: 'center',
         width: 18,
         height: 18,
-        borderRadius: 999,
-        backgroundColor: 'var(--color-accent)',
-        color: 'var(--color-bg-base)',
+        color: 'var(--color-accent)',
         flexShrink: 0,
       }}
     >
       <svg
-        width="10"
-        height="10"
+        width="16"
+        height="16"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
-        strokeWidth="3"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
         aria-hidden="true"
       >
-        <polyline points="20 6 9 17 4 12" />
+        <circle cx="12" cy="12" r="10" />
+        <circle cx="12" cy="12" r="6" />
+        <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
       </svg>
     </span>
   );
