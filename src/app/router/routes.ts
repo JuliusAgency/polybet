@@ -26,6 +26,7 @@ export const ROUTES = {
     EVENT_DETAIL: '/events/:id',
     WALLET: '/wallet',
     MY_BETS: '/my-bets',
+    SAVED: '/saved',
     STATS: '/stats',
   },
 } as const;

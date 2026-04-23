@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   useMarkets,
@@ -8,6 +9,8 @@ import {
   useAllowedCategoryTags,
   groupMarketsByEvent,
 } from '@/features/bet';
+import { useFavoriteMarkets } from '@/features/favorites';
+import { ROUTES } from '@/app/router/routes';
 import type { Market, MarketOutcome, MarketStatusFilter } from '@/features/bet';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { useIntersectionObserver } from '@/shared/hooks/useIntersectionObserver';
@@ -28,6 +31,8 @@ interface SelectedBet {
 
 const MarketsFeedPage = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { favoriteSet } = useFavoriteMarkets();
   const [statusFilter, setStatusFilter] = useState<MarketStatusFilter>('open');
   const [searchQuery, setSearchQuery] = useState('');
   const [tagSlug, setTagSlug] = useState<string | null>('trending');
@@ -112,6 +117,8 @@ const MarketsFeedPage = () => {
         openBetsCount={openBetsCount}
         isLoading={!balance}
         onOpenDrawer={() => setIsDrawerOpen(true)}
+        onOpenSaved={() => navigate(ROUTES.USER.SAVED)}
+        savedCount={favoriteSet.size}
       />
 
       {/* Filters */}

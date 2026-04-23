@@ -7,6 +7,8 @@ interface BalanceWidgetProps {
   openBetsCount: number;
   isLoading: boolean;
   onOpenDrawer: () => void;
+  onOpenSaved?: () => void;
+  savedCount?: number;
 }
 
 export const BalanceWidget = ({
@@ -15,6 +17,8 @@ export const BalanceWidget = ({
   openBetsCount,
   isLoading,
   onOpenDrawer,
+  onOpenSaved,
+  savedCount,
 }: BalanceWidgetProps) => {
   const { t } = useTranslation();
 
@@ -108,6 +112,57 @@ export const BalanceWidget = ({
           <polyline points="6 9 12 15 18 9" />
         </svg>
       </button>
+
+      {/* Saved markets — pinned to the inline-end edge */}
+      {onOpenSaved && (
+        <button
+          onClick={onOpenSaved}
+          className="flex items-center gap-1.5 rounded-md px-2 py-1 transition-colors"
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            outline: 'none',
+            marginInlineStart: 'auto',
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+              'var(--color-bg-elevated)';
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+          }}
+          aria-label={t('markets.savedButton')}
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ color: 'var(--color-text-secondary)' }}
+          >
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+          </svg>
+          <span className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+            {t('markets.savedButton')}
+          </span>
+          {typeof savedCount === 'number' && savedCount > 0 && (
+            <span
+              className="rounded-full px-1.5 py-0.5 text-xs font-medium"
+              style={{
+                backgroundColor: 'var(--color-accent)',
+                color: 'var(--color-bg-base)',
+              }}
+            >
+              {savedCount}
+            </span>
+          )}
+        </button>
+      )}
     </div>
   );
 };
