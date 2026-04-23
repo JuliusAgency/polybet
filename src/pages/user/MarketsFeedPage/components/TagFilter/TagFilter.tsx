@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import type { AllowedCategoryTag } from '@/features/bet';
+import { CLOSING_TODAY_TAG_SLUG, type AllowedCategoryTag } from '@/features/bet';
 import './trendingChip.css';
 
 interface TagFilterProps {
@@ -72,6 +72,28 @@ export function TagFilter({
           </button>
         );
       })}
+      {(() => {
+        const isActive = value === CLOSING_TODAY_TAG_SLUG;
+        return (
+          <button
+            onClick={() => onChange(isActive ? null : CLOSING_TODAY_TAG_SLUG)}
+            aria-pressed={isActive}
+            className="flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors"
+            style={{
+              backgroundColor: isActive
+                ? 'var(--color-accent)'
+                : 'color-mix(in srgb, var(--color-accent) 3%, var(--color-bg-elevated))',
+              color: isActive
+                ? 'var(--color-bg-base)'
+                : 'color-mix(in srgb, var(--color-accent) 25%, var(--color-text-secondary))',
+              border: `1px solid ${isActive ? 'var(--color-accent)' : 'color-mix(in srgb, var(--color-accent) 12%, var(--color-border))'}`,
+            }}
+          >
+            <ClockIcon />
+            <span>{t('markets.closingToday')}</span>
+          </button>
+        );
+      })()}
       <button
         onClick={() => onChange(null)}
         className="rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors"
@@ -108,6 +130,25 @@ export function TagFilter({
         </button>
       )}
     </div>
+  );
+}
+
+function ClockIcon() {
+  return (
+    <svg
+      width="11"
+      height="11"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </svg>
   );
 }
 

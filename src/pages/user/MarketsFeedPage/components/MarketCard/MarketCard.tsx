@@ -6,6 +6,7 @@ import { Badge } from '@/shared/ui/Badge';
 import { OutcomeButtons, type OutcomeButton } from '@/shared/ui/OutcomeButtons';
 import { MarketThumbnail } from '@/shared/ui/MarketThumbnail';
 import { BookmarkButton } from '@/shared/ui/BookmarkButton';
+import { ChanceGauge } from '@/shared/ui/ChanceGauge';
 import { MARKETS_STALE_THRESHOLD_MS } from '@/shared/config/markets';
 import { useTicker } from '@/shared/hooks/useTicker';
 import { formatVolume } from '@/shared/utils';
@@ -70,7 +71,11 @@ export const MarketCard = ({
   }));
 
   const yesOutcome = market.market_outcomes[0];
-  const yesPct = yesOutcome?.price != null ? `${Math.round(yesOutcome.price * 100)}%` : null;
+  // Arc gauge only reads outcome[0].price, so limit it to binary (Yes/No)
+  // markets where that price is the "Yes chance". For multi-outcome markets
+  // outcome[0] is just one of many and a single gauge would be misleading.
+  const isBinary = market.market_outcomes.length === 2;
+  const yesProbability = isBinary && yesOutcome?.price != null ? yesOutcome.price : null;
 
   const volumeLabel = formatVolume(market.volume ?? null);
   const closesDate = formatClosesDate(market.close_at, i18n.language);
@@ -134,16 +139,9 @@ export const MarketCard = ({
         </div>
       )}
 
-      {/* Outcome CTAs — Polymarket style with big % and hover-shows-percentage buttons */}
+      {/* Outcome CTAs — Polymarket style with arc gauge + hover-shows-percentage buttons */}
       <div className="flex min-h-20 items-center gap-3">
-        {yesPct && (
-          <span
-            className="shrink-0 text-lg font-bold tabular-nums"
-            style={{ color: 'var(--color-text-primary)' }}
-          >
-            {yesPct}
-          </span>
-        )}
+        {yesProbability != null && <ChanceGauge value={yesProbability} size={56} />}
         <div className="min-w-0 flex-1">
           <OutcomeButtons
             outcomes={outcomeButtons}

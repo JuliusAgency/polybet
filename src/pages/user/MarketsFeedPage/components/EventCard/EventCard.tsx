@@ -1,9 +1,11 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { Market, MarketEvent, MarketOutcome, MyBet } from '@/features/bet';
+import { Badge } from '@/shared/ui/Badge';
 import { OutcomeButtons, type OutcomeButton } from '@/shared/ui/OutcomeButtons';
 import { MarketThumbnail } from '@/shared/ui/MarketThumbnail';
 import { BookmarkButton } from '@/shared/ui/BookmarkButton';
+import { ChanceGauge } from '@/shared/ui/ChanceGauge';
 import { formatVolume } from '@/shared/utils';
 
 // Polymarket-style: at most 2 outcome rows visible in the feed card.
@@ -42,12 +44,22 @@ export const EventCard = ({
         })
       : null;
 
-  const visibleMarkets = markets.slice(0, VISIBLE_MARKET_LIMIT);
+  // Markets the user has bets on always stay visible — they must never be hidden
+  // behind the VISIBLE_MARKET_LIMIT slice. Pinned first in original order, then
+  // the rest fills remaining slots up to the limit (or extended to fit all bets).
+  const betMarkets = markets.filter((m) => betByMarketId.has(m.id));
+  const nonBetMarkets = markets.filter((m) => !betByMarketId.has(m.id));
+  const visibleLimit = Math.max(VISIBLE_MARKET_LIMIT, betMarkets.length);
+  const visibleMarkets = [
+    ...betMarkets,
+    ...nonBetMarkets.slice(0, Math.max(0, visibleLimit - betMarkets.length)),
+  ];
   // Pick the most liquid market as the bookmark anchor (same rule
   // the feed uses to pick the primary market for an event).
   const primaryMarket = markets.find((m) => (m.volume ?? 0) > 0) ?? markets[0] ?? null;
   const isSingle = visibleMarkets.length === 1;
   const singleMarket = isSingle ? visibleMarkets[0] : null;
+  const singleUserBet = singleMarket ? betByMarketId.get(singleMarket.id) : undefined;
 
   const singleIsExpired =
     singleMarket?.close_at != null && new Date(singleMarket.close_at).getTime() <= Date.now();
@@ -73,7 +85,9 @@ export const EventCard = ({
       }))
     : [];
   const singleYes = singleMarket?.market_outcomes[0];
-  const singleYesPct = singleYes?.price != null ? `${Math.round(singleYes.price * 100)}%` : null;
+  // Arc gauge only applies to binary markets (see MarketCard rationale).
+  const singleIsBinary = (singleMarket?.market_outcomes.length ?? 0) === 2;
+  const singleYesProbability = singleIsBinary && singleYes?.price != null ? singleYes.price : null;
 
   return (
     <article
@@ -104,17 +118,41 @@ export const EventCard = ({
         </div>
       </Link>
 
-      {/* Body: single market → big buttons; multi → compact rows */}
-      {singleMarket ? (
-        <div className="flex min-h-20 items-center gap-3">
-          {singleYesPct && (
-            <span
-              className="shrink-0 text-lg font-bold tabular-nums"
-              style={{ color: 'var(--color-text-primary)' }}
-            >
-              {singleYesPct}
+      {/* User bet inline — mirrors MarketCard so the "My bets" view shows
+          the stake, locked odds, and result even when the event reduces to
+          a single sub-market under the filter. */}
+      {singleMarket && singleUserBet && (
+        <div
+          className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md px-3 py-2 text-xs"
+          style={{
+            backgroundColor: 'color-mix(in oklch, var(--color-accent) 10%, transparent)',
+            border: '1px solid color-mix(in oklch, var(--color-accent) 30%, transparent)',
+          }}
+        >
+          <span style={{ color: 'var(--color-text-secondary)' }}>{t('markets.yourBet')}:</span>
+          <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>
+            {singleUserBet.market_outcomes?.name ?? '—'}
+          </span>
+          <span className="font-mono" style={{ color: 'var(--color-text-secondary)' }}>
+            {singleUserBet.stake.toFixed(2)}
+          </span>
+          {singleUserBet.status === 'open' && (
+            <span className="font-mono" style={{ color: 'var(--color-accent)' }}>
+              → {singleUserBet.potential_payout.toFixed(2)}
             </span>
           )}
+          {singleUserBet.status !== 'open' && (
+            <Badge variant={singleUserBet.status === 'won' ? 'win' : 'loss'}>
+              {singleUserBet.status === 'won' ? t('bet.won') : t('bet.lost')}
+            </Badge>
+          )}
+        </div>
+      )}
+
+      {/* Body: single market → gauge + big buttons; multi → compact rows */}
+      {singleMarket ? (
+        <div className="flex min-h-20 items-center gap-3">
+          {singleYesProbability != null && <ChanceGauge value={singleYesProbability} size={56} />}
           <div className="min-w-0 flex-1">
             <OutcomeButtons
               outcomes={singleOutcomeButtons}
@@ -258,11 +296,15 @@ function EventMarketRow({
 
       {userBet && (
         <span
-          className="relative z-10 shrink-0 text-[11px]"
-          style={{ color: 'var(--color-accent)' }}
-          title={`${t('markets.yourBet')}: ${userBet.market_outcomes?.name ?? '—'}`}
+          className="relative z-10 shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-medium"
+          style={{
+            color: 'var(--color-accent)',
+            backgroundColor: 'color-mix(in oklch, var(--color-accent) 10%, transparent)',
+            border: '1px solid color-mix(in oklch, var(--color-accent) 30%, transparent)',
+          }}
+          title={`${t('markets.yourBet')}: ${userBet.market_outcomes?.name ?? '—'} ${userBet.stake.toFixed(2)} → ${userBet.potential_payout.toFixed(2)}`}
         >
-          ● {userBet.stake.toFixed(0)}
+          {userBet.market_outcomes?.name ?? '●'} · {userBet.stake.toFixed(0)}
         </span>
       )}
     </div>

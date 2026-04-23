@@ -65,6 +65,11 @@ interface Cursor {
   lastId: string;
 }
 
+/** Virtual slug that filters by `close_at` within today's local day instead of
+ *  by event tag. Kept as a slug (rather than a separate prop) so the TagFilter
+ *  pill stays mutually-exclusive with the other category chips. */
+export const CLOSING_TODAY_TAG_SLUG = 'closing-today';
+
 export function useMarkets(
   statusFilter: MarketStatusFilter = 'all',
   searchQuery = '',
@@ -85,12 +90,16 @@ export function useMarkets(
     initialPageParam: undefined,
     staleTime: 5 * 60 * 1000,
     queryFn: async ({ pageParam }) => {
-      // When filtering by tag we need an inner join on events so the eq()
+      const isClosingTodayFilter = tagSlugFilter === CLOSING_TODAY_TAG_SLUG;
+      // When filtering by a real tag we need an inner join on events so the eq()
       // applies as a SQL-level filter (not a post-fetch client trim). The
       // default left join keeps standalone legacy markets visible.
-      const eventJoin = tagSlugFilter
-        ? 'event:event_id!inner(id, title, description, category, image_url, close_at, status, volume, tag_slug, tag_label, tag_slugs)'
-        : 'event:event_id(id, title, description, category, image_url, close_at, status, volume, tag_slug, tag_label, tag_slugs)';
+      // The virtual "closing-today" slug filters on markets.close_at, so it
+      // doesn't need the inner join.
+      const eventJoin =
+        tagSlugFilter && !isClosingTodayFilter
+          ? 'event:event_id!inner(id, title, description, category, image_url, close_at, status, volume, tag_slug, tag_label, tag_slugs)'
+          : 'event:event_id(id, title, description, category, image_url, close_at, status, volume, tag_slug, tag_label, tag_slugs)';
 
       let query = supabase
         .from('markets')
@@ -121,11 +130,24 @@ export function useMarkets(
         query = query.eq('category', categoryFilter);
       }
 
-      if (tagSlugFilter) {
+      if (tagSlugFilter && !isClosingTodayFilter) {
         // Array containment: event.tag_slugs @> '{slug}'. An event can belong
         // to multiple whitelisted categories, so filtering by the single
         // tag_slug column used to hide it from all but its primary category.
         query = query.contains('event.tag_slugs', [tagSlugFilter]);
+      }
+
+      if (isClosingTodayFilter) {
+        // Local-day bounds in ISO (timestamptz tolerates any offset). Include
+        // the entire current day regardless of whether close_at already passed
+        // earlier today — the list is a "closing today" agenda, not a
+        // currently-tradable slice (statusFilter handles the latter).
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const tomorrowStart = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+        query = query
+          .gte('close_at', todayStart.toISOString())
+          .lt('close_at', tomorrowStart.toISOString());
       }
 
       // Cursor: fetch rows after the last item of the previous page.

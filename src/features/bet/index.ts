@@ -1,4 +1,4 @@
-export { useMarkets } from './useMarkets';
+export { useMarkets, CLOSING_TODAY_TAG_SLUG } from './useMarkets';
 export type { Market, MarketOutcome, MarketEvent, MarketStatusFilter } from './useMarkets';
 
 export { useMarketsByIds } from './useMarketsByIds';
