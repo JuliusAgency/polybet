@@ -38,11 +38,13 @@ export function ChanceGauge({ value, size = 56, label, className }: ChanceGaugeP
   const angle = Math.PI - pct * Math.PI;
   const ex = cx + r * Math.cos(angle);
   const ey = cy - r * Math.sin(angle);
-  const largeArc = pct > 0.5 ? 1 : 0;
 
-  // Paths
-  const bgPath = `M ${cx - r},${cy} A ${r},${r} 0 0 0 ${cx + r},${cy}`;
-  const fgPath = `M ${cx - r},${cy} A ${r},${r} 0 ${largeArc} 0 ${ex.toFixed(3)},${ey.toFixed(3)}`;
+  // Paths. In SVG's y-down user coords, sweep-flag=1 traces the arc clockwise,
+  // which on screen routes the curve OVER the top (giving a semicircle that
+  // opens downward — matches the Polymarket reference). The filled arc is
+  // always the shorter of the two candidate arcs, so large-arc-flag=0.
+  const bgPath = `M ${cx - r},${cy} A ${r},${r} 0 0 1 ${cx + r},${cy}`;
+  const fgPath = `M ${cx - r},${cy} A ${r},${r} 0 0 1 ${ex.toFixed(3)},${ey.toFixed(3)}`;
 
   const trackColor = 'color-mix(in srgb, var(--color-text-muted) 30%, transparent)';
   const fillColor = 'var(--color-accent)';

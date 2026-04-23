@@ -6,6 +6,7 @@ import { OutcomeButtons, type OutcomeButton } from '@/shared/ui/OutcomeButtons';
 import { MarketThumbnail } from '@/shared/ui/MarketThumbnail';
 import { BookmarkButton } from '@/shared/ui/BookmarkButton';
 import { ChanceGauge } from '@/shared/ui/ChanceGauge';
+import { BetMarker } from '@/shared/ui/BetMarker';
 import { formatVolume } from '@/shared/utils';
 
 // Polymarket-style: at most 2 outcome rows visible in the feed card.
@@ -44,16 +45,13 @@ export const EventCard = ({
         })
       : null;
 
-  // Markets the user has bets on always stay visible — they must never be hidden
-  // behind the VISIBLE_MARKET_LIMIT slice. Pinned first in original order, then
-  // the rest fills remaining slots up to the limit (or extended to fit all bets).
+  // Strict VISIBLE_MARKET_LIMIT cap, but bet markets take priority over the
+  // default sort so a user's wagered market is never buried — if they have
+  // bets across more than the limit, only the top-N bet markets fit; the
+  // full list stays reachable via the event detail page.
   const betMarkets = markets.filter((m) => betByMarketId.has(m.id));
   const nonBetMarkets = markets.filter((m) => !betByMarketId.has(m.id));
-  const visibleLimit = Math.max(VISIBLE_MARKET_LIMIT, betMarkets.length);
-  const visibleMarkets = [
-    ...betMarkets,
-    ...nonBetMarkets.slice(0, Math.max(0, visibleLimit - betMarkets.length)),
-  ];
+  const visibleMarkets = [...betMarkets, ...nonBetMarkets].slice(0, VISIBLE_MARKET_LIMIT);
   // Pick the most liquid market as the bookmark anchor (same rule
   // the feed uses to pick the primary market for an event).
   const primaryMarket = markets.find((m) => (m.volume ?? 0) > 0) ?? markets[0] ?? null;
@@ -100,23 +98,31 @@ export const EventCard = ({
         transitionTimingFunction: 'var(--ease-out-expo)',
       }}
     >
-      {/* Header: thumb + title (clickable to detail) */}
-      <Link
-        to={detailPath}
-        aria-label={t('eventDetail.open', { defaultValue: 'Open event details' })}
-        className="group/title -mx-1 -mt-1 flex items-start gap-2.5 rounded-md p-1"
-      >
-        <MarketThumbnail src={event.image_url} title={event.title} id={event.id} size="md" />
+      {/* Header: thumb + title on the start; probability gauge pinned to the
+          inline-end so buttons below can span the full width. */}
+      <header className="-mx-1 -mt-1 flex items-start gap-2.5 rounded-md p-1">
+        <Link
+          to={detailPath}
+          aria-label={t('eventDetail.open', { defaultValue: 'Open event details' })}
+          className="group/title flex min-w-0 flex-1 items-start gap-2.5"
+        >
+          <MarketThumbnail src={event.image_url} title={event.title} id={event.id} size="md" />
 
-        <div className="min-w-0 flex-1">
-          <h3
-            className="line-clamp-2 text-sm font-semibold leading-snug underline-offset-2 decoration-1 group-hover/title:underline"
-            style={{ color: 'var(--color-text-primary)', fontFamily: 'var(--font-sans)' }}
-          >
-            {event.title}
-          </h3>
-        </div>
-      </Link>
+          <div className="min-w-0 flex-1">
+            <h3
+              className="line-clamp-2 text-sm font-semibold leading-snug underline-offset-2 decoration-1 group-hover/title:underline"
+              style={{ color: 'var(--color-text-primary)', fontFamily: 'var(--font-sans)' }}
+            >
+              {event.title}
+            </h3>
+          </div>
+        </Link>
+        {singleYesProbability != null && (
+          <div className="shrink-0">
+            <ChanceGauge value={singleYesProbability} size={52} />
+          </div>
+        )}
+      </header>
 
       {/* User bet inline — mirrors MarketCard so the "My bets" view shows
           the stake, locked odds, and result even when the event reduces to
@@ -149,10 +155,9 @@ export const EventCard = ({
         </div>
       )}
 
-      {/* Body: single market → gauge + big buttons; multi → compact rows */}
+      {/* Body: single market → full-width buttons (gauge is in header); multi → compact rows */}
       {singleMarket ? (
-        <div className="flex min-h-20 items-center gap-3">
-          {singleYesProbability != null && <ChanceGauge value={singleYesProbability} size={56} />}
+        <div className="flex min-h-20 items-center">
           <div className="min-w-0 flex-1">
             <OutcomeButtons
               outcomes={singleOutcomeButtons}
@@ -212,7 +217,10 @@ export const EventCard = ({
             </span>
           )}
         </div>
-        {primaryMarket && <BookmarkButton marketId={primaryMarket.id} stopPropagation={false} />}
+        <div className="flex items-center gap-1">
+          {betMarkets.length > 0 && <BetMarker />}
+          {primaryMarket && <BookmarkButton marketId={primaryMarket.id} stopPropagation={false} />}
+        </div>
       </footer>
     </article>
   );

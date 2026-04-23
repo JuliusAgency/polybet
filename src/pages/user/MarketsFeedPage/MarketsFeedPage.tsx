@@ -168,14 +168,25 @@ const MarketsFeedPage = () => {
             )}
           </div>
         </div>
-        {/* Tag filter — curated popular categories from Polymarket */}
+        {/* Tag filter — curated popular categories from Polymarket.
+            My-bets and tag selection are mutually exclusive: turning one on
+            clears the other so the feed has a single intent at any time. */}
         <TagFilter
           value={tagSlug}
-          onChange={setTagSlug}
+          onChange={(next) => {
+            setTagSlug(next);
+            if (myBetsOnly) setMyBetsOnly(false);
+          }}
           tags={allowedTags}
           showMyBets={hasBets}
           myBetsActive={myBetsOnly}
-          onMyBetsToggle={() => setMyBetsOnly((v) => !v)}
+          onMyBetsToggle={() => {
+            setMyBetsOnly((v) => {
+              const nextValue = !v;
+              if (nextValue) setTagSlug(null);
+              return nextValue;
+            });
+          }}
         />
       </div>
 
@@ -193,7 +204,9 @@ const MarketsFeedPage = () => {
       {!feedIsLoading && !feedIsError && feedItems.length === 0 && (
         <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
           {myBetsOnly
-            ? t('markets.noMyBets')
+            ? hasBets
+              ? t('markets.noMyBetsForStatus')
+              : t('markets.noMyBets')
             : debouncedSearch
               ? t('markets.noResults')
               : t('markets.noMarkets')}

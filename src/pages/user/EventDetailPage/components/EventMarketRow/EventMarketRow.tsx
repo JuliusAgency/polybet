@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import type { Market, MarketOutcome, MyBet } from '@/features/bet';
 import { Badge } from '@/shared/ui/Badge';
 import { BookmarkButton } from '@/shared/ui/BookmarkButton';
+import { BetMarker } from '@/shared/ui/BetMarker';
 import { MarketThumbnail } from '@/shared/ui/MarketThumbnail';
 import { OutcomeButtons, type OutcomeButton } from '@/shared/ui/OutcomeButtons';
 import { formatVolume } from '@/shared/utils';
@@ -134,6 +135,7 @@ export const EventMarketRow = ({
         />
       </div>
 
+      {userBet && <BetMarker />}
       <BookmarkButton marketId={market.id} stopPropagation />
     </div>
   );

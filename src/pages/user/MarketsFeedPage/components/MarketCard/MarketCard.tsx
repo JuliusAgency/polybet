@@ -7,6 +7,7 @@ import { OutcomeButtons, type OutcomeButton } from '@/shared/ui/OutcomeButtons';
 import { MarketThumbnail } from '@/shared/ui/MarketThumbnail';
 import { BookmarkButton } from '@/shared/ui/BookmarkButton';
 import { ChanceGauge } from '@/shared/ui/ChanceGauge';
+import { BetMarker } from '@/shared/ui/BetMarker';
 import { MARKETS_STALE_THRESHOLD_MS } from '@/shared/config/markets';
 import { useTicker } from '@/shared/hooks/useTicker';
 import { formatVolume } from '@/shared/utils';
@@ -95,20 +96,28 @@ export const MarketCard = ({
         transitionTimingFunction: 'var(--ease-out-expo)',
       }}
     >
-      {/* Header: thumb + title + category (volume moved to footer). */}
-      {linkToEvent && market.event_id ? (
-        <Link
-          to={`/events/${market.event_id}`}
-          aria-label={t('eventDetail.open', { defaultValue: 'Open event details' })}
-          className="group/title -mx-1 -mt-1 flex items-start gap-2.5 rounded-md p-1"
-        >
-          <MarketCardHeaderContent market={market} withTitleHover />
-        </Link>
-      ) : (
-        <header className="flex items-start gap-2.5">
-          <MarketCardHeaderContent market={market} />
-        </header>
-      )}
+      {/* Header: thumb + title on the start; probability gauge pinned to the
+          inline-end so buttons below can span the full width. */}
+      <header className="-mx-1 -mt-1 flex items-start gap-2.5 rounded-md p-1">
+        {linkToEvent && market.event_id ? (
+          <Link
+            to={`/events/${market.event_id}`}
+            aria-label={t('eventDetail.open', { defaultValue: 'Open event details' })}
+            className="group/title flex min-w-0 flex-1 items-start gap-2.5"
+          >
+            <MarketCardHeaderContent market={market} withTitleHover />
+          </Link>
+        ) : (
+          <div className="flex min-w-0 flex-1 items-start gap-2.5">
+            <MarketCardHeaderContent market={market} />
+          </div>
+        )}
+        {yesProbability != null && (
+          <div className="shrink-0">
+            <ChanceGauge value={yesProbability} size={52} />
+          </div>
+        )}
+      </header>
 
       {/* User bet inline — only if present */}
       {userBet && (
@@ -139,9 +148,8 @@ export const MarketCard = ({
         </div>
       )}
 
-      {/* Outcome CTAs — Polymarket style with arc gauge + hover-shows-percentage buttons */}
-      <div className="flex min-h-20 items-center gap-3">
-        {yesProbability != null && <ChanceGauge value={yesProbability} size={56} />}
+      {/* Outcome CTAs — full-width, gauge moved to the header. */}
+      <div className="flex min-h-20 items-center">
         <div className="min-w-0 flex-1">
           <OutcomeButtons
             outcomes={outcomeButtons}
@@ -200,6 +208,7 @@ export const MarketCard = ({
               ⚠
             </span>
           )}
+          {userBet && <BetMarker />}
           <BookmarkButton marketId={market.id} />
           {showRefreshAction && market.polymarket_id && (
             <button

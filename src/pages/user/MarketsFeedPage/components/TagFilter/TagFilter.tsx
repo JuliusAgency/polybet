@@ -32,10 +32,14 @@ export function TagFilter({
 
   if (tags.length === 0) return null;
 
+  // When My bets is on, it owns the feed intent — no tag chip or the
+  // "All categories" fallback should look active.
+  const effectiveValue = myBetsActive ? undefined : value;
+
   return (
     <div className="mt-2 flex flex-wrap gap-1.5">
       {tags.map((tag) => {
-        const isActive = value === tag.slug;
+        const isActive = effectiveValue === tag.slug;
         const isTrending = tag.slug === 'trending';
         const label = t(`markets.tags.${tag.slug}`, { defaultValue: tag.label });
 
@@ -73,7 +77,7 @@ export function TagFilter({
         );
       })}
       {(() => {
-        const isActive = value === CLOSING_TODAY_TAG_SLUG;
+        const isActive = effectiveValue === CLOSING_TODAY_TAG_SLUG;
         return (
           <button
             onClick={() => onChange(isActive ? null : CLOSING_TODAY_TAG_SLUG)}
@@ -94,28 +98,31 @@ export function TagFilter({
           </button>
         );
       })()}
-      <button
-        onClick={() => onChange(null)}
-        className="rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors"
-        style={{
-          backgroundColor:
-            value === null
-              ? 'var(--color-accent)'
-              : 'color-mix(in srgb, var(--color-accent) 3%, var(--color-bg-elevated))',
-          color:
-            value === null
-              ? 'var(--color-bg-base)'
-              : 'color-mix(in srgb, var(--color-accent) 25%, var(--color-text-secondary))',
-          border: `1px solid ${value === null ? 'var(--color-accent)' : 'color-mix(in srgb, var(--color-accent) 12%, var(--color-border))'}`,
-        }}
-      >
-        {t('markets.categoryAll')}
-      </button>
+      {(() => {
+        const isActive = effectiveValue === null;
+        return (
+          <button
+            onClick={() => onChange(null)}
+            className="rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors"
+            style={{
+              backgroundColor: isActive
+                ? 'var(--color-accent)'
+                : 'color-mix(in srgb, var(--color-accent) 3%, var(--color-bg-elevated))',
+              color: isActive
+                ? 'var(--color-bg-base)'
+                : 'color-mix(in srgb, var(--color-accent) 25%, var(--color-text-secondary))',
+              border: `1px solid ${isActive ? 'var(--color-accent)' : 'color-mix(in srgb, var(--color-accent) 12%, var(--color-border))'}`,
+            }}
+          >
+            {t('markets.categoryAll')}
+          </button>
+        );
+      })()}
       {showMyBets && onMyBetsToggle && (
         <button
           onClick={onMyBetsToggle}
           aria-pressed={myBetsActive}
-          className="rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors"
+          className="flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors"
           style={{
             backgroundColor: myBetsActive
               ? 'var(--color-accent)'
@@ -126,10 +133,35 @@ export function TagFilter({
             border: `1px solid ${myBetsActive ? 'var(--color-accent)' : 'color-mix(in srgb, var(--color-accent) 12%, var(--color-border))'}`,
           }}
         >
-          {t('markets.myBets')}
+          <TargetIcon />
+          <span>{t('markets.myBets')}</span>
         </button>
       )}
     </div>
+  );
+}
+
+function TargetIcon() {
+  // Bullseye — three concentric circles, center dot filled. Not used elsewhere
+  // in the app (bookmark is taken by Saved/BookmarkButton, check by BetMarker,
+  // flame by Trending, clock by Closing today). Reads as "you aimed, you
+  // placed your bet" which matches the My bets semantics.
+  return (
+    <svg
+      width="11"
+      height="11"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <circle cx="12" cy="12" r="6" />
+      <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
+    </svg>
   );
 }
 
