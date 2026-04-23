@@ -225,6 +225,10 @@ const MarketsFeedPage = () => {
                   bets={bets ?? []}
                   mode={item.event.status === 'archived' ? 'readonly' : 'interactive'}
                   onOutcomeClick={handleOutcomeClick}
+                  // In "my bets" mode only the user's wagered markets are passed;
+                  // force multi-row so a truly multi-market event doesn't collapse
+                  // into the single-market visual just because siblings were filtered out.
+                  forceMultiRow={myBetsOnly}
                 />
               ) : (
                 <MarketCard

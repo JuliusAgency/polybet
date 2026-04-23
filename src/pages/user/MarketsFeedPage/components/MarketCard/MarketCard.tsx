@@ -84,9 +84,11 @@ export const MarketCard = ({
       ? t(`markets.status.${effectiveStatus}`, { defaultValue: effectiveStatus.toUpperCase() })
       : null;
 
+  const cardHref = linkToEvent && market.event_id ? `/events/${market.event_id}` : null;
+
   return (
     <article
-      className="flex flex-col gap-3 p-3 transition-[transform,box-shadow] motion-reduce:transition-none hover:-translate-y-0.5 hover:[box-shadow:var(--shadow-md)] motion-reduce:hover:translate-y-0"
+      className="relative flex flex-col gap-3 p-3 transition-[transform,box-shadow] motion-reduce:transition-none hover:-translate-y-0.5 hover:[box-shadow:var(--shadow-md)] motion-reduce:hover:translate-y-0"
       style={{
         backgroundColor: 'var(--color-bg-surface)',
         border: '1px solid var(--color-border)',
@@ -95,22 +97,23 @@ export const MarketCard = ({
         transitionTimingFunction: 'var(--ease-out-expo)',
       }}
     >
+      {/* Full-card click target — any whitespace/non-interactive surface opens
+          the event detail page. Interactive children below sit on z-10 so
+          clicks on buttons/bookmark keep their own behaviour. */}
+      {cardHref && (
+        <Link
+          to={cardHref}
+          aria-label={t('eventDetail.open', { defaultValue: 'Open event details' })}
+          className="absolute inset-0 z-0 rounded-[inherit]"
+        />
+      )}
+
       {/* Header: thumb + title on the start; probability gauge pinned to the
           inline-end so buttons below can span the full width. */}
-      <header className="-mx-1 -mt-1 flex items-start gap-2.5 rounded-md p-1">
-        {linkToEvent && market.event_id ? (
-          <Link
-            to={`/events/${market.event_id}`}
-            aria-label={t('eventDetail.open', { defaultValue: 'Open event details' })}
-            className="group/title flex min-w-0 flex-1 items-start gap-2.5"
-          >
-            <MarketCardHeaderContent market={market} withTitleHover />
-          </Link>
-        ) : (
-          <div className="flex min-w-0 flex-1 items-start gap-2.5">
-            <MarketCardHeaderContent market={market} />
-          </div>
-        )}
+      <header className="relative z-0 -mx-1 -mt-1 flex items-start gap-2.5 rounded-md p-1">
+        <div className="group/title flex min-w-0 flex-1 items-start gap-2.5">
+          <MarketCardHeaderContent market={market} withTitleHover={!!cardHref} />
+        </div>
         {yesProbability != null && (
           <div className="shrink-0">
             <ChanceGauge value={yesProbability} size={64} />
@@ -119,7 +122,7 @@ export const MarketCard = ({
       </header>
 
       {/* Outcome CTAs — full-width, gauge moved to the header. */}
-      <div className="flex min-h-20 items-center">
+      <div className="relative z-10 flex min-h-20 items-center">
         <div className="min-w-0 flex-1">
           <OutcomeButtons
             outcomes={outcomeButtons}
@@ -141,7 +144,7 @@ export const MarketCard = ({
 
       {/* Footer: metadata as icons + compact text */}
       <footer
-        className="flex items-center justify-between gap-3 text-xs"
+        className="relative flex items-center justify-between gap-3 text-xs"
         style={{ color: 'var(--color-text-secondary)' }}
       >
         <div className="flex items-center gap-3">
@@ -172,7 +175,7 @@ export const MarketCard = ({
           )}
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="relative z-10 flex items-center gap-1">
           {showRefreshAction && isStale && (
             <span title={t('markets.syncedStale')} style={{ color: 'var(--color-loss)' }}>
               ⚠

@@ -18,6 +18,12 @@ interface EventCardProps {
   bets?: MyBet[];
   mode?: 'interactive' | 'readonly';
   onOutcomeClick?: (market: Market, outcome: MarketOutcome) => void;
+  // When true, always render as a multi-row event card even if only one
+  // market is passed in. Used by the "my bets" filter: there we only pass
+  // the user's wagered markets, so a multi-market event would otherwise
+  // collapse into the single-market visual just because the other rows
+  // are filtered out.
+  forceMultiRow?: boolean;
 }
 
 export const EventCard = ({
@@ -26,6 +32,7 @@ export const EventCard = ({
   bets,
   mode = 'interactive',
   onOutcomeClick,
+  forceMultiRow = false,
 }: EventCardProps) => {
   const { t, i18n } = useTranslation();
   const isHebrew = i18n.language === 'he';
@@ -54,7 +61,8 @@ export const EventCard = ({
   // Pick the most liquid market as the bookmark anchor (same rule
   // the feed uses to pick the primary market for an event).
   const primaryMarket = markets.find((m) => (m.volume ?? 0) > 0) ?? markets[0] ?? null;
-  const isSingle = visibleMarkets.length === 1;
+
+  const isSingle = !forceMultiRow && visibleMarkets.length === 1;
   const singleMarket = isSingle ? visibleMarkets[0] : null;
 
   const singleIsExpired =
@@ -208,14 +216,8 @@ interface EventMarketRowProps {
   detailPath: string;
 }
 
-function EventMarketRow({
-  market,
-  userBet,
-  mode,
-  onOutcomeClick,
-  detailPath,
-}: EventMarketRowProps) {
-  const { t, i18n } = useTranslation();
+function EventMarketRow({ market, mode, onOutcomeClick, detailPath }: EventMarketRowProps) {
+  const { i18n } = useTranslation();
   const isHebrew = i18n.language === 'he';
 
   const isExpired = market.close_at != null && new Date(market.close_at).getTime() <= Date.now();
@@ -279,20 +281,6 @@ function EventMarketRow({
           }
         />
       </div>
-
-      {userBet && (
-        <span
-          className="relative z-10 shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-medium"
-          style={{
-            color: 'var(--color-accent)',
-            backgroundColor: 'color-mix(in oklch, var(--color-accent) 10%, transparent)',
-            border: '1px solid color-mix(in oklch, var(--color-accent) 30%, transparent)',
-          }}
-          title={`${t('markets.yourBet')}: ${userBet.market_outcomes?.name ?? '—'} ${userBet.stake.toFixed(2)} → ${userBet.potential_payout.toFixed(2)}`}
-        >
-          {userBet.market_outcomes?.name ?? '●'} · {userBet.stake.toFixed(0)}
-        </span>
-      )}
     </div>
   );
 }
