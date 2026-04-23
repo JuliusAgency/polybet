@@ -93,11 +93,9 @@ const EventDetailPage = () => {
                 defaultValue: '{{count}} markets',
               })}
             </span>
-            {volumeLabel && (
-              <span className="font-mono">{t('markets.volumeShort', { value: volumeLabel })}</span>
-            )}
+            {volumeLabel && <span>{t('markets.volumeShort', { value: volumeLabel })}</span>}
             {closesDate && (
-              <span className="font-mono">
+              <span>
                 {event.status === 'open' ? t('markets.closesAt') : t('markets.closedAt')}{' '}
                 {closesDate}
               </span>
