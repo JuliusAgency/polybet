@@ -63,7 +63,7 @@ const EventDetailPage = () => {
   const betByMarketId = new Map(bets.map((b) => [b.market_id, b]));
   const volumeLabel = formatVolume(event.volume ?? null);
   const closesDate = event.close_at
-    ? new Date(event.close_at).toLocaleDateString(i18n.language === 'he' ? 'he-IL' : undefined, {
+    ? new Date(event.close_at).toLocaleDateString(i18n.language === 'he' ? 'he-IL' : 'en-US', {
         day: 'numeric',
         month: 'short',
         year: 'numeric',

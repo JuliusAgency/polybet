@@ -25,7 +25,7 @@ interface MarketCardProps {
 
 function formatClosesDate(iso: string | null, locale: string): string | null {
   if (!iso) return null;
-  return new Date(iso).toLocaleDateString(locale === 'he' ? 'he-IL' : undefined, {
+  return new Date(iso).toLocaleDateString(locale === 'he' ? 'he-IL' : 'en-US', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
