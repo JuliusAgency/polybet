@@ -170,7 +170,6 @@ export function useMarkets(
       if (error) throw new Error(error.message);
       const markets = (data ?? []) as unknown as Market[];
       if (import.meta.env.DEV && markets.length > 0) {
-        // eslint-disable-next-line no-console
         console.log(
           '[useMarkets] queryFn fetched, first market last_synced_at:',
           markets[0].last_synced_at

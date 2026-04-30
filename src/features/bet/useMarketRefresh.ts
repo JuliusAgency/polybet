@@ -13,12 +13,32 @@ interface RefreshMarketsResponse {
   errors?: string[];
 }
 
-export type RefreshResult = 'idle' | 'ok' | 'failed';
+type RefreshResult = 'idle' | 'ok' | 'failed';
+
+interface UseMarketRefreshOptions {
+  /** Disable the interval (manual-only mode for per-card buttons). */
+  autoRefresh?: boolean;
+  /** When set, after a successful refresh invalidate exactly `['event', eventId]`
+   *  so the EventDetail query refetches fresh prices without a 30s lag.
+   *  Omit on the feed page where there is no event in scope — broadcasting an
+   *  invalidation across all `['event', *]` cache entries would refetch every
+   *  warm event query unnecessarily. */
+  eventId?: string;
+}
 
 /** Full-cycle sync for the given polymarket_ids: refreshes odds, updates market status,
- *  and settles resolved markets. Periodically auto-runs and can be triggered manually.
- *  Pass autoRefresh=false to disable the interval (manual-only mode for per-card buttons). */
-export function useMarketRefresh(polymarketIds: string[], autoRefresh = true) {
+ *  and settles resolved markets. Periodically auto-runs and can be triggered manually. */
+export function useMarketRefresh(
+  polymarketIds: string[],
+  optionsOrAutoRefresh: UseMarketRefreshOptions | boolean = true
+) {
+  const options: UseMarketRefreshOptions =
+    typeof optionsOrAutoRefresh === 'boolean'
+      ? { autoRefresh: optionsOrAutoRefresh }
+      : optionsOrAutoRefresh;
+  const autoRefresh = options.autoRefresh ?? true;
+  const eventId = options.eventId;
+
   const queryClient = useQueryClient();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastResult, setLastResult] = useState<RefreshResult>('idle');
@@ -48,7 +68,6 @@ export function useMarketRefresh(polymarketIds: string[], autoRefresh = true) {
       );
 
       if (import.meta.env.DEV) {
-        // eslint-disable-next-line no-console
         console.log('[useMarketRefresh] edge response', {
           ids,
           updated: data?.updated,
@@ -79,10 +98,14 @@ export function useMarketRefresh(polymarketIds: string[], autoRefresh = true) {
           });
         }
 
-        // Invalidate the EventDetail cache so useEventById refetches fresh
-        // odds right after the edge function commits — otherwise its own
-        // refetchInterval can race the edge call and cache stale prices.
-        void queryClient.invalidateQueries({ queryKey: ['event'] });
+        // Invalidate the specific EventDetail cache so useEventById refetches
+        // fresh odds right after the edge function commits — otherwise its
+        // refetchInterval can race the edge call and cache stale prices. We
+        // narrow to the exact eventId so warm-but-background event queries
+        // are not refetched on every cycle.
+        if (eventId) {
+          void queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+        }
       }
 
       const result: RefreshResult = data && data.updated > 0 ? 'ok' : 'failed';
@@ -93,7 +116,6 @@ export function useMarketRefresh(polymarketIds: string[], autoRefresh = true) {
       resultTimerRef.current = setTimeout(() => setLastResult('idle'), 4_000);
     } catch (err) {
       if (import.meta.env.DEV) {
-        // eslint-disable-next-line no-console
         console.error('[useMarketRefresh] CAUGHT error:', err);
       }
       setLastResult('failed');

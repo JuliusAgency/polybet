@@ -31,9 +31,11 @@ const EventDetailPage = () => {
   const { data: eventData, isLoading, isError, error } = useEventById(id);
   // Periodically refresh odds from Polymarket so the bet placement page can't be
   // gamed by checking the original site between price ticks. The edge function
-  // writes fresh prices into market_outcomes; useEventById refetches them.
+  // writes fresh prices into market_outcomes; useMarketRefresh invalidates the
+  // exact `['event', id]` cache key after a successful refresh so useEventById
+  // immediately picks up fresh prices without a 30s lag.
   const eventPolymarketIds = (eventData?.markets ?? []).map((m) => m.polymarket_id);
-  useMarketRefresh(eventPolymarketIds);
+  useMarketRefresh(eventPolymarketIds, { eventId: id });
   const { data: bets = [] } = useMyBets();
   const { data: balance } = useUserBalance();
   const { data: similar = [], isLoading: isSimilarLoading } = useSimilarEvents({

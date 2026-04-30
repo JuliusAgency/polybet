@@ -1,0 +1,40 @@
+Codemap regeneration — 2026-05-01 (post code-review)
+
+Status: incremental update on top of initial generation earlier this session.
+
+Files updated:
+  docs/CODEMAPS/frontend.md     — useMarketRefresh signature now accepts options object
+  docs/CODEMAPS/backend.md      — migration 070 BEGIN/COMMIT + SET LOCAL note
+  docs/CODEMAPS/data.md         — same migration 070 note
+
+Architecture changes documented (since pre-session baseline):
+  + migration 069 — markets.tag_slugs denormalization, DROP markets+market_outcomes
+                    from supabase_realtime publication
+  + migration 070 — backfill + GIN idx_markets_tag_slugs_visible
+                    BEGIN/COMMIT-wrapped UPDATE with SET LOCAL statement_timeout=0
+                    so the long backfill cannot leak its timeout setting to
+                    subsequent migrations on a partial failure
+  + frontend:    cross-user realtime subscriptions removed in favour of polling
+                 (useMarkets, useMyBets, useSystemKpis, WalletPage duplicate)
+  + frontend:    EventDetailPage now polls via useMarketRefresh + useEventById refetchInterval
+                 (antifraud window = MARKETS_REFRESH_INTERVAL_MS = 30s)
+  + frontend:    useMarketRefresh exposes (ids, { autoRefresh?, eventId? })
+                 — narrow ['event', eventId] invalidation when eventId is in scope,
+                 no broadcast invalidation that would refetch every cached event
+  + cleanup:     three unused eslint-disable directives removed,
+                 unused `cn` className helper removed,
+                 RefreshResult demoted from exported to local type
+
+Realtime publication state:
+  in:    bets, balances, balance_transactions, profiles, events
+  out:   markets (069), market_outcomes (069)
+
+Critical perf indexes (markets feed):
+  idx_markets_visible_sort_volume        — feed cursor (057)
+  idx_markets_close_at_visible           — closing-today filter (066)
+  idx_markets_tag_slugs_visible (GIN)    — tag filter (070, NEW)
+  idx_markets_event_visible_status      — per-event children (048)
+
+Test baseline: 84 pass / 12 fail (pre-existing — no regression introduced this session).
+
+Staleness: none.

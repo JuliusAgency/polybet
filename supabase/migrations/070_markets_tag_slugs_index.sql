@@ -19,7 +19,12 @@
 --     rows of small text[] arrays the GIN build is only a few seconds and
 --     sync writers simply queue on the table lock for that window.
 
-SET statement_timeout = 0;
+-- Wrap the long UPDATE in an explicit transaction so we can use `SET LOCAL`
+-- — that scopes the disabled timeout to this transaction only and cannot
+-- leak to subsequent migrations in the same CLI session, even if a later
+-- statement aborts.
+BEGIN;
+SET LOCAL statement_timeout = 0;
 
 -- Single bulk UPDATE. The WHERE filter is the idempotency guard — already-
 -- backfilled rows are skipped, so re-running this migration is a no-op.
@@ -32,11 +37,11 @@ FROM events e
 WHERE m.event_id = e.id
   AND m.tag_slugs IS DISTINCT FROM COALESCE(e.tag_slugs, '{}'::text[]);
 
+COMMIT;
+
 -- GIN index for tag containment lookups, scoped to the visible feed slice.
+-- Plain CREATE INDEX (non-CONCURRENT) is fine on ~157k rows of small text[]
+-- arrays — build is a few seconds. Runs at default statement_timeout.
 CREATE INDEX IF NOT EXISTS idx_markets_tag_slugs_visible
   ON markets USING gin (tag_slugs)
   WHERE is_visible = true;
-
--- Restore default statement_timeout for any subsequent migrations in this
--- session (a no-op if this is the last file the CLI runs).
-RESET statement_timeout;
