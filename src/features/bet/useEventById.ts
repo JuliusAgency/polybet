@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/shared/api/supabase';
+import { MARKETS_REFRESH_INTERVAL_MS } from '@/shared/config/markets';
 import type { Market, MarketEvent } from './useMarkets';
 
 export interface EventWithMarkets {
@@ -14,7 +15,11 @@ export function useEventById(eventId: string | undefined) {
   return useQuery<EventWithMarkets | null, Error>({
     queryKey: ['event', eventId] as const,
     enabled: !!eventId,
-    staleTime: 60_000,
+    // Re-pull fresh odds from DB on the same cadence as useMarketRefresh so that
+    // the bet placement page reflects Polymarket prices without realtime.
+    staleTime: MARKETS_REFRESH_INTERVAL_MS,
+    refetchInterval: MARKETS_REFRESH_INTERVAL_MS,
+    refetchIntervalInBackground: false,
     queryFn: async () => {
       if (!eventId) return null;
 

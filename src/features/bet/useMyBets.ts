@@ -32,9 +32,8 @@ export function useMyBets() {
   useEffect(() => {
     if (!userId) return;
 
-    // Single channel that listens to:
-    // 1. bets table — direct bet status changes (e.g. won/lost after settlement)
-    // 2. markets table — market resolution changes the joined markets data in the query
+    // Listen only to this user's bets — settlement triggers an UPDATE on bets,
+    // which is enough to refresh the joined markets data.
     const channel = supabase
       .channel(`user_bets_${userId}`)
       .on(
@@ -44,9 +43,6 @@ export function useMyBets() {
           void queryClient.invalidateQueries({ queryKey: ['user', 'bets', userId] });
         }
       )
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'markets' }, () => {
-        void queryClient.invalidateQueries({ queryKey: ['user', 'bets', userId] });
-      })
       .subscribe();
 
     return () => {

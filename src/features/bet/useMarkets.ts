@@ -1,5 +1,4 @@
-import { useCallback, useEffect } from 'react';
-import { type InfiniteData, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { supabase } from '@/shared/api/supabase';
 import { MARKETS_PAGE_LIMIT, MARKETS_REFRESH_MAX_IDS } from '@/shared/config/markets';
 import { useMarketRefresh } from './useMarketRefresh';
@@ -55,6 +54,9 @@ export interface Market {
   sort_volume?: number | null;
   event_id: string | null;
   group_label: string | null;
+  // Denormalized from events.tag_slugs (migration 069). May be missing on
+  // legacy cached records read before the column existed; treat as optional.
+  tag_slugs?: string[];
   event: MarketEvent | null;
   market_outcomes: MarketOutcome[];
 }
@@ -76,7 +78,6 @@ export function useMarkets(
   categoryFilter: string | null = null,
   tagSlugFilter: string | null = null
 ) {
-  const queryClient = useQueryClient();
   const queryKey = ['markets', statusFilter, searchQuery, categoryFilter, tagSlugFilter] as const;
 
   const result = useInfiniteQuery<
@@ -91,15 +92,12 @@ export function useMarkets(
     staleTime: 5 * 60 * 1000,
     queryFn: async ({ pageParam }) => {
       const isClosingTodayFilter = tagSlugFilter === CLOSING_TODAY_TAG_SLUG;
-      // When filtering by a real tag we need an inner join on events so the eq()
-      // applies as a SQL-level filter (not a post-fetch client trim). The
-      // default left join keeps standalone legacy markets visible.
-      // The virtual "closing-today" slug filters on markets.close_at, so it
-      // doesn't need the inner join.
+      // tag_slugs is denormalized onto markets (migration 069), so the tag
+      // filter applies directly on markets and the inner join is no longer
+      // required. A plain left join still attaches the event payload for
+      // markets that have one, while standalone legacy markets stay visible.
       const eventJoin =
-        tagSlugFilter && !isClosingTodayFilter
-          ? 'event:event_id!inner(id, title, description, category, image_url, close_at, status, volume, tag_slug, tag_label, tag_slugs)'
-          : 'event:event_id(id, title, description, category, image_url, close_at, status, volume, tag_slug, tag_label, tag_slugs)';
+        'event:event_id(id, title, description, category, image_url, close_at, status, volume, tag_slug, tag_label, tag_slugs)';
 
       let query = supabase
         .from('markets')
@@ -131,10 +129,10 @@ export function useMarkets(
       }
 
       if (tagSlugFilter && !isClosingTodayFilter) {
-        // Array containment: event.tag_slugs @> '{slug}'. An event can belong
-        // to multiple whitelisted categories, so filtering by the single
-        // tag_slug column used to hide it from all but its primary category.
-        query = query.contains('event.tag_slugs', [tagSlugFilter]);
+        // Array containment on the denormalized markets.tag_slugs column
+        // (migration 069). Hits idx_markets_tag_slugs_visible (GIN) and
+        // avoids the events nested loop that previously timed out under load.
+        query = query.contains('tag_slugs', [tagSlugFilter]);
       }
 
       if (isClosingTodayFilter) {
@@ -193,52 +191,6 @@ export function useMarkets(
 
   // Flatten all pages into a single array
   const markets = result.data?.pages.flat() ?? [];
-
-  // Realtime: patch the cached outcome in-place without invalidating pages (preserves cursor)
-  const handleRealtimeChange = useCallback(
-    (payload: { new: Record<string, unknown> }) => {
-      const updated = payload.new;
-      if (!updated || typeof updated !== 'object') return;
-      const outcomeId = updated['id'] as string | undefined;
-      const marketId = updated['market_id'] as string | undefined;
-      if (!outcomeId || !marketId) return;
-
-      queryClient.setQueriesData<InfiniteData<Market[]>>({ queryKey: ['markets'] }, (old) => {
-        if (!old) return old;
-        return {
-          ...old,
-          pages: old.pages.map((page) =>
-            page.map((market) => {
-              if (market.id !== marketId) return market;
-              return {
-                ...market,
-                market_outcomes: market.market_outcomes.map((o) =>
-                  o.id === outcomeId ? { ...o, ...(updated as Partial<MarketOutcome>) } : o
-                ),
-              };
-            })
-          ),
-        };
-      });
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [queryClient]
-  );
-
-  useEffect(() => {
-    const channel = supabase
-      .channel('market_outcomes_changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'market_outcomes' },
-        handleRealtimeChange
-      )
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [handleRealtimeChange]);
 
   // Pass the first N polymarket IDs to the refresh hook
   const polymarketIds = markets.slice(0, MARKETS_REFRESH_MAX_IDS).map((m) => m.polymarket_id);

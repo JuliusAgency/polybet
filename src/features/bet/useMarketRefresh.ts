@@ -64,25 +64,25 @@ export function useMarketRefresh(polymarketIds: string[], autoRefresh = true) {
         const { data: freshMarkets } = await supabase
           .from('markets')
           .select(
-            'id, polymarket_id, question, status, winning_outcome_id, category, image_url, close_at, last_synced_at, created_at, volume, market_outcomes!market_outcomes_market_id_fkey(id, name, price, odds, effective_odds, updated_at, polymarket_token_id)'
+            'id, polymarket_id, question, status, winning_outcome_id, category, image_url, close_at, last_synced_at, created_at, volume, sort_volume, event_id, group_label, tag_slugs, market_outcomes!market_outcomes_market_id_fkey(id, name, price, odds, effective_odds, updated_at, polymarket_token_id)'
           )
           .in('polymarket_id', ids);
 
         if (freshMarkets && freshMarkets.length > 0) {
           const freshById = Object.fromEntries(freshMarkets.map((m) => [m.id, m]));
-          queryClient.setQueriesData<InfiniteData<Market[]>>(
-            { queryKey: ['markets'] },
-            (old) => {
-              if (!old) return old;
-              return {
-                ...old,
-                pages: old.pages.map((page) =>
-                  page.map((market) => freshById[market.id] ?? market)
-                ),
-              };
-            }
-          );
+          queryClient.setQueriesData<InfiniteData<Market[]>>({ queryKey: ['markets'] }, (old) => {
+            if (!old) return old;
+            return {
+              ...old,
+              pages: old.pages.map((page) => page.map((market) => freshById[market.id] ?? market)),
+            };
+          });
         }
+
+        // Invalidate the EventDetail cache so useEventById refetches fresh
+        // odds right after the edge function commits — otherwise its own
+        // refetchInterval can race the edge call and cache stale prices.
+        void queryClient.invalidateQueries({ queryKey: ['event'] });
       }
 
       const result: RefreshResult = data && data.updated > 0 ? 'ok' : 'failed';

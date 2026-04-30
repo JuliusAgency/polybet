@@ -1,7 +1,13 @@
 import { useCallback, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useEventById, useMyBets, useSimilarEvents, useUserBalance } from '@/features/bet';
+import {
+  useEventById,
+  useMarketRefresh,
+  useMyBets,
+  useSimilarEvents,
+  useUserBalance,
+} from '@/features/bet';
 import type { Market, MarketOutcome } from '@/features/bet';
 import { BetSlip } from '@/pages/user/MarketsFeedPage/components/BetSlip';
 import { MarketThumbnail } from '@/shared/ui/MarketThumbnail';
@@ -23,6 +29,11 @@ const EventDetailPage = () => {
   const { id } = useParams<{ id: string }>();
 
   const { data: eventData, isLoading, isError, error } = useEventById(id);
+  // Periodically refresh odds from Polymarket so the bet placement page can't be
+  // gamed by checking the original site between price ticks. The edge function
+  // writes fresh prices into market_outcomes; useEventById refetches them.
+  const eventPolymarketIds = (eventData?.markets ?? []).map((m) => m.polymarket_id);
+  useMarketRefresh(eventPolymarketIds);
   const { data: bets = [] } = useMyBets();
   const { data: balance } = useUserBalance();
   const { data: similar = [], isLoading: isSimilarLoading } = useSimilarEvents({

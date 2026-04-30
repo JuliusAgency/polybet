@@ -1,9 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import { useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/shared/api/supabase';
-import { useAuth } from '@/shared/hooks/useAuth';
 import { useUserBalance } from '@/features/bet';
 import { useUserTransactions } from '@/features/wallet';
 import { Card } from '@/shared/ui/Card';
@@ -32,44 +29,17 @@ const formatTransactionType = (
 
 const WalletPage = () => {
   const { t, i18n } = useTranslation();
-  const { session } = useAuth();
-  const queryClient = useQueryClient();
-  const userId = session?.user.id;
 
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
+  // useUserBalance already subscribes to balances changes for the current user
   const { data: balance, isLoading: balanceLoading } = useUserBalance();
   const { data: transactions, isLoading: txLoading } = useUserTransactions({ startDate, endDate });
 
   const available = balance?.available ?? 0;
   const inPlay = balance?.in_play ?? 0;
   const totalEquity = available + inPlay;
-
-  // Realtime subscription on balances table to keep balance cards fresh
-  useEffect(() => {
-    if (!userId) return;
-
-    const channel = supabase
-      .channel(`user_balance_changes_${userId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'balances',
-          filter: `user_id=eq.${userId}`,
-        },
-        () => {
-          void queryClient.invalidateQueries({ queryKey: ['user', 'balance', userId] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [userId, queryClient]);
 
   return (
     <div>
