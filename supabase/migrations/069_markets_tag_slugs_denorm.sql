@@ -38,17 +38,7 @@ END $$;
 ALTER TABLE markets
   ADD COLUMN IF NOT EXISTS tag_slugs text[] NOT NULL DEFAULT '{}';
 
--- 2. Backfill from events. We deliberately do NOT touch event_id or volume,
---    so the existing markets BEFORE-UPDATE triggers on those columns stay quiet.
-UPDATE markets m
-SET tag_slugs = COALESCE(e.tag_slugs, '{}'::text[])
-FROM events e
-WHERE m.event_id = e.id
-  AND m.tag_slugs IS DISTINCT FROM COALESCE(e.tag_slugs, '{}'::text[]);
-
--- Standalone markets (no event) keep the default '{}' — nothing to backfill.
-
--- 3. Maintain on the market side: when event_id changes, refresh tag_slugs.
+-- 2. Maintain on the market side: when event_id changes, refresh tag_slugs.
 CREATE OR REPLACE FUNCTION markets_set_tag_slugs()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -77,7 +67,7 @@ BEFORE INSERT OR UPDATE OF event_id ON markets
 FOR EACH ROW
 EXECUTE FUNCTION markets_set_tag_slugs();
 
--- 4. Maintain on the event side: when an event's tag_slugs changes, propagate.
+-- 3. Maintain on the event side: when an event's tag_slugs changes, propagate.
 CREATE OR REPLACE FUNCTION events_propagate_tag_slugs()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -100,5 +90,6 @@ AFTER UPDATE OF tag_slugs ON events
 FOR EACH ROW
 EXECUTE FUNCTION events_propagate_tag_slugs();
 
--- GIN index is created in migration 070 with CONCURRENTLY to avoid blocking
--- the Polymarket sync writers while building it.
+-- Backfill of existing rows + GIN index live in migration 070, which uses a
+-- chunked SKIP LOCKED loop to avoid waiting on rows currently locked by the
+-- Polymarket sync writers.
