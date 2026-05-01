@@ -145,10 +145,15 @@ export function OutcomeButtons({
         const displayName = hoverShowsPercentage && isHovered && hoverPct ? hoverPct : label;
 
         const body: ReactNode = (
-          <div className="flex items-center justify-center gap-2 whitespace-nowrap">
-            <span className={styles.name}>{displayName}</span>
+          <div className="flex min-w-0 items-center justify-center gap-2">
+            <span className={`${styles.name} min-w-0 break-words text-center line-clamp-2`}>
+              {displayName}
+            </span>
             {pct && (
-              <span className={styles.odds} style={{ color: 'inherit', opacity: 0.95 }}>
+              <span
+                className={`${styles.odds} shrink-0`}
+                style={{ color: 'inherit', opacity: 0.95 }}
+              >
                 {pct}
               </span>
             )}

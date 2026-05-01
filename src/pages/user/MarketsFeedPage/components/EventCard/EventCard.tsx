@@ -95,7 +95,7 @@ export const EventCard = ({
 
   return (
     <article
-      className="flex flex-col gap-3 p-3 transition-[transform,box-shadow] motion-reduce:transition-none hover:-translate-y-0.5 hover:[box-shadow:var(--shadow-md)] motion-reduce:hover:translate-y-0"
+      className="group/card relative flex flex-col gap-3 p-3 transition-[transform,box-shadow] motion-reduce:transition-none hover:-translate-y-0.5 hover:[box-shadow:var(--shadow-md)] motion-reduce:hover:translate-y-0"
       style={{
         backgroundColor: 'var(--color-bg-surface)',
         border: '1px solid var(--color-border)',
@@ -104,19 +104,25 @@ export const EventCard = ({
         transitionTimingFunction: 'var(--ease-out-expo)',
       }}
     >
+      {/* Full-card click target — any whitespace/non-interactive surface opens
+          the event detail page. Interactive children below sit on z-10 so
+          clicks on outcome buttons / bookmark / per-row links keep their own
+          behaviour. Mirrors the pattern in MarketCard. */}
+      <Link
+        to={detailPath}
+        aria-label={t('eventDetail.open', { defaultValue: 'Open event details' })}
+        className="absolute inset-0 z-0 rounded-[inherit]"
+      />
+
       {/* Header: thumb + title on the start; probability gauge pinned to the
           inline-end so buttons below can span the full width. */}
-      <header className="-mx-1 -mt-1 flex items-start gap-2.5 rounded-md p-1">
-        <Link
-          to={detailPath}
-          aria-label={t('eventDetail.open', { defaultValue: 'Open event details' })}
-          className="group/title flex min-w-0 flex-1 items-start gap-2.5"
-        >
+      <header className="relative z-0 -mx-1 -mt-1 flex items-start gap-2.5 rounded-md p-1">
+        <div className="flex min-w-0 flex-1 items-start gap-2.5">
           <MarketThumbnail src={event.image_url} title={event.title} id={event.id} size="md" />
 
           <div className="min-w-0 flex-1">
             <h3
-              className="line-clamp-2 text-sm font-semibold leading-snug underline-offset-2 decoration-1 group-hover/title:underline"
+              className="line-clamp-2 text-sm font-semibold leading-snug underline-offset-2 decoration-1 group-hover/card:underline"
               style={{
                 color: 'var(--color-text-primary)',
                 fontFamily: 'var(--font-sans)',
@@ -129,7 +135,7 @@ export const EventCard = ({
               {event.title}
             </h3>
           </div>
-        </Link>
+        </div>
         {singleYesProbability != null && (
           <div className="shrink-0">
             <ChanceGauge value={singleYesProbability} size={64} />
@@ -139,7 +145,7 @@ export const EventCard = ({
 
       {/* Body: single market → full-width buttons (gauge is in header); multi → compact rows */}
       {singleMarket ? (
-        <div className="flex min-h-20 items-center">
+        <div className="relative z-10 flex min-h-20 items-center">
           <div className="min-w-0 flex-1">
             <OutcomeButtons
               outcomes={singleOutcomeButtons}
@@ -159,7 +165,7 @@ export const EventCard = ({
           </div>
         </div>
       ) : (
-        <div className="flex flex-col">
+        <div className="relative z-0 flex flex-col">
           {visibleMarkets.map((market) => (
             <EventMarketRow
               key={market.id}
@@ -167,7 +173,6 @@ export const EventCard = ({
               userBet={betByMarketId.get(market.id)}
               mode={mode}
               onOutcomeClick={onOutcomeClick}
-              detailPath={detailPath}
             />
           ))}
         </div>
@@ -175,7 +180,7 @@ export const EventCard = ({
 
       {/* Footer: meta + bookmark */}
       <footer
-        className="flex items-center justify-between gap-3 text-xs"
+        className="relative z-0 flex items-center justify-between gap-3 text-xs"
         style={{ color: 'var(--color-text-secondary)' }}
       >
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -199,7 +204,7 @@ export const EventCard = ({
             </span>
           )}
         </div>
-        <div className="flex items-center gap-1">
+        <div className="relative z-10 flex items-center gap-1">
           {betMarkets.length > 0 && <BetMarker />}
           {primaryMarket && <BookmarkButton marketId={primaryMarket.id} stopPropagation={false} />}
         </div>
@@ -213,10 +218,9 @@ interface EventMarketRowProps {
   userBet: MyBet | undefined;
   mode: 'interactive' | 'readonly';
   onOutcomeClick?: (market: Market, outcome: MarketOutcome) => void;
-  detailPath: string;
 }
 
-function EventMarketRow({ market, mode, onOutcomeClick, detailPath }: EventMarketRowProps) {
+function EventMarketRow({ market, mode, onOutcomeClick }: EventMarketRowProps) {
   const { i18n } = useTranslation();
   const isHebrew = i18n.language === 'he';
 
@@ -241,12 +245,9 @@ function EventMarketRow({ market, mode, onOutcomeClick, detailPath }: EventMarke
   const yesPct = yesOutcome?.price != null ? `${Math.round(yesOutcome.price * 100)}%` : null;
 
   return (
-    <div className="group/row relative flex items-center gap-3 py-1.5">
-      {/* Full-row click target — covers label, pct, and whitespace */}
-      <Link to={detailPath} aria-label={label} className="absolute inset-0 rounded" />
-
+    <div className="flex items-center gap-3 py-1.5">
       <span
-        className="min-w-0 flex-1 line-clamp-2 text-sm font-medium leading-snug underline-offset-2 decoration-1 group-hover/row:underline"
+        className="min-w-0 flex-1 line-clamp-2 text-sm font-medium leading-snug underline-offset-2 decoration-1 group-hover/card:underline"
         style={{
           color: 'var(--color-text-primary)',
           ...(isHebrew && { direction: 'ltr' as const, textAlign: 'right' as const }),
