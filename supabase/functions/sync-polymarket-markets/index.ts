@@ -408,7 +408,13 @@ Deno.serve(async (req: Request) => {
           for (const { polymarket_id } of batch) {
             try {
               const gm = gmMap.get(polymarket_id);
-              if (gm?.resolved) {
+              // Don't gate on gm.resolved alone. Polymarket frequently leaves
+              // resolved=null/false on markets that are de-facto decided
+              // (closed=true with outcomePrices like ["0","1"]). Pass through
+              // for any closed/resolved market — resolveWinnerTokenId inside
+              // processResolvedMarket has a price-fallback and will skip
+              // safely if the payload is genuinely ambiguous.
+              if (gm && (gm.resolved || gm.closed)) {
                 await processResolvedMarket(supabase, gm, autoShowAll, runId, stats);
               }
             } catch (e: unknown) {
@@ -514,7 +520,12 @@ Deno.serve(async (req: Request) => {
                 stats.errors.push(
                   `Hot-set market details unavailable for ${marketRow.polymarket_id}`
                 );
-              } else if (gm.resolved) {
+              } else if (gm.resolved || gm.closed) {
+                // Same rationale as backfill: closed-without-resolved is the
+                // common upstream state for de-facto-settled markets. Push
+                // them through processResolvedMarket so resolveWinnerTokenId
+                // can derive the winner from outcomePrices when Polymarket
+                // hasn't flipped the resolved flag yet.
                 await processResolvedMarket(supabase, gm, autoShowAll, runId, stats);
               } else {
                 await upsertMarket(supabase, gm, 'open', autoShowAll, runId, stats);
