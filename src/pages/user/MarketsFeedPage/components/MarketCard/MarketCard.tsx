@@ -98,19 +98,22 @@ export const MarketCard = ({
       }}
     >
       {/* Full-card click target — any whitespace/non-interactive surface opens
-          the event detail page. Interactive children below sit on z-10 so
-          clicks on buttons/bookmark keep their own behaviour. */}
+          the event detail page. Absolute (no z-index) so it stacks above the
+          static header content (title, gauge) and below interactive children
+          marked z-10 (outcome buttons, bookmark). Header must stay non-
+          positioned, otherwise a relative+z-0 header creates its own stacking
+          context that paints above the overlay and swallows title clicks. */}
       {cardHref && (
         <Link
           to={cardHref}
           aria-label={t('eventDetail.open', { defaultValue: 'Open event details' })}
-          className="absolute inset-0 z-0 rounded-[inherit]"
+          className="absolute inset-0 rounded-[inherit]"
         />
       )}
 
       {/* Header: thumb + title on the start; probability gauge pinned to the
           inline-end so buttons below can span the full width. */}
-      <header className="relative z-0 -mx-1 -mt-1 flex items-start gap-2.5 rounded-md p-1">
+      <header className="-mx-1 -mt-1 flex items-start gap-2.5 rounded-md p-1">
         <div className="group/title flex min-w-0 flex-1 items-start gap-2.5">
           <MarketCardHeaderContent market={market} withTitleHover={!!cardHref} />
         </div>

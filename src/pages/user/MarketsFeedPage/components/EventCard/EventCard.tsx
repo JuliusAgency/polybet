@@ -105,18 +105,20 @@ export const EventCard = ({
       }}
     >
       {/* Full-card click target — any whitespace/non-interactive surface opens
-          the event detail page. Interactive children below sit on z-10 so
-          clicks on outcome buttons / bookmark / per-row links keep their own
-          behaviour. Mirrors the pattern in MarketCard. */}
+          the event detail page. The Link is absolute (no z-index) so it
+          stacks above static header content (title, gauge) and below
+          explicitly-z-10 interactive children (outcome buttons, bookmark).
+          Header must NOT be position:relative or it will create a stacking
+          context that paints above the overlay and swallow title clicks. */}
       <Link
         to={detailPath}
         aria-label={t('eventDetail.open', { defaultValue: 'Open event details' })}
-        className="absolute inset-0 z-0 rounded-[inherit]"
+        className="absolute inset-0 rounded-[inherit]"
       />
 
       {/* Header: thumb + title on the start; probability gauge pinned to the
           inline-end so buttons below can span the full width. */}
-      <header className="relative z-0 -mx-1 -mt-1 flex items-start gap-2.5 rounded-md p-1">
+      <header className="-mx-1 -mt-1 flex items-start gap-2.5 rounded-md p-1">
         <div className="flex min-w-0 flex-1 items-start gap-2.5">
           <MarketThumbnail src={event.image_url} title={event.title} id={event.id} size="md" />
 
@@ -165,7 +167,7 @@ export const EventCard = ({
           </div>
         </div>
       ) : (
-        <div className="relative z-0 flex flex-col">
+        <div className="flex flex-col">
           {visibleMarkets.map((market) => (
             <EventMarketRow
               key={market.id}
@@ -180,7 +182,7 @@ export const EventCard = ({
 
       {/* Footer: meta + bookmark */}
       <footer
-        className="relative z-0 flex items-center justify-between gap-3 text-xs"
+        className="relative flex items-center justify-between gap-3 text-xs"
         style={{ color: 'var(--color-text-secondary)' }}
       >
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
