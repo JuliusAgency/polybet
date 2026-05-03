@@ -173,9 +173,7 @@ export const BalanceWidget = ({
             <span
               className="rounded-full px-1.5 py-0.5 text-xs font-medium"
               style={{
-                backgroundColor: savedActive
-                  ? 'var(--color-bg-base)'
-                  : 'var(--color-accent)',
+                backgroundColor: savedActive ? 'var(--color-bg-base)' : 'var(--color-accent)',
                 color: savedActive ? 'var(--color-accent)' : 'var(--color-bg-base)',
               }}
             >

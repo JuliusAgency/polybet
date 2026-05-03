@@ -108,11 +108,7 @@ const MarketsFeedPage = () => {
 
   const feedItems = groupMarketsByEvent(visibleMarkets);
 
-  const feedIsLoading = savedOnly
-    ? isLoadingSaved
-    : myBetsOnly
-      ? isLoadingMyBets
-      : isLoading;
+  const feedIsLoading = savedOnly ? isLoadingSaved : myBetsOnly ? isLoadingMyBets : isLoading;
   const feedIsError = savedOnly ? isErrorSaved : myBetsOnly ? isErrorMyBets : isError;
   const feedError = savedOnly ? errorSaved : myBetsOnly ? errorMyBets : error;
 
