@@ -9,6 +9,9 @@ interface BalanceWidgetProps {
   onOpenDrawer: () => void;
   onOpenSaved?: () => void;
   savedCount?: number;
+  /** When true, the Saved button renders with an active (filled) style so the
+   *  user can tell the markets feed below is currently filtered to saved-only. */
+  savedActive?: boolean;
 }
 
 export const BalanceWidget = ({
@@ -19,6 +22,7 @@ export const BalanceWidget = ({
   onOpenDrawer,
   onOpenSaved,
   savedCount,
+  savedActive = false,
 }: BalanceWidgetProps) => {
   const { t } = useTranslation();
 
@@ -113,24 +117,32 @@ export const BalanceWidget = ({
         </svg>
       </button>
 
-      {/* Saved markets — pinned to the inline-end edge */}
+      {/* Saved markets — pinned to the inline-end edge. When `savedActive` is
+          true the button renders with an active (accent) style so the user can
+          see at a glance that the feed below is currently filtered to saved
+          markets only. */}
       {onOpenSaved && (
         <button
           onClick={onOpenSaved}
+          aria-pressed={savedActive}
           className="flex items-center gap-1.5 rounded-md px-2 py-1 transition-colors"
           style={{
-            background: 'none',
+            background: savedActive ? 'var(--color-accent)' : 'none',
             border: 'none',
             cursor: 'pointer',
             outline: 'none',
             marginInlineStart: 'auto',
           }}
           onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor =
-              'var(--color-bg-elevated)';
+            if (!savedActive) {
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+                'var(--color-bg-elevated)';
+            }
           }}
           onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+            if (!savedActive) {
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+            }
           }}
           aria-label={t('markets.savedButton')}
         >
@@ -138,24 +150,33 @@ export const BalanceWidget = ({
             width="14"
             height="14"
             viewBox="0 0 24 24"
-            fill="none"
+            fill={savedActive ? 'currentColor' : 'none'}
             stroke="currentColor"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            style={{ color: 'var(--color-text-secondary)' }}
+            style={{
+              color: savedActive ? 'var(--color-bg-base)' : 'var(--color-text-secondary)',
+            }}
           >
             <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
           </svg>
-          <span className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+          <span
+            className="text-xs font-medium"
+            style={{
+              color: savedActive ? 'var(--color-bg-base)' : 'var(--color-text-secondary)',
+            }}
+          >
             {t('markets.savedButton')}
           </span>
           {typeof savedCount === 'number' && savedCount > 0 && (
             <span
               className="rounded-full px-1.5 py-0.5 text-xs font-medium"
               style={{
-                backgroundColor: 'var(--color-accent)',
-                color: 'var(--color-bg-base)',
+                backgroundColor: savedActive
+                  ? 'var(--color-bg-base)'
+                  : 'var(--color-accent)',
+                color: savedActive ? 'var(--color-accent)' : 'var(--color-bg-base)',
               }}
             >
               {savedCount}

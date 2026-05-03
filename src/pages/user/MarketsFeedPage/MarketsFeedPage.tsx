@@ -1,5 +1,4 @@
 import { useState, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   useMarkets,
@@ -10,7 +9,6 @@ import {
   groupMarketsByEvent,
 } from '@/features/bet';
 import { useFavoriteMarkets } from '@/features/favorites';
-import { ROUTES } from '@/app/router/routes';
 import type { Market, MarketOutcome, MarketStatusFilter } from '@/features/bet';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { useIntersectionObserver } from '@/shared/hooks/useIntersectionObserver';
@@ -31,12 +29,12 @@ interface SelectedBet {
 
 const MarketsFeedPage = () => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { favoriteSet } = useFavoriteMarkets();
   const [statusFilter, setStatusFilter] = useState<MarketStatusFilter>('open');
   const [searchQuery, setSearchQuery] = useState('');
   const [tagSlug, setTagSlug] = useState<string | null>('trending');
   const [myBetsOnly, setMyBetsOnly] = useState(false);
+  const [savedOnly, setSavedOnly] = useState(false);
   const debouncedSearch = useDebounce(searchQuery, 300);
 
   const { data: allowedTags = [] } = useAllowedCategoryTags();
@@ -54,6 +52,13 @@ const MarketsFeedPage = () => {
     isError: isErrorMyBets,
     error: errorMyBets,
   } = useMarketsByIds(myBetMarketIds, statusFilter, myBetsOnly);
+  const savedMarketIds = Array.from(favoriteSet);
+  const {
+    data: savedMarkets,
+    isLoading: isLoadingSaved,
+    isError: isErrorSaved,
+    error: errorSaved,
+  } = useMarketsByIds(savedMarketIds, statusFilter, savedOnly);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedBet, setSelectedBet] = useState<SelectedBet | null>(null);
 
@@ -81,7 +86,11 @@ const MarketsFeedPage = () => {
 
   const userBetForMarket = (marketId: string) => (bets ?? []).find((b) => b.market_id === marketId);
 
-  const sourceMarkets = myBetsOnly ? (myBetsMarkets ?? []) : markets;
+  const sourceMarkets = savedOnly
+    ? (savedMarkets ?? [])
+    : myBetsOnly
+      ? (myBetsMarkets ?? [])
+      : markets;
 
   // Mirror UI's effectiveStatus rule (see MarketCard/EventCard): a record counts
   // as "open" only if its own status is open, its close_at is in the future, and —
@@ -99,9 +108,13 @@ const MarketsFeedPage = () => {
 
   const feedItems = groupMarketsByEvent(visibleMarkets);
 
-  const feedIsLoading = myBetsOnly ? isLoadingMyBets : isLoading;
-  const feedIsError = myBetsOnly ? isErrorMyBets : isError;
-  const feedError = myBetsOnly ? errorMyBets : error;
+  const feedIsLoading = savedOnly
+    ? isLoadingSaved
+    : myBetsOnly
+      ? isLoadingMyBets
+      : isLoading;
+  const feedIsError = savedOnly ? isErrorSaved : myBetsOnly ? isErrorMyBets : isError;
+  const feedError = savedOnly ? errorSaved : myBetsOnly ? errorMyBets : error;
 
   return (
     <div>
@@ -117,8 +130,20 @@ const MarketsFeedPage = () => {
         openBetsCount={openBetsCount}
         isLoading={!balance}
         onOpenDrawer={() => setIsDrawerOpen(true)}
-        onOpenSaved={() => navigate(ROUTES.USER.SAVED)}
+        onOpenSaved={() => {
+          setSavedOnly((current) => {
+            const next = !current;
+            // Saved is mutually exclusive with my-bets and the tag filter —
+            // turning it on clears the others so the feed has a single intent.
+            if (next) {
+              setMyBetsOnly(false);
+              setTagSlug(null);
+            }
+            return next;
+          });
+        }}
         savedCount={favoriteSet.size}
+        savedActive={savedOnly}
       />
 
       {/* Filters */}
@@ -176,6 +201,7 @@ const MarketsFeedPage = () => {
           onChange={(next) => {
             setTagSlug(next);
             if (myBetsOnly) setMyBetsOnly(false);
+            if (savedOnly) setSavedOnly(false);
           }}
           tags={allowedTags}
           showMyBets={hasBets}
@@ -183,7 +209,10 @@ const MarketsFeedPage = () => {
           onMyBetsToggle={() => {
             setMyBetsOnly((v) => {
               const nextValue = !v;
-              if (nextValue) setTagSlug(null);
+              if (nextValue) {
+                setTagSlug(null);
+                setSavedOnly(false);
+              }
               return nextValue;
             });
           }}
@@ -203,13 +232,15 @@ const MarketsFeedPage = () => {
       {/* Empty state — no markets at all */}
       {!feedIsLoading && !feedIsError && feedItems.length === 0 && (
         <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-          {myBetsOnly
-            ? hasBets
-              ? t('markets.noMyBetsForStatus')
-              : t('markets.noMyBets')
-            : debouncedSearch
-              ? t('markets.noResults')
-              : t('markets.noMarkets')}
+          {savedOnly
+            ? t('markets.noSaved')
+            : myBetsOnly
+              ? hasBets
+                ? t('markets.noMyBetsForStatus')
+                : t('markets.noMyBets')
+              : debouncedSearch
+                ? t('markets.noResults')
+                : t('markets.noMarkets')}
         </p>
       )}
 
@@ -259,18 +290,18 @@ const MarketsFeedPage = () => {
         </div>
       )}
 
-      {/* Infinite scroll sentinel (disabled in my-bets view — fixed result set) */}
-      {!myBetsOnly && <div ref={sentinelRef} className="h-4" />}
+      {/* Infinite scroll sentinel — disabled in fixed-result-set views (my-bets, saved). */}
+      {!myBetsOnly && !savedOnly && <div ref={sentinelRef} className="h-4" />}
 
       {/* Loading next page */}
-      {!myBetsOnly && isFetchingNextPage && (
+      {!myBetsOnly && !savedOnly && isFetchingNextPage && (
         <div className="mt-4 flex justify-center">
           <Spinner size="sm" />
         </div>
       )}
 
       {/* All pages loaded */}
-      {!myBetsOnly && !hasNextPage && markets.length > 0 && !isLoading && (
+      {!myBetsOnly && !savedOnly && !hasNextPage && markets.length > 0 && !isLoading && (
         <p className="mt-4 text-center text-sm" style={{ color: 'var(--color-text-secondary)' }}>
           {t('markets.allLoaded')}
         </p>
