@@ -4,8 +4,7 @@ import type { Market, MarketEvent, MarketOutcome, MyBet } from '@/features/bet';
 import { OutcomeButtons, type OutcomeButton } from '@/shared/ui/OutcomeButtons';
 import { MarketThumbnail } from '@/shared/ui/MarketThumbnail';
 import { EventBookmarkButton } from '@/shared/ui/EventBookmarkButton';
-import { RemoveMarketButton } from '@/shared/ui/RemoveMarketButton';
-import { RemoveEventButton } from '@/shared/ui/RemoveEventButton';
+import { BookmarkButton } from '@/shared/ui/BookmarkButton';
 import { ChanceGauge } from '@/shared/ui/ChanceGauge';
 import { BetMarker } from '@/shared/ui/BetMarker';
 import { formatVolume } from '@/shared/utils';
@@ -235,11 +234,7 @@ export const EventCard = ({
         </div>
         <div className="relative z-10 flex items-center gap-1">
           {betMarkets.length > 0 && <BetMarker />}
-          {cardMode === 'saved' ? (
-            <RemoveEventButton marketIds={allMarketIds} />
-          ) : (
-            <EventBookmarkButton marketIds={allMarketIds} stopPropagation={false} />
-          )}
+          <EventBookmarkButton marketIds={allMarketIds} stopPropagation={false} />
         </div>
       </footer>
     </article>
@@ -319,7 +314,7 @@ function EventMarketRow({ market, mode, onOutcomeClick, showRemove = false }: Ev
 
       {showRemove && (
         <div className="relative z-10 shrink-0">
-          <RemoveMarketButton marketId={market.id} />
+          <BookmarkButton marketId={market.id} stopPropagation />
         </div>
       )}
     </div>
