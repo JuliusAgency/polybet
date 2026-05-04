@@ -6,6 +6,7 @@ import {
   useUserBalance,
   useMyBets,
   useAllowedCategoryTags,
+  useEventMarketCounts,
   groupMarketsByEvent,
 } from '@/features/bet';
 import { useFavoriteMarkets } from '@/features/favorites';
@@ -107,6 +108,9 @@ const MarketsFeedPage = () => {
       : sourceMarkets;
 
   const feedItems = groupMarketsByEvent(visibleMarkets);
+
+  const eventIds = feedItems.flatMap((item) => (item.type === 'event' ? [item.event.id] : []));
+  const { data: eventMarketCounts } = useEventMarketCounts(eventIds);
 
   const feedIsLoading = savedOnly ? isLoadingSaved : myBetsOnly ? isLoadingMyBets : isLoading;
   const feedIsError = savedOnly ? isErrorSaved : myBetsOnly ? isErrorMyBets : isError;
@@ -256,6 +260,7 @@ const MarketsFeedPage = () => {
                   // force multi-row so a truly multi-market event doesn't collapse
                   // into the single-market visual just because siblings were filtered out.
                   forceMultiRow={myBetsOnly}
+                  totalMarketsCount={eventMarketCounts?.[item.event.id]}
                 />
               ) : (
                 <MarketCard
