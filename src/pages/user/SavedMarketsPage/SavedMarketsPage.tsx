@@ -6,6 +6,7 @@ import {
   useUserBalance,
   useMyBets,
   useMarketRefresh,
+  useEventMarketCounts,
   groupMarketsByEvent,
 } from '@/features/bet';
 import type { Market, MarketOutcome } from '@/features/bet';
@@ -68,6 +69,9 @@ const SavedMarketsPage = () => {
 
   const feedItems = groupMarketsByEvent(savedMarkets ?? []);
 
+  const eventIds = feedItems.flatMap((item) => (item.type === 'event' ? [item.event.id] : []));
+  const { data: eventMarketCounts } = useEventMarketCounts(eventIds);
+
   const isLoading = isLoadingFavorites || (savedIds.length > 0 && isLoadingMarkets);
 
   return (
@@ -112,6 +116,7 @@ const SavedMarketsPage = () => {
                   mode={item.event.status === 'archived' ? 'readonly' : 'interactive'}
                   onOutcomeClick={handleOutcomeClick}
                   cardMode="saved"
+                  totalMarketsCount={eventMarketCounts?.[item.event.id]}
                 />
               ) : (
                 <MarketCard

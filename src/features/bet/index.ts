@@ -3,6 +3,8 @@ export type { Market, MarketOutcome, MarketEvent, MarketStatusFilter } from './u
 
 export { useMarketsByIds } from './useMarketsByIds';
 
+export { useEventMarketCounts } from './useEventMarketCounts';
+
 export { groupMarketsByEvent } from './groupMarketsByEvent';
 export type { FeedItem } from './groupMarketsByEvent';
 

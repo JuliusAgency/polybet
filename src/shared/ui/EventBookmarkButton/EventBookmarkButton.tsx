@@ -7,11 +7,17 @@ type BookmarkState = 'none' | 'partial' | 'all';
 interface EventBookmarkButtonProps {
   marketIds: string[];
   stopPropagation?: boolean;
+  // When provided, used to determine 'partial' state — i.e. saved (= marketIds
+  // intersected with favoriteSet) vs total markets of the event. Needed on the
+  // Saved page where `marketIds` only contains saved markets, so without it
+  // state always evaluates to 'all'.
+  totalMarketsCount?: number;
 }
 
 export function EventBookmarkButton({
   marketIds,
   stopPropagation = false,
+  totalMarketsCount,
 }: EventBookmarkButtonProps) {
   const { t } = useTranslation();
   const clipId = useId();
@@ -19,8 +25,8 @@ export function EventBookmarkButton({
   const toggle = useToggleFavoriteEvent();
 
   const savedCount = marketIds.filter((id) => favoriteSet.has(id)).length;
-  const state: BookmarkState =
-    savedCount === 0 ? 'none' : savedCount === marketIds.length ? 'all' : 'partial';
+  const total = totalMarketsCount ?? marketIds.length;
+  const state: BookmarkState = savedCount === 0 ? 'none' : savedCount >= total ? 'all' : 'partial';
 
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {

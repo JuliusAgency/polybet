@@ -28,6 +28,10 @@ interface EventCardProps {
   // 'saved' mode: shows all markets (scrollable), per-row remove buttons,
   // and a remove-event action in the footer instead of the feed bookmark.
   cardMode?: 'feed' | 'saved';
+  // Total markets of the event (across the DB, not just visible). Used by the
+  // footer EventBookmarkButton on the Saved page to render 'partial' state
+  // when only some of the event's markets are saved.
+  totalMarketsCount?: number;
 }
 
 export const EventCard = ({
@@ -38,6 +42,7 @@ export const EventCard = ({
   onOutcomeClick,
   forceMultiRow = false,
   cardMode = 'feed',
+  totalMarketsCount,
 }: EventCardProps) => {
   const { t, i18n } = useTranslation();
   const isHebrew = i18n.language === 'he';
@@ -234,7 +239,11 @@ export const EventCard = ({
         </div>
         <div className="relative z-10 flex items-center gap-1">
           {betMarkets.length > 0 && <BetMarker />}
-          <EventBookmarkButton marketIds={allMarketIds} stopPropagation={false} />
+          <EventBookmarkButton
+            marketIds={allMarketIds}
+            stopPropagation={false}
+            totalMarketsCount={totalMarketsCount}
+          />
         </div>
       </footer>
     </article>
