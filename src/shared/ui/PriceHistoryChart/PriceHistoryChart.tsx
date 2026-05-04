@@ -120,7 +120,7 @@ export const PriceHistoryChart = ({
         className="flex items-center justify-center text-sm"
         style={{ height, color: 'var(--color-text-secondary)' }}
       >
-        {t('priceHistory.empty', { defaultValue: 'No price history yet' })}
+        {t('priceHistory.empty')}
       </div>
     );
   }

@@ -1,4 +1,4 @@
-<!-- Generated: 2026-05-01 | Tables scanned: 16 public + 70 migrations | Token estimate: ~700 -->
+<!-- Generated: 2026-05-04 | Tables scanned: 16 public + 70 migrations | Token estimate: ~700 -->
 
 # Data
 

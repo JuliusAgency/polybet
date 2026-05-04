@@ -1,4 +1,7 @@
--- RLS Policies for PolyBet
+-- RLS Policies for PolyBet — REFERENCE ONLY
+-- DO NOT apply manually. The source of truth is supabase/migrations/039_*.sql (and later migrations).
+-- This file is kept as a historical snapshot and may be outdated or contain known bugs
+-- (e.g. NEW.role in WITH CHECK is invalid in Postgres RLS).
 -- Apply AFTER running 001_initial_schema.sql
 
 -- Enable RLS on all tables

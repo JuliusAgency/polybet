@@ -1,4 +1,4 @@
-<!-- Generated: 2026-05-01 | Files scanned: ~70 migrations + 6 edge fns | Token estimate: ~700 -->
+<!-- Generated: 2026-05-04 | Files scanned: ~70 migrations + 6 edge fns | Token estimate: ~700 -->
 
 # Backend
 
@@ -11,7 +11,7 @@ Supabase Postgres 17 + Edge Functions (Deno). All app-facing edge functions vali
 | `create-user` | Admin/manager creates user + initial balance | service-role only | manager UI |
 | `export-admin-report` | CSV export of bets/transactions | user JWT + super_admin role | admin UI button |
 | `market-price-history` | Returns bucketed price points for a market or event | user JWT (any role) | bet/event detail charts |
-| `refresh-markets` | On-demand Polymarket pull for given polymarket_ids; writes outcomes; settles resolved | user JWT | `useMarketRefresh` (feed + event page, every 30s) |
+| `refresh-markets` | On-demand Polymarket pull for given polymarket_ids; writes outcomes; settles resolved | user JWT (user/manager/super_admin) | `useMarketRefresh` (feed + event page, every 30s) |
 | `settle-markets` | Bulk settle resolved markets | service-role only | manual admin trigger |
 | `sync-polymarket-markets` | Full sync — events + markets + outcomes (modes: hot_set, backfill, resolved_only, event_first) | service-role only | pg_cron (`sync-hot-set-markets` every 1m, `backfill-open-bets` every hour) |
 | `_shared/` | Common utilities (auth, polymarket client, types) | — | imported by all of the above |

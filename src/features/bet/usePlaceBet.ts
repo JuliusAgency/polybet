@@ -22,8 +22,9 @@ export function usePlaceBet() {
       return betId as string;
     },
     onSuccess: () => {
+      // Balance update is not covered by realtime, so must be invalidated explicitly.
+      // Bets list is covered by the useMyBets realtime channel (INSERT on bets fires it).
       queryClient.invalidateQueries({ queryKey: ['user', 'balance'] });
-      queryClient.invalidateQueries({ queryKey: ['user', 'bets'] });
     },
   });
 }

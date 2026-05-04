@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import { Modal } from '@/shared/ui/Modal';
 import { Input } from '@/shared/ui/Input';
 import { Button } from '@/shared/ui/Button';
 import { Badge } from '@/shared/ui/Badge';
 import { usePlaceBet } from '@/features/bet';
-import type { Market, MarketOutcome } from '@/features/bet';
+import type { Market, MarketOutcome, EventWithMarkets } from '@/features/bet';
 
 interface BetSlipProps {
   market: Market;
@@ -16,6 +17,26 @@ interface BetSlipProps {
   onSuccess: () => void;
 }
 
+const parseStake = (value: string): number | null => {
+  // Reject anything that isn't a plain decimal number (no commas, no trailing chars)
+  if (!/^\d+(\.\d+)?$/.test(value.trim())) return null;
+  const n = Number(value);
+  return isFinite(n) && n > 0 ? n : null;
+};
+
+const getLiveOdds = (
+  queryClient: ReturnType<typeof useQueryClient>,
+  market: Market,
+  outcomeId: string
+): number | null => {
+  const eventData = queryClient.getQueryData<EventWithMarkets>(['event', market.event_id]);
+  if (!eventData) return null;
+  const liveMarket = eventData.markets.find((m) => m.id === market.id);
+  if (!liveMarket) return null;
+  const liveOutcome = liveMarket.market_outcomes?.find((o) => o.id === outcomeId);
+  return liveOutcome?.effective_odds ?? null;
+};
+
 export const BetSlip = ({
   market,
   outcome,
@@ -24,36 +45,49 @@ export const BetSlip = ({
   onSuccess,
 }: BetSlipProps) => {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const [amount, setAmount] = useState('');
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [oddsAtConfirm, setOddsAtConfirm] = useState<number | null>(null);
 
   const { mutate: placeBet, isPending } = usePlaceBet();
 
-  const stake = parseFloat(amount);
-  const isValidStake = !isNaN(stake) && stake > 0;
-  const isInsufficient = isValidStake && stake > availableBalance;
-  const potentialPayout =
-    isValidStake && !isInsufficient ? stake * (outcome.effective_odds - 1) : null;
+  // Lock displayed odds at the moment the slip opened
+  const lockedOddsRef = useRef(outcome.effective_odds);
+  const displayOdds = oddsAtConfirm ?? lockedOddsRef.current;
+
+  const stake = parseStake(amount);
+  const isValidStake = stake !== null;
+  const isInsufficient = isValidStake && stake! > availableBalance;
+  const potentialPayout = isValidStake && !isInsufficient ? stake! * (displayOdds - 1) : null;
   const balanceIfWin =
-    isValidStake && !isInsufficient
-      ? availableBalance - stake + stake * outcome.effective_odds
-      : null;
-  const balanceIfLose = isValidStake && !isInsufficient ? availableBalance - stake : null;
+    isValidStake && !isInsufficient ? availableBalance - stake! + stake! * displayOdds : null;
+  const balanceIfLose = isValidStake && !isInsufficient ? availableBalance - stake! : null;
 
   const handleAllIn = () => {
     setAmount(availableBalance.toFixed(2));
   };
 
   const handleConfirm = () => {
+    if (isPending) return;
     if (!isValidStake || isInsufficient) return;
-    setSubmitError(null);
 
+    // Detect stale odds: check if live cache has updated prices
+    const liveOdds = getLiveOdds(queryClient, market, outcome.id);
+    if (liveOdds !== null && Math.abs(liveOdds - displayOdds) > 0.001) {
+      // Show updated odds and require a second confirmation
+      setOddsAtConfirm(liveOdds);
+      setSubmitError(t('markets.oddsChanged', { odds: liveOdds.toFixed(2) }));
+      return;
+    }
+
+    setSubmitError(null);
     placeBet(
-      { marketId: market.id, outcomeId: outcome.id, stake },
+      { marketId: market.id, outcomeId: outcome.id, stake: stake! },
       {
         onSuccess: () => {
           toast.success(
-            t('bet.notification.placed', { outcome: outcome.name, stake: stake.toFixed(2) }),
+            t('bet.notification.placed', { outcome: outcome.name, stake: stake!.toFixed(2) }),
             {
               duration: 5000,
             }
@@ -85,7 +119,7 @@ export const BetSlip = ({
           <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
             {outcome.name}
           </span>
-          <Badge variant="open">{outcome.effective_odds.toFixed(2)}</Badge>
+          <Badge variant="open">{displayOdds.toFixed(2)}</Badge>
         </div>
 
         {/* Stake input */}

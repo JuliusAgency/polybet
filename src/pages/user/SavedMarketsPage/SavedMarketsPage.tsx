@@ -111,6 +111,7 @@ const SavedMarketsPage = () => {
                   bets={bets ?? []}
                   mode={item.event.status === 'archived' ? 'readonly' : 'interactive'}
                   onOutcomeClick={handleOutcomeClick}
+                  cardMode="saved"
                 />
               ) : (
                 <MarketCard

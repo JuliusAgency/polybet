@@ -2,46 +2,46 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/shared/api/supabase';
 import { useAuth } from '@/shared/hooks/useAuth';
 
-interface ToggleFavoriteInput {
-  marketId: string;
-  /** True when the market is currently a favourite (so the action will REMOVE it). */
-  currentlyFavorite: boolean;
+interface ToggleFavoriteEventInput {
+  marketIds: string[];
+  mode: 'add' | 'remove';
 }
 
-export function useToggleFavoriteMarket() {
+export function useToggleFavoriteEvent() {
   const { session } = useAuth();
   const queryClient = useQueryClient();
   const userId = session?.user.id;
   const queryKey = ['user', 'favorite-markets', userId] as const;
 
   return useMutation({
-    mutationFn: async ({ marketId, currentlyFavorite }: ToggleFavoriteInput) => {
+    mutationFn: async ({ marketIds, mode }: ToggleFavoriteEventInput) => {
       if (!session) throw new Error('Not authenticated');
 
-      if (currentlyFavorite) {
+      if (mode === 'add') {
+        const rows = marketIds.map((market_id) => ({
+          user_id: session.user.id,
+          market_id,
+        }));
         const { error } = await supabase
           .from('user_favorite_markets')
-          .delete()
-          .eq('user_id', session.user.id)
-          .eq('market_id', marketId);
+          .upsert(rows, { onConflict: 'user_id,market_id', ignoreDuplicates: true });
         if (error) throw new Error(error.message);
       } else {
         const { error } = await supabase
           .from('user_favorite_markets')
-          .upsert(
-            { user_id: session.user.id, market_id: marketId },
-            { onConflict: 'user_id,market_id', ignoreDuplicates: true }
-          );
+          .delete()
+          .eq('user_id', session.user.id)
+          .in('market_id', marketIds);
         if (error) throw new Error(error.message);
       }
     },
-    // Optimistic: flip the cache immediately, roll back on failure.
-    onMutate: async ({ marketId, currentlyFavorite }) => {
+    onMutate: async ({ marketIds, mode }) => {
       await queryClient.cancelQueries({ queryKey });
       const previous = queryClient.getQueryData<string[]>(queryKey) ?? [];
-      const next = currentlyFavorite
-        ? previous.filter((id) => id !== marketId)
-        : Array.from(new Set([...previous, marketId]));
+      const next =
+        mode === 'add'
+          ? Array.from(new Set([...previous, ...marketIds]))
+          : previous.filter((id) => !marketIds.includes(id));
       queryClient.setQueryData(queryKey, next);
       return { previous };
     },

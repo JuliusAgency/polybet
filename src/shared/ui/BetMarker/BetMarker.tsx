@@ -14,7 +14,7 @@ interface BetMarkerProps {
  */
 export function BetMarker({ title, className }: BetMarkerProps) {
   const { t } = useTranslation();
-  const label = title ?? t('markets.betPlacedMarker', { defaultValue: 'You have a bet here' });
+  const label = title ?? t('markets.betPlacedMarker');
 
   return (
     <span

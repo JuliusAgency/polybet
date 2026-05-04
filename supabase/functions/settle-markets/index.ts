@@ -4,6 +4,7 @@
 // where the stored polymarket winner token matches.
 // Delegates actual settlement to the settle_market SQL RPC.
 
+import { type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { authorizeEdgeCall } from '../_shared/edgeAuth.ts';
 import { buildCorsPreflightResponse, jsonWithCors } from '../_shared/cors.ts';
 
@@ -78,21 +79,24 @@ Deno.serve(async (req: Request) => {
       resolvedWinnerOutcomeId = await lookupWinnerFromGamma(
         supabase,
         market_id,
-        market.polymarket_id as string,
+        market.polymarket_id as string
       );
 
       if (!resolvedWinnerOutcomeId) {
-        return jsonWithCors({
-          success: false,
-          error:
-            'winning_outcome_id not provided and could not be determined from Polymarket API',
-        }, 422);
+        return jsonWithCors(
+          {
+            success: false,
+            error:
+              'winning_outcome_id not provided and could not be determined from Polymarket API',
+          },
+          422
+        );
       }
     }
 
     // ── 3. Call settle_market RPC ─────────────────────────────────────────────
     const { data: result, error: settleErr } = await supabase.rpc('settle_market', {
-      p_market_id:          market_id,
+      p_market_id: market_id,
       p_winning_outcome_id: resolvedWinnerOutcomeId,
     });
 
@@ -101,15 +105,16 @@ Deno.serve(async (req: Request) => {
     }
 
     // result shape: { settled: number, winners: number, losers: number }
-    const { settled, winners, losers } = (result as { settled: number; winners: number; losers: number }) ?? {};
+    const { settled, winners, losers } =
+      (result as { settled: number; winners: number; losers: number }) ?? {};
 
     return jsonWithCors({
       success: true,
       market_id,
       winning_outcome_id: resolvedWinnerOutcomeId,
-      settled:            settled ?? 0,
-      winners:            winners ?? 0,
-      losers:             losers  ?? 0,
+      settled: settled ?? 0,
+      winners: winners ?? 0,
+      losers: losers ?? 0,
     });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Unknown error';
@@ -122,9 +127,10 @@ Deno.serve(async (req: Request) => {
 // then resolves it to our internal outcome id.
 
 async function lookupWinnerFromGamma(
-  supabase: ReturnType<typeof createClient>,
+  // deno-lint-ignore no-explicit-any
+  supabase: SupabaseClient<any>,
   marketId: string,
-  polymarketId: string,
+  polymarketId: string
 ): Promise<string | undefined> {
   try {
     const url = `https://gamma-api.polymarket.com/markets/${polymarketId}`;

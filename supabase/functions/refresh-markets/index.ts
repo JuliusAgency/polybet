@@ -61,7 +61,7 @@ Deno.serve(async (req: Request) => {
 
   // Any authenticated user may call this (no admin role required)
   const authResult = await authorizeEdgeCall(req, {
-    allowedRoles: ['user', 'agent', 'super_admin'],
+    allowedRoles: ['user', 'manager', 'super_admin'],
   });
 
   if (!authResult.ok) {

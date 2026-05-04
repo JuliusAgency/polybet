@@ -1,5 +1,4 @@
-import { useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/shared/api/supabase';
 
 export interface AgentStatsRow {
@@ -25,8 +24,6 @@ interface UseAgentStatsResult {
 }
 
 export function useAgentStats(filters: AgentStatsFilters = {}): UseAgentStatsResult {
-  const queryClient = useQueryClient();
-
   const { data, isLoading, error } = useQuery({
     queryKey: ['admin', 'agent-stats', filters.month, filters.year],
     queryFn: async () => {
@@ -37,24 +34,8 @@ export function useAgentStats(filters: AgentStatsFilters = {}): UseAgentStatsRes
       if (error) throw new Error(error.message);
       return (data ?? []) as unknown as AgentStatsRow[];
     },
+    refetchInterval: 30_000,
   });
-
-  useEffect(() => {
-    const channel = supabase
-      .channel('agent_stats_bt_changes')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'balance_transactions' },
-        () => {
-          void queryClient.invalidateQueries({ queryKey: ['admin', 'agent-stats'] });
-        },
-      )
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [queryClient]);
 
   return {
     agents: data ?? [],

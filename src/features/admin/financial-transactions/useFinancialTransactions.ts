@@ -1,11 +1,10 @@
-import { useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/shared/api/supabase';
 
 export interface TransactionFilters {
   managerId?: string;
-  month?: number;  // 1-12
-  year?: number;   // e.g. 2026
+  month?: number; // 1-12
+  year?: number; // e.g. 2026
 }
 
 export interface FinancialTransactionRow {
@@ -39,7 +38,7 @@ interface UseFinancialTransactionsResult {
 }
 
 const fetchFinancialTransactions = async (
-  filters: TransactionFilters,
+  filters: TransactionFilters
 ): Promise<FinancialTransactionRow[]> => {
   let query = supabase
     .from('admin_financial_transactions')
@@ -104,31 +103,13 @@ const computeTotals = (transactions: FinancialTransactionRow[]): TransactionTota
 };
 
 export function useFinancialTransactions(
-  filters: TransactionFilters = {},
+  filters: TransactionFilters = {}
 ): UseFinancialTransactionsResult {
-  const queryClient = useQueryClient();
-
   const { data, isLoading, error } = useQuery({
     queryKey: ['admin', 'financial-transactions', filters.managerId, filters.month, filters.year],
     queryFn: () => fetchFinancialTransactions(filters),
+    refetchInterval: 30_000,
   });
-
-  useEffect(() => {
-    const channel = supabase
-      .channel('balance_transactions_inserts')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'balance_transactions' },
-        () => {
-          void queryClient.invalidateQueries({ queryKey: ['admin', 'financial-transactions'] });
-        },
-      )
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [queryClient]);
 
   const transactions = data ?? [];
   const totals = computeTotals(transactions);

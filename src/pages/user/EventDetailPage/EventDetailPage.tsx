@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { ROUTES } from '@/app/router/routes';
 import { useTranslation } from 'react-i18next';
 import {
   useEventById,
@@ -63,9 +64,7 @@ const EventDetailPage = () => {
       <div>
         <BackLink />
         <p className="mt-4 text-sm" style={{ color: 'var(--color-loss)' }}>
-          {t('eventDetail.loadError', {
-            defaultValue: 'Event not found or failed to load',
-          })}
+          {t('eventDetail.loadError')}
           {error?.message ? `: ${error.message}` : ''}
         </p>
       </div>
@@ -103,7 +102,6 @@ const EventDetailPage = () => {
             <span>
               {t('events.marketCount', {
                 count: markets.length,
-                defaultValue: '{{count}} markets',
               })}
             </span>
             {volumeLabel && <span>{t('markets.volumeShort', { value: volumeLabel })}</span>}
@@ -126,7 +124,7 @@ const EventDetailPage = () => {
       <div className="mt-6 flex flex-col gap-4">
         {markets.length === 0 ? (
           <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-            {t('eventDetail.noMarkets', { defaultValue: 'No markets for this event' })}
+            {t('eventDetail.noMarkets')}
           </p>
         ) : isSingleMarket ? (
           <SingleMarketView
@@ -151,7 +149,7 @@ const EventDetailPage = () => {
                   className="text-sm font-semibold"
                   style={{ color: 'var(--color-text-primary)' }}
                 >
-                  {t('eventDetail.rules', { defaultValue: 'Rules' })}
+                  {t('eventDetail.rules')}
                 </h3>
                 <p
                   className="whitespace-pre-line text-sm leading-relaxed"
@@ -213,7 +211,7 @@ const BackLink = () => {
   const { t } = useTranslation();
   return (
     <Link
-      to="/markets"
+      to={ROUTES.USER.MARKETS}
       className="inline-flex items-center gap-1.5 text-sm font-medium"
       style={{ color: 'var(--color-text-secondary)' }}
     >
@@ -230,7 +228,7 @@ const BackLink = () => {
       >
         <polyline points="15 18 9 12 15 6" />
       </svg>
-      {t('eventDetail.back', { defaultValue: 'Back to markets' })}
+      {t('eventDetail.back')}
     </Link>
   );
 };

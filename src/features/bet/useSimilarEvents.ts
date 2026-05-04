@@ -26,11 +26,13 @@ export function useSimilarEvents({
     queryFn: async () => {
       if (!eventId || !hasFilter) return [];
 
+      const SAFE_SLUG = /^[a-z0-9-]+$/i;
       const orParts: string[] = [];
       // cs = contains (PostgREST array @> {slug}). Matches any event whose
       // tag_slugs array includes the filter tag, not just the primary one.
-      if (tagSlug) orParts.push(`tag_slugs.cs.{${tagSlug}}`);
-      if (category) orParts.push(`category.eq.${category}`);
+      // Validate before interpolating to prevent malformed filter strings.
+      if (tagSlug && SAFE_SLUG.test(tagSlug)) orParts.push(`tag_slugs.cs.{${tagSlug}}`);
+      if (category && SAFE_SLUG.test(category)) orParts.push(`category.eq.${category}`);
 
       const { data, error } = await supabase
         .from('events')

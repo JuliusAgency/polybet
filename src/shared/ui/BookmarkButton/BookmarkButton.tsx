@@ -26,9 +26,9 @@ export function BookmarkButton({ marketId, stopPropagation = true }: BookmarkBut
         event.preventDefault();
         event.stopPropagation();
       }
-      toggle.mutate({ marketId, isFavorite });
+      toggle.mutate({ marketId, currentlyFavorite: isFavorite });
     },
-    [toggle, marketId, isFavorite, stopPropagation],
+    [toggle, marketId, isFavorite, stopPropagation]
   );
 
   return (

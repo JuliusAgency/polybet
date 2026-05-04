@@ -3,14 +3,16 @@ import { useTranslation } from 'react-i18next';
 import type { Market, MarketEvent, MarketOutcome, MyBet } from '@/features/bet';
 import { OutcomeButtons, type OutcomeButton } from '@/shared/ui/OutcomeButtons';
 import { MarketThumbnail } from '@/shared/ui/MarketThumbnail';
-import { BookmarkButton } from '@/shared/ui/BookmarkButton';
+import { EventBookmarkButton } from '@/shared/ui/EventBookmarkButton';
+import { RemoveMarketButton } from '@/shared/ui/RemoveMarketButton';
+import { RemoveEventButton } from '@/shared/ui/RemoveEventButton';
 import { ChanceGauge } from '@/shared/ui/ChanceGauge';
 import { BetMarker } from '@/shared/ui/BetMarker';
 import { formatVolume } from '@/shared/utils';
 
 // Polymarket-style: at most 2 outcome rows visible in the feed card.
 // Users drill into /events/:id to see the full list — no inline expansion.
-const VISIBLE_MARKET_LIMIT = 2;
+const FEED_VISIBLE_LIMIT = 2;
 
 interface EventCardProps {
   event: MarketEvent;
@@ -24,6 +26,9 @@ interface EventCardProps {
   // collapse into the single-market visual just because the other rows
   // are filtered out.
   forceMultiRow?: boolean;
+  // 'saved' mode: shows all markets (scrollable), per-row remove buttons,
+  // and a remove-event action in the footer instead of the feed bookmark.
+  cardMode?: 'feed' | 'saved';
 }
 
 export const EventCard = ({
@@ -33,6 +38,7 @@ export const EventCard = ({
   mode = 'interactive',
   onOutcomeClick,
   forceMultiRow = false,
+  cardMode = 'feed',
 }: EventCardProps) => {
   const { t, i18n } = useTranslation();
   const isHebrew = i18n.language === 'he';
@@ -51,16 +57,12 @@ export const EventCard = ({
         })
       : null;
 
-  // Strict VISIBLE_MARKET_LIMIT cap, but bet markets take priority over the
-  // default sort so a user's wagered market is never buried — if they have
-  // bets across more than the limit, only the top-N bet markets fit; the
-  // full list stays reachable via the event detail page.
+  // In feed mode cap to 2 rows; in saved mode show all (list is scrollable).
   const betMarkets = markets.filter((m) => betByMarketId.has(m.id));
   const nonBetMarkets = markets.filter((m) => !betByMarketId.has(m.id));
-  const visibleMarkets = [...betMarkets, ...nonBetMarkets].slice(0, VISIBLE_MARKET_LIMIT);
-  // Pick the most liquid market as the bookmark anchor (same rule
-  // the feed uses to pick the primary market for an event).
-  const primaryMarket = markets.find((m) => (m.volume ?? 0) > 0) ?? markets[0] ?? null;
+  const orderedMarkets = [...betMarkets, ...nonBetMarkets];
+  const visibleMarkets =
+    cardMode === 'saved' ? orderedMarkets : orderedMarkets.slice(0, FEED_VISIBLE_LIMIT);
 
   const isSingle = !forceMultiRow && visibleMarkets.length === 1;
   const singleMarket = isSingle ? visibleMarkets[0] : null;
@@ -92,6 +94,8 @@ export const EventCard = ({
   // Arc gauge only applies to binary markets (see MarketCard rationale).
   const singleIsBinary = (singleMarket?.market_outcomes.length ?? 0) === 2;
   const singleYesProbability = singleIsBinary && singleYes?.price != null ? singleYes.price : null;
+
+  const allMarketIds = markets.map((m) => m.id);
 
   return (
     <article
@@ -166,6 +170,29 @@ export const EventCard = ({
             />
           </div>
         </div>
+      ) : cardMode === 'saved' ? (
+        // Saved mode: show all markets in a scrollable container so cards
+        // don't grow unbounded when an event has many saved rows.
+        <div
+          className="flex flex-col overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-thumb]:rounded-full"
+          style={{
+            maxHeight: '320px',
+            // Scrollbar thumb uses border token as a subtle neutral
+            scrollbarColor: 'var(--color-border) transparent',
+            scrollbarWidth: 'thin',
+          }}
+        >
+          {visibleMarkets.map((market) => (
+            <EventMarketRow
+              key={market.id}
+              market={market}
+              userBet={betByMarketId.get(market.id)}
+              mode={mode}
+              onOutcomeClick={onOutcomeClick}
+              showRemove
+            />
+          ))}
+        </div>
       ) : (
         <div className="flex flex-col">
           {visibleMarkets.map((market) => (
@@ -180,7 +207,7 @@ export const EventCard = ({
         </div>
       )}
 
-      {/* Footer: meta + bookmark */}
+      {/* Footer: meta + action */}
       <footer
         className="relative flex items-center justify-between gap-3 text-xs"
         style={{ color: 'var(--color-text-secondary)' }}
@@ -208,7 +235,11 @@ export const EventCard = ({
         </div>
         <div className="relative z-10 flex items-center gap-1">
           {betMarkets.length > 0 && <BetMarker />}
-          {primaryMarket && <BookmarkButton marketId={primaryMarket.id} stopPropagation={false} />}
+          {cardMode === 'saved' ? (
+            <RemoveEventButton marketIds={allMarketIds} />
+          ) : (
+            <EventBookmarkButton marketIds={allMarketIds} stopPropagation={false} />
+          )}
         </div>
       </footer>
     </article>
@@ -220,9 +251,10 @@ interface EventMarketRowProps {
   userBet: MyBet | undefined;
   mode: 'interactive' | 'readonly';
   onOutcomeClick?: (market: Market, outcome: MarketOutcome) => void;
+  showRemove?: boolean;
 }
 
-function EventMarketRow({ market, mode, onOutcomeClick }: EventMarketRowProps) {
+function EventMarketRow({ market, mode, onOutcomeClick, showRemove = false }: EventMarketRowProps) {
   const { i18n } = useTranslation();
   const isHebrew = i18n.language === 'he';
 
@@ -284,6 +316,12 @@ function EventMarketRow({ market, mode, onOutcomeClick }: EventMarketRowProps) {
           }
         />
       </div>
+
+      {showRemove && (
+        <div className="relative z-10 shrink-0">
+          <RemoveMarketButton marketId={market.id} />
+        </div>
+      )}
     </div>
   );
 }

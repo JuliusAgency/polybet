@@ -45,10 +45,12 @@ export function useMarketRefresh(
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resultTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeIdsRef = useRef<string[]>([]);
+  const eventIdRef = useRef<string | undefined>(eventId);
   const refreshingRef = useRef(false);
 
   const slicedIds = polymarketIds.slice(0, MARKETS_REFRESH_MAX_IDS);
   activeIdsRef.current = slicedIds;
+  eventIdRef.current = eventId;
   const hasIds = slicedIds.length > 0;
 
   const refresh = async () => {
@@ -103,12 +105,16 @@ export function useMarketRefresh(
         // refetchInterval can race the edge call and cache stale prices. We
         // narrow to the exact eventId so warm-but-background event queries
         // are not refetched on every cycle.
-        if (eventId) {
-          void queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+        const currentEventId = eventIdRef.current;
+        if (currentEventId) {
+          void queryClient.invalidateQueries({ queryKey: ['event', currentEventId] });
         }
       }
 
-      const result: RefreshResult = data && data.updated > 0 ? 'ok' : 'failed';
+      // Consider it a failure only when there's an error; updated=0 just means
+      // prices were already fresh — that is a success, not a failure.
+      const hasError = error !== null || (data?.errors && data.errors.length > 0);
+      const result: RefreshResult = hasError ? 'failed' : 'ok';
       setLastResult(result);
 
       // Reset result indicator after 4 seconds

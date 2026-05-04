@@ -1,4 +1,4 @@
-<!-- Generated: 2026-05-01 | Files scanned: ~150 .tsx/.ts | Token estimate: ~900 -->
+<!-- Generated: 2026-05-04 | Files scanned: ~150 .tsx/.ts | Token estimate: ~900 -->
 
 # Frontend
 
@@ -65,6 +65,7 @@ bet/                                            (markets, events, bets, balance,
   useMarketRefresh         POSTs refresh-markets edge fn; patches ['markets']
                            Accepts (ids, true|false) OR (ids, { autoRefresh?, eventId? }).
                            When `eventId` is passed, invalidates ['event', eventId] after refresh.
+                           eventId tracked via ref (not closure) to stay fresh across navigations.
   useMyBets                user bets + realtime listener on bets (filter by user_id)
   useUserBalance           balances row + realtime listener (filter by user_id)
   useUserTransactions      ledger view + realtime on balance_transactions
@@ -89,11 +90,10 @@ balances             useUserBalance              filter user_id=eq.${userId}
 bets                 useMyBets                   filter user_id=eq.${userId}
 bets                 useBetResultNotifications   filter user_id=eq.${userId}
 balance_transactions useUserTransactions         filter user_id=eq.${userId}
-balance_transactions admin/financial-transactions  unfiltered (super-admin only)
 profiles             AuthProvider                filter id=eq.${userId} (manager-block check)
 ```
 
-Cross-user data uses `refetchInterval` polling (`useSystemKpis`, `useAgentStats`).
+Cross-user data uses `refetchInterval: 30_000` polling (`useSystemKpis`, `useAgentStats`, `useFinancialTransactions`).
 
 ## Layouts
 

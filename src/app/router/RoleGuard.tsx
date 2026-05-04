@@ -25,7 +25,9 @@ export const RoleGuard = ({ allowedRoles, children }: RoleGuardProps) => {
   const { user, role, loading } = useAuth();
   const { t } = useTranslation();
 
-  if (loading) {
+  // Show spinner while initial auth bootstrap is running OR while role is still
+  // loading after sign-in (auth state change fires before profile fetch completes).
+  if (loading || (user !== null && role === null)) {
     return (
       <div
         style={{
@@ -44,9 +46,8 @@ export const RoleGuard = ({ allowedRoles, children }: RoleGuardProps) => {
     return <Navigate to={ROUTES.SIGN_IN} replace />;
   }
 
-  if (role === null || !allowedRoles.includes(role)) {
-    const redirectTo = role !== null ? getDashboardForRole(role) : ROUTES.SIGN_IN;
-    return <Navigate to={redirectTo} replace />;
+  if (!allowedRoles.includes(role!)) {
+    return <Navigate to={getDashboardForRole(role!)} replace />;
   }
 
   return <>{children}</>;
