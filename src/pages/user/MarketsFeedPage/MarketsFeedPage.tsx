@@ -54,12 +54,15 @@ const MarketsFeedPage = () => {
     error: errorMyBets,
   } = useMarketsByIds(myBetMarketIds, statusFilter, myBetsOnly);
   const savedMarketIds = Array.from(favoriteSet);
+  // Fetched regardless of `savedOnly` so the badge inside the Saved button
+  // can always advertise the number of cards that would appear on the Saved
+  // tab — not just the count for the currently active tab.
   const {
     data: savedMarkets,
     isLoading: isLoadingSaved,
     isError: isErrorSaved,
     error: errorSaved,
-  } = useMarketsByIds(savedMarketIds, statusFilter, savedOnly);
+  } = useMarketsByIds(savedMarketIds, statusFilter, true);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedBet, setSelectedBet] = useState<SelectedBet | null>(null);
 
@@ -109,6 +112,21 @@ const MarketsFeedPage = () => {
 
   const feedItems = groupMarketsByEvent(visibleMarkets);
 
+  // Grouped saved cards count for the Saved button badge — applies the same
+  // open-event visibility rule as the main feed so the number matches what
+  // the user will actually see after clicking Saved.
+  const savedVisibleMarkets =
+    statusFilter === 'open'
+      ? (savedMarkets ?? []).filter((m) => {
+          if (!m.event) return true;
+          const ev = m.event;
+          if (ev.status !== 'open') return false;
+          if (ev.close_at != null && new Date(ev.close_at).getTime() <= Date.now()) return false;
+          return true;
+        })
+      : (savedMarkets ?? []);
+  const savedFeedCount = groupMarketsByEvent(savedVisibleMarkets).length;
+
   const eventIds = feedItems.flatMap((item) => (item.type === 'event' ? [item.event.id] : []));
   const { data: eventMarketCounts } = useEventMarketCounts(eventIds);
 
@@ -143,7 +161,7 @@ const MarketsFeedPage = () => {
           });
         }}
         savedActive={savedOnly}
-        clickableCount={feedItems.length}
+        clickableCount={savedFeedCount}
       />
 
       {/* Filters */}
