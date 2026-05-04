@@ -142,7 +142,6 @@ const MarketsFeedPage = () => {
             return next;
           });
         }}
-        savedCount={favoriteSet.size}
         savedActive={savedOnly}
         clickableCount={feedItems.length}
       />

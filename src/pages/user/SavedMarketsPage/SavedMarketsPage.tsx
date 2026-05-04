@@ -87,7 +87,6 @@ const SavedMarketsPage = () => {
         isLoading={!balance}
         onOpenDrawer={() => setIsDrawerOpen(true)}
         onOpenSaved={() => navigate(ROUTES.USER.MARKETS)}
-        savedCount={favoriteSet.size}
         clickableCount={feedItems.length}
       />
 
