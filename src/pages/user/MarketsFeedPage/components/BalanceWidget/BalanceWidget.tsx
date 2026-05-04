@@ -12,6 +12,10 @@ interface BalanceWidgetProps {
   /** When true, the Saved button renders with an active (filled) style so the
    *  user can tell the markets feed below is currently filtered to saved-only. */
   savedActive?: boolean;
+  /** Number of cards clickable in the current feed view — shown as a small
+   *  badge before the Saved button so the user can see at a glance how many
+   *  items the active filters (status / tag / search) currently produce. */
+  clickableCount?: number;
 }
 
 export const BalanceWidget = ({
@@ -23,6 +27,7 @@ export const BalanceWidget = ({
   onOpenSaved,
   savedCount,
   savedActive = false,
+  clickableCount,
 }: BalanceWidgetProps) => {
   const { t } = useTranslation();
 
@@ -117,10 +122,31 @@ export const BalanceWidget = ({
         </svg>
       </button>
 
-      {/* Saved markets — pinned to the inline-end edge. When `savedActive` is
-          true the button renders with an active (accent) style so the user can
-          see at a glance that the feed below is currently filtered to saved
-          markets only. */}
+      {/* Cards-on-tab counter — shows how many feed items match the current
+          filters. Pinned to the inline-end edge alongside the Saved button. */}
+      {typeof clickableCount === 'number' && (
+        <div
+          className="flex items-center gap-1.5 rounded-md px-2 py-1"
+          style={{ marginInlineStart: 'auto' }}
+        >
+          <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+            {t('markets.cardsCount')}
+          </span>
+          <span
+            className="rounded-full px-1.5 py-0.5 text-xs font-medium"
+            style={{
+              backgroundColor: 'var(--color-bg-elevated)',
+              color: 'var(--color-text-primary)',
+            }}
+          >
+            {clickableCount}
+          </span>
+        </div>
+      )}
+
+      {/* Saved markets. When `savedActive` is true the button renders with an
+          active (accent) style so the user can see at a glance that the feed
+          below is currently filtered to saved markets only. */}
       {onOpenSaved && (
         <button
           onClick={onOpenSaved}
@@ -131,7 +157,10 @@ export const BalanceWidget = ({
             border: 'none',
             cursor: 'pointer',
             outline: 'none',
-            marginInlineStart: 'auto',
+            // Only push to the inline-end if the cards counter is absent —
+            // otherwise the counter already owns the auto-margin and we sit
+            // right after it.
+            marginInlineStart: typeof clickableCount === 'number' ? undefined : 'auto',
           }}
           onMouseEnter={(e) => {
             if (!savedActive) {

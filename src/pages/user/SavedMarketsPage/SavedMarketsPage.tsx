@@ -88,6 +88,7 @@ const SavedMarketsPage = () => {
         onOpenDrawer={() => setIsDrawerOpen(true)}
         onOpenSaved={() => navigate(ROUTES.USER.MARKETS)}
         savedCount={favoriteSet.size}
+        clickableCount={feedItems.length}
       />
 
       {isLoading && <CardGridSkeleton count={6} />}

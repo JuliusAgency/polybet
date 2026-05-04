@@ -144,6 +144,7 @@ const MarketsFeedPage = () => {
         }}
         savedCount={favoriteSet.size}
         savedActive={savedOnly}
+        clickableCount={feedItems.length}
       />
 
       {/* Filters */}
@@ -206,6 +207,7 @@ const MarketsFeedPage = () => {
           tags={allowedTags}
           showMyBets={hasBets}
           myBetsActive={myBetsOnly}
+          savedActive={savedOnly}
           onMyBetsToggle={() => {
             setMyBetsOnly((v) => {
               const nextValue = !v;

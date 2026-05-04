@@ -9,6 +9,7 @@ interface TagFilterProps {
   myBetsActive?: boolean;
   onMyBetsToggle?: () => void;
   showMyBets?: boolean;
+  savedActive?: boolean;
 }
 
 /**
@@ -27,14 +28,15 @@ export function TagFilter({
   myBetsActive = false,
   onMyBetsToggle,
   showMyBets = false,
+  savedActive = false,
 }: TagFilterProps) {
   const { t } = useTranslation();
 
   if (tags.length === 0) return null;
 
-  // When My bets is on, it owns the feed intent — no tag chip or the
-  // "All categories" fallback should look active.
-  const effectiveValue = myBetsActive ? undefined : value;
+  // My bets and Saved both own the feed intent — when either is on, no tag
+  // chip (including the "All categories" fallback) should look active.
+  const effectiveValue = myBetsActive || savedActive ? undefined : value;
 
   // Pull Trending out so we can slot "Closing today" directly after it;
   // the rest keeps Polymarket's original ordering.
