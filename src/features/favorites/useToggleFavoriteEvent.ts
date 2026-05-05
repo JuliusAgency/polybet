@@ -3,45 +3,44 @@ import { supabase } from '@/shared/api/supabase';
 import { useAuth } from '@/shared/hooks/useAuth';
 
 interface ToggleFavoriteEventInput {
-  marketIds: string[];
-  mode: 'add' | 'remove';
+  eventId: string;
+  /** True when the event is currently saved (so the action will REMOVE it). */
+  currentlyFavorite: boolean;
 }
 
 export function useToggleFavoriteEvent() {
   const { session } = useAuth();
   const queryClient = useQueryClient();
   const userId = session?.user.id;
-  const queryKey = ['user', 'favorite-markets', userId] as const;
+  const queryKey = ['user', 'favorite-events', userId] as const;
 
   return useMutation({
-    mutationFn: async ({ marketIds, mode }: ToggleFavoriteEventInput) => {
+    mutationFn: async ({ eventId, currentlyFavorite }: ToggleFavoriteEventInput) => {
       if (!session) throw new Error('Not authenticated');
 
-      if (mode === 'add') {
-        const rows = marketIds.map((market_id) => ({
-          user_id: session.user.id,
-          market_id,
-        }));
+      if (currentlyFavorite) {
         const { error } = await supabase
-          .from('user_favorite_markets')
-          .upsert(rows, { onConflict: 'user_id,market_id', ignoreDuplicates: true });
+          .from('user_favorite_events')
+          .delete()
+          .eq('user_id', session.user.id)
+          .eq('event_id', eventId);
         if (error) throw new Error(error.message);
       } else {
         const { error } = await supabase
-          .from('user_favorite_markets')
-          .delete()
-          .eq('user_id', session.user.id)
-          .in('market_id', marketIds);
+          .from('user_favorite_events')
+          .upsert(
+            { user_id: session.user.id, event_id: eventId },
+            { onConflict: 'user_id,event_id', ignoreDuplicates: true }
+          );
         if (error) throw new Error(error.message);
       }
     },
-    onMutate: async ({ marketIds, mode }) => {
+    onMutate: async ({ eventId, currentlyFavorite }) => {
       await queryClient.cancelQueries({ queryKey });
       const previous = queryClient.getQueryData<string[]>(queryKey) ?? [];
-      const next =
-        mode === 'add'
-          ? Array.from(new Set([...previous, ...marketIds]))
-          : previous.filter((id) => !marketIds.includes(id));
+      const next = currentlyFavorite
+        ? previous.filter((id) => id !== eventId)
+        : Array.from(new Set([...previous, eventId]));
       queryClient.setQueryData(queryKey, next);
       return { previous };
     },

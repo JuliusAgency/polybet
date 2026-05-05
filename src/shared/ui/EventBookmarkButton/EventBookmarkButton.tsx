@@ -1,32 +1,18 @@
-import { useId, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useFavoriteMarkets, useToggleFavoriteEvent } from '@/features/favorites';
-
-type BookmarkState = 'none' | 'partial' | 'all';
+import { useFavoriteEvents, useToggleFavoriteEvent } from '@/features/favorites';
 
 interface EventBookmarkButtonProps {
-  marketIds: string[];
+  eventId: string;
   stopPropagation?: boolean;
-  // When provided, used to determine 'partial' state — i.e. saved (= marketIds
-  // intersected with favoriteSet) vs total markets of the event. Needed on the
-  // Saved page where `marketIds` only contains saved markets, so without it
-  // state always evaluates to 'all'.
-  totalMarketsCount?: number;
 }
 
-export function EventBookmarkButton({
-  marketIds,
-  stopPropagation = false,
-  totalMarketsCount,
-}: EventBookmarkButtonProps) {
+export function EventBookmarkButton({ eventId, stopPropagation = false }: EventBookmarkButtonProps) {
   const { t } = useTranslation();
-  const clipId = useId();
-  const { favoriteSet } = useFavoriteMarkets();
+  const { favoriteEventSet } = useFavoriteEvents();
   const toggle = useToggleFavoriteEvent();
 
-  const savedCount = marketIds.filter((id) => favoriteSet.has(id)).length;
-  const total = totalMarketsCount ?? marketIds.length;
-  const state: BookmarkState = savedCount === 0 ? 'none' : savedCount >= total ? 'all' : 'partial';
+  const isFavorite = favoriteEventSet.has(eventId);
 
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -34,42 +20,34 @@ export function EventBookmarkButton({
         e.preventDefault();
         e.stopPropagation();
       }
-      toggle.mutate({ marketIds, mode: state === 'none' ? 'add' : 'remove' });
+      toggle.mutate({ eventId, currentlyFavorite: isFavorite });
     },
-    [toggle, marketIds, state, stopPropagation]
+    [toggle, eventId, isFavorite, stopPropagation]
   );
 
-  const label = state === 'none' ? t('markets.favorite') : t('markets.unfavorite');
+  const label = isFavorite ? t('markets.unfavorite') : t('markets.favorite');
 
   return (
     <button
       type="button"
       onClick={handleClick}
       disabled={toggle.isPending}
-      aria-pressed={state !== 'none'}
+      aria-pressed={isFavorite}
       title={label}
       aria-label={label}
       className="rounded-md p-1 transition-colors hover:opacity-80 disabled:opacity-40"
       style={{
-        color: state !== 'none' ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+        color: isFavorite ? 'var(--color-accent)' : 'var(--color-text-secondary)',
         transitionDuration: 'var(--duration-fast)',
         transitionTimingFunction: 'var(--ease-out-expo)',
       }}
     >
       <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
-        {state === 'partial' && (
-          <defs>
-            <clipPath id={clipId}>
-              <rect x="0" y="0" width="12" height="24" />
-            </clipPath>
-          </defs>
-        )}
-        {state !== 'none' && (
+        {isFavorite && (
           <path
             d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"
             fill="currentColor"
             stroke="none"
-            clipPath={state === 'partial' ? `url(#${clipId})` : undefined}
           />
         )}
         <path

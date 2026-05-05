@@ -3,13 +3,13 @@ import { useTranslation } from 'react-i18next';
 import {
   useMarkets,
   useMarketsByIds,
+  useEventsByIds,
   useUserBalance,
   useMyBets,
   useAllowedCategoryTags,
-  useEventMarketCounts,
   groupMarketsByEvent,
 } from '@/features/bet';
-import { useFavoriteMarkets } from '@/features/favorites';
+import { useFavoriteMarkets, useFavoriteEvents } from '@/features/favorites';
 import type { Market, MarketOutcome, MarketStatusFilter } from '@/features/bet';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { useIntersectionObserver } from '@/shared/hooks/useIntersectionObserver';
@@ -31,6 +31,7 @@ interface SelectedBet {
 const MarketsFeedPage = () => {
   const { t } = useTranslation();
   const { favoriteSet } = useFavoriteMarkets();
+  const { favoriteEventSet } = useFavoriteEvents();
   const [statusFilter, setStatusFilter] = useState<MarketStatusFilter>('open');
   const [searchQuery, setSearchQuery] = useState('');
   const [tagSlug, setTagSlug] = useState<string | null>('trending');
@@ -54,15 +55,26 @@ const MarketsFeedPage = () => {
     error: errorMyBets,
   } = useMarketsByIds(myBetMarketIds, statusFilter, myBetsOnly);
   const savedMarketIds = Array.from(favoriteSet);
-  // Fetched regardless of `savedOnly` so the badge inside the Saved button
-  // can always advertise the number of cards that would appear on the Saved
-  // tab — not just the count for the currently active tab.
+  const savedEventIds = Array.from(favoriteEventSet);
+  // Fetched regardless of `savedOnly` so the Saved button badge can always
+  // advertise the count of cards that would appear on the Saved tab — not
+  // only when the tab is active.
   const {
-    data: savedMarkets,
-    isLoading: isLoadingSaved,
-    isError: isErrorSaved,
-    error: errorSaved,
+    data: savedStandaloneMarkets,
+    isLoading: isLoadingSavedMarkets,
+    isError: isErrorSavedMarkets,
+    error: errorSavedMarkets,
   } = useMarketsByIds(savedMarketIds, statusFilter, true);
+  const {
+    data: savedEventMarkets,
+    isLoading: isLoadingSavedEvents,
+    isError: isErrorSavedEvents,
+    error: errorSavedEvents,
+  } = useEventsByIds(savedEventIds, statusFilter, true);
+  const savedMarkets = [...(savedEventMarkets ?? []), ...(savedStandaloneMarkets ?? [])];
+  const isLoadingSaved = isLoadingSavedMarkets || isLoadingSavedEvents;
+  const isErrorSaved = isErrorSavedMarkets || isErrorSavedEvents;
+  const errorSaved = errorSavedMarkets ?? errorSavedEvents;
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedBet, setSelectedBet] = useState<SelectedBet | null>(null);
 
@@ -91,7 +103,7 @@ const MarketsFeedPage = () => {
   const userBetForMarket = (marketId: string) => (bets ?? []).find((b) => b.market_id === marketId);
 
   const sourceMarkets = savedOnly
-    ? (savedMarkets ?? [])
+    ? savedMarkets
     : myBetsOnly
       ? (myBetsMarkets ?? [])
       : markets;
@@ -117,18 +129,15 @@ const MarketsFeedPage = () => {
   // the user will actually see after clicking Saved.
   const savedVisibleMarkets =
     statusFilter === 'open'
-      ? (savedMarkets ?? []).filter((m) => {
+      ? savedMarkets.filter((m) => {
           if (!m.event) return true;
           const ev = m.event;
           if (ev.status !== 'open') return false;
           if (ev.close_at != null && new Date(ev.close_at).getTime() <= Date.now()) return false;
           return true;
         })
-      : (savedMarkets ?? []);
+      : savedMarkets;
   const savedFeedCount = groupMarketsByEvent(savedVisibleMarkets).length;
-
-  const eventIds = feedItems.flatMap((item) => (item.type === 'event' ? [item.event.id] : []));
-  const { data: eventMarketCounts } = useEventMarketCounts(eventIds);
 
   const feedIsLoading = savedOnly ? isLoadingSaved : myBetsOnly ? isLoadingMyBets : isLoading;
   const feedIsError = savedOnly ? isErrorSaved : myBetsOnly ? isErrorMyBets : isError;
@@ -151,11 +160,15 @@ const MarketsFeedPage = () => {
         onOpenSaved={() => {
           setSavedOnly((current) => {
             const next = !current;
-            // Saved is mutually exclusive with my-bets and the tag filter —
-            // turning it on clears the others so the feed has a single intent.
+            // Saved is mutually exclusive with my-bets and the tag filter.
+            // Turning ON clears my-bets and tag so the feed has a single intent.
+            // Turning OFF returns to the default Popular (`trending`) tag —
+            // otherwise the feed would render empty until the user picks one.
             if (next) {
               setMyBetsOnly(false);
               setTagSlug(null);
+            } else {
+              setTagSlug('trending');
             }
             return next;
           });
@@ -279,7 +292,6 @@ const MarketsFeedPage = () => {
                   // force multi-row so a truly multi-market event doesn't collapse
                   // into the single-market visual just because siblings were filtered out.
                   forceMultiRow={myBetsOnly}
-                  totalMarketsCount={eventMarketCounts?.[item.event.id]}
                 />
               ) : (
                 <MarketCard

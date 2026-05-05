@@ -1,15 +1,16 @@
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal } from '@/shared/ui/Modal';
-import { useToggleFavoriteEvent } from '@/features/favorites';
+import { useToggleFavoriteEvent, useFavoriteEvents } from '@/features/favorites';
 
 interface RemoveEventButtonProps {
-  marketIds: string[];
+  eventId: string;
 }
 
-export function RemoveEventButton({ marketIds }: RemoveEventButtonProps) {
+export function RemoveEventButton({ eventId }: RemoveEventButtonProps) {
   const { t } = useTranslation();
   const toggle = useToggleFavoriteEvent();
+  const { favoriteEventSet } = useFavoriteEvents();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -20,9 +21,9 @@ export function RemoveEventButton({ marketIds }: RemoveEventButtonProps) {
   }, []);
 
   const handleConfirm = useCallback(() => {
-    toggle.mutate({ marketIds, mode: 'remove' });
+    toggle.mutate({ eventId, currentlyFavorite: favoriteEventSet.has(eventId) });
     setIsConfirmOpen(false);
-  }, [toggle, marketIds]);
+  }, [toggle, eventId, favoriteEventSet]);
 
   return (
     <>
@@ -66,7 +67,7 @@ export function RemoveEventButton({ marketIds }: RemoveEventButtonProps) {
         title={t('markets.removeEvent')}
       >
         <p className="mb-6 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-          {t('markets.removeEventConfirm', { count: marketIds.length })}
+          {t('markets.removeEventConfirm', { count: 1 })}
         </p>
         <div className="flex justify-end gap-3">
           <button

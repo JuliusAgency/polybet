@@ -4,7 +4,6 @@ import type { Market, MarketEvent, MarketOutcome, MyBet } from '@/features/bet';
 import { OutcomeButtons, type OutcomeButton } from '@/shared/ui/OutcomeButtons';
 import { MarketThumbnail } from '@/shared/ui/MarketThumbnail';
 import { EventBookmarkButton } from '@/shared/ui/EventBookmarkButton';
-import { BookmarkButton } from '@/shared/ui/BookmarkButton';
 import { ChanceGauge } from '@/shared/ui/ChanceGauge';
 import { BetMarker } from '@/shared/ui/BetMarker';
 import { formatVolume } from '@/shared/utils';
@@ -25,13 +24,6 @@ interface EventCardProps {
   // collapse into the single-market visual just because the other rows
   // are filtered out.
   forceMultiRow?: boolean;
-  // 'saved' mode: shows all markets (scrollable), per-row remove buttons,
-  // and a remove-event action in the footer instead of the feed bookmark.
-  cardMode?: 'feed' | 'saved';
-  // Total markets of the event (across the DB, not just visible). Used by the
-  // footer EventBookmarkButton on the Saved page to render 'partial' state
-  // when only some of the event's markets are saved.
-  totalMarketsCount?: number;
 }
 
 export const EventCard = ({
@@ -41,8 +33,6 @@ export const EventCard = ({
   mode = 'interactive',
   onOutcomeClick,
   forceMultiRow = false,
-  cardMode = 'feed',
-  totalMarketsCount,
 }: EventCardProps) => {
   const { t, i18n } = useTranslation();
   const isHebrew = i18n.language === 'he';
@@ -61,12 +51,10 @@ export const EventCard = ({
         })
       : null;
 
-  // In feed mode cap to 2 rows; in saved mode show all (list is scrollable).
   const betMarkets = markets.filter((m) => betByMarketId.has(m.id));
   const nonBetMarkets = markets.filter((m) => !betByMarketId.has(m.id));
   const orderedMarkets = [...betMarkets, ...nonBetMarkets];
-  const visibleMarkets =
-    cardMode === 'saved' ? orderedMarkets : orderedMarkets.slice(0, FEED_VISIBLE_LIMIT);
+  const visibleMarkets = orderedMarkets.slice(0, FEED_VISIBLE_LIMIT);
 
   const isSingle = !forceMultiRow && visibleMarkets.length === 1;
   const singleMarket = isSingle ? visibleMarkets[0] : null;
@@ -98,8 +86,6 @@ export const EventCard = ({
   // Arc gauge only applies to binary markets (see MarketCard rationale).
   const singleIsBinary = (singleMarket?.market_outcomes.length ?? 0) === 2;
   const singleYesProbability = singleIsBinary && singleYes?.price != null ? singleYes.price : null;
-
-  const allMarketIds = markets.map((m) => m.id);
 
   return (
     <article
@@ -174,29 +160,6 @@ export const EventCard = ({
             />
           </div>
         </div>
-      ) : cardMode === 'saved' ? (
-        // Saved mode: show all markets in a scrollable container so cards
-        // don't grow unbounded when an event has many saved rows.
-        <div
-          className="flex flex-col overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-thumb]:rounded-full"
-          style={{
-            maxHeight: '320px',
-            // Scrollbar thumb uses border token as a subtle neutral
-            scrollbarColor: 'var(--color-border) transparent',
-            scrollbarWidth: 'thin',
-          }}
-        >
-          {visibleMarkets.map((market) => (
-            <EventMarketRow
-              key={market.id}
-              market={market}
-              userBet={betByMarketId.get(market.id)}
-              mode={mode}
-              onOutcomeClick={onOutcomeClick}
-              showRemove
-            />
-          ))}
-        </div>
       ) : (
         <div className="flex flex-col">
           {visibleMarkets.map((market) => (
@@ -239,11 +202,7 @@ export const EventCard = ({
         </div>
         <div className="relative z-10 flex items-center gap-1">
           {betMarkets.length > 0 && <BetMarker />}
-          <EventBookmarkButton
-            marketIds={allMarketIds}
-            stopPropagation={false}
-            totalMarketsCount={totalMarketsCount}
-          />
+          <EventBookmarkButton eventId={event.id} stopPropagation={false} />
         </div>
       </footer>
     </article>
@@ -255,10 +214,9 @@ interface EventMarketRowProps {
   userBet: MyBet | undefined;
   mode: 'interactive' | 'readonly';
   onOutcomeClick?: (market: Market, outcome: MarketOutcome) => void;
-  showRemove?: boolean;
 }
 
-function EventMarketRow({ market, mode, onOutcomeClick, showRemove = false }: EventMarketRowProps) {
+function EventMarketRow({ market, mode, onOutcomeClick }: EventMarketRowProps) {
   const { i18n } = useTranslation();
   const isHebrew = i18n.language === 'he';
 
@@ -321,11 +279,6 @@ function EventMarketRow({ market, mode, onOutcomeClick, showRemove = false }: Ev
         />
       </div>
 
-      {showRemove && (
-        <div className="relative z-10 shrink-0">
-          <BookmarkButton marketId={market.id} stopPropagation />
-        </div>
-      )}
     </div>
   );
 }

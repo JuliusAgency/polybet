@@ -3,14 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   useMarketsByIds,
+  useEventsByIds,
   useUserBalance,
   useMyBets,
   useMarketRefresh,
-  useEventMarketCounts,
   groupMarketsByEvent,
 } from '@/features/bet';
 import type { Market, MarketOutcome } from '@/features/bet';
-import { useFavoriteMarkets } from '@/features/favorites';
+import { useFavoriteMarkets, useFavoriteEvents } from '@/features/favorites';
 import { ROUTES } from '@/app/router/routes';
 import { CardGridSkeleton } from '@/shared/ui/CardGridSkeleton';
 import { MARKETS_REFRESH_MAX_IDS } from '@/shared/config/markets';
@@ -29,23 +29,37 @@ const SavedMarketsPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
-  const { favoriteSet, isLoading: isLoadingFavorites } = useFavoriteMarkets();
-  const savedIds = Array.from(favoriteSet);
+  const { favoriteSet, isLoading: isLoadingFavMarkets } = useFavoriteMarkets();
+  const { favoriteEventSet, isLoading: isLoadingFavEvents } = useFavoriteEvents();
+  const savedMarketIds = Array.from(favoriteSet);
+  const savedEventIds = Array.from(favoriteEventSet);
 
+  // Standalone saved markets (not part of an event).
   const {
-    data: savedMarkets,
-    isLoading: isLoadingMarkets,
-    isError,
-    error,
-  } = useMarketsByIds(savedIds, 'all', savedIds.length > 0);
+    data: savedStandaloneMarkets,
+    isLoading: isLoadingStandalone,
+    isError: isErrorStandalone,
+    error: errorStandalone,
+  } = useMarketsByIds(savedMarketIds, 'all', savedMarketIds.length > 0);
+
+  // Markets belonging to saved events (rendered as event cards).
+  const {
+    data: savedEventMarkets,
+    isLoading: isLoadingEventMarkets,
+    isError: isErrorEventMarkets,
+    error: errorEventMarkets,
+  } = useEventsByIds(savedEventIds, 'all', savedEventIds.length > 0);
 
   const { data: balance } = useUserBalance();
   const { data: bets } = useMyBets();
 
-  // Drive live odds refresh for the top N visible saved markets, same cadence
-  // as the main feed (~30s). Auto-enabled so cards stay in sync without the
-  // user having to navigate away and back.
-  const polymarketIds = (savedMarkets ?? [])
+  // Combine both sources, then group. Saved standalone markets stay as
+  // market-cards (event_id is null), saved events collapse into event-cards.
+  const allSavedMarkets = [...(savedEventMarkets ?? []), ...(savedStandaloneMarkets ?? [])];
+
+  // Drive live odds refresh for the top N visible saved markets — same cadence
+  // as the main feed (~30s).
+  const polymarketIds = allSavedMarkets
     .slice(0, MARKETS_REFRESH_MAX_IDS)
     .map((m) => m.polymarket_id);
   useMarketRefresh(polymarketIds, true);
@@ -67,12 +81,16 @@ const SavedMarketsPage = () => {
 
   const userBetForMarket = (marketId: string) => (bets ?? []).find((b) => b.market_id === marketId);
 
-  const feedItems = groupMarketsByEvent(savedMarkets ?? []);
+  const feedItems = groupMarketsByEvent(allSavedMarkets);
 
-  const eventIds = feedItems.flatMap((item) => (item.type === 'event' ? [item.event.id] : []));
-  const { data: eventMarketCounts } = useEventMarketCounts(eventIds);
+  const isLoading =
+    isLoadingFavMarkets ||
+    isLoadingFavEvents ||
+    (savedMarketIds.length > 0 && isLoadingStandalone) ||
+    (savedEventIds.length > 0 && isLoadingEventMarkets);
 
-  const isLoading = isLoadingFavorites || (savedIds.length > 0 && isLoadingMarkets);
+  const isError = isErrorStandalone || isErrorEventMarkets;
+  const errorMessage = errorStandalone?.message ?? errorEventMarkets?.message ?? '';
 
   return (
     <div>
@@ -94,7 +112,7 @@ const SavedMarketsPage = () => {
 
       {isError && (
         <p className="text-sm" style={{ color: 'var(--color-error)' }}>
-          {t('common.error')}: {error?.message}
+          {t('common.error')}: {errorMessage}
         </p>
       )}
 
@@ -115,8 +133,6 @@ const SavedMarketsPage = () => {
                   bets={bets ?? []}
                   mode={item.event.status === 'archived' ? 'readonly' : 'interactive'}
                   onOutcomeClick={handleOutcomeClick}
-                  cardMode="saved"
-                  totalMarketsCount={eventMarketCounts?.[item.event.id]}
                 />
               ) : (
                 <MarketCard
