@@ -4,6 +4,12 @@ import { useFavoriteMarkets, useToggleFavoriteMarket } from '@/features/favorite
 
 interface BookmarkButtonProps {
   marketId: string;
+  /**
+   * Event id of the market, when the caller has it. Lets the optimistic
+   * cache update reflect the partial/full event-level state immediately
+   * instead of waiting for the next refetch.
+   */
+  eventId?: string | null;
   /** Stops the click from bubbling into an enclosing <Link>. */
   stopPropagation?: boolean;
 }
@@ -13,7 +19,7 @@ interface BookmarkButtonProps {
  * Renders a static-looking bookmark silhouette; filled when saved, outlined when not.
  * Style mirrors the refresh/archive footer icons in MarketCard.
  */
-export function BookmarkButton({ marketId, stopPropagation = true }: BookmarkButtonProps) {
+export function BookmarkButton({ marketId, eventId, stopPropagation = true }: BookmarkButtonProps) {
   const { t } = useTranslation();
   const { favoriteSet } = useFavoriteMarkets();
   const toggle = useToggleFavoriteMarket();
@@ -26,9 +32,9 @@ export function BookmarkButton({ marketId, stopPropagation = true }: BookmarkBut
         event.preventDefault();
         event.stopPropagation();
       }
-      toggle.mutate({ marketId, currentlyFavorite: isFavorite });
+      toggle.mutate({ marketId, currentlyFavorite: isFavorite, eventId });
     },
-    [toggle, marketId, isFavorite, stopPropagation]
+    [toggle, marketId, isFavorite, eventId, stopPropagation]
   );
 
   return (

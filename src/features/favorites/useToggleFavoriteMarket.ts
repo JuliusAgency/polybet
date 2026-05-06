@@ -2,10 +2,21 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/shared/api/supabase';
 import { useAuth } from '@/shared/hooks/useAuth';
 
+interface FavoriteMarketEntry {
+  marketId: string;
+  eventId: string | null;
+}
+
 interface ToggleFavoriteInput {
   marketId: string;
   /** True when the market is currently a favourite (so the action will REMOVE it). */
   currentlyFavorite: boolean;
+  /**
+   * Event id of the market, when known by the caller. Used purely to keep
+   * the optimistic cache update aligned with the server shape — without it
+   * the partial/full event-bookmark state would only update after refetch.
+   */
+  eventId?: string | null;
 }
 
 export function useToggleFavoriteMarket() {
@@ -35,13 +46,14 @@ export function useToggleFavoriteMarket() {
         if (error) throw new Error(error.message);
       }
     },
-    // Optimistic: flip the cache immediately, roll back on failure.
-    onMutate: async ({ marketId, currentlyFavorite }) => {
+    onMutate: async ({ marketId, currentlyFavorite, eventId }) => {
       await queryClient.cancelQueries({ queryKey });
-      const previous = queryClient.getQueryData<string[]>(queryKey) ?? [];
-      const next = currentlyFavorite
-        ? previous.filter((id) => id !== marketId)
-        : Array.from(new Set([...previous, marketId]));
+      const previous = queryClient.getQueryData<FavoriteMarketEntry[]>(queryKey) ?? [];
+      const next: FavoriteMarketEntry[] = currentlyFavorite
+        ? previous.filter((e) => e.marketId !== marketId)
+        : previous.some((e) => e.marketId === marketId)
+          ? previous
+          : [...previous, { marketId, eventId: eventId ?? null }];
       queryClient.setQueryData(queryKey, next);
       return { previous };
     },

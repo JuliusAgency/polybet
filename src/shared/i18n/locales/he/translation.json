@@ -260,6 +260,7 @@
     },
     "favorite": "שמור שוק",
     "unfavorite": "הסר מהשמורים",
+    "partialFavorite": "חלק מהשווקים באירוע זה שמורים",
     "removeEvent": "הסר אירוע מהשמורים",
     "removeEventConfirm": "להסיר את כל {{count}} השווקים השמורים מהאירוע?",
     "searchPlaceholder": "חיפוש שווקים…",

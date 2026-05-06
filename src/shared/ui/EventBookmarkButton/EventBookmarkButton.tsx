@@ -1,18 +1,20 @@
-import { useCallback } from 'react';
+import { useCallback, useId } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useFavoriteEvents, useToggleFavoriteEvent } from '@/features/favorites';
+import { useEventFavoriteState, useToggleFavoriteEvent } from '@/features/favorites';
 
 interface EventBookmarkButtonProps {
   eventId: string;
   stopPropagation?: boolean;
 }
 
-export function EventBookmarkButton({ eventId, stopPropagation = false }: EventBookmarkButtonProps) {
+export function EventBookmarkButton({
+  eventId,
+  stopPropagation = false,
+}: EventBookmarkButtonProps) {
   const { t } = useTranslation();
-  const { favoriteEventSet } = useFavoriteEvents();
+  const { state, isEventFavorite } = useEventFavoriteState(eventId);
   const toggle = useToggleFavoriteEvent();
-
-  const isFavorite = favoriteEventSet.has(eventId);
+  const clipId = useId();
 
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -20,34 +22,62 @@ export function EventBookmarkButton({ eventId, stopPropagation = false }: EventB
         e.preventDefault();
         e.stopPropagation();
       }
-      toggle.mutate({ eventId, currentlyFavorite: isFavorite });
+      // We only ever toggle the event-level row. The partial visual is
+      // driven by per-market favorites and is not directly togglable here —
+      // clicking attaches/detaches the event itself.
+      toggle.mutate({ eventId, currentlyFavorite: isEventFavorite });
     },
-    [toggle, eventId, isFavorite, stopPropagation]
+    [toggle, eventId, isEventFavorite, stopPropagation]
   );
 
-  const label = isFavorite ? t('markets.unfavorite') : t('markets.favorite');
+  const label =
+    state === 'full'
+      ? t('markets.unfavorite')
+      : state === 'partial'
+        ? t('markets.partialFavorite')
+        : t('markets.favorite');
+
+  const isFilled = state === 'full';
+  const isPartial = state === 'partial';
 
   return (
     <button
       type="button"
       onClick={handleClick}
       disabled={toggle.isPending}
-      aria-pressed={isFavorite}
+      aria-pressed={isFilled}
       title={label}
       aria-label={label}
       className="rounded-md p-1 transition-colors hover:opacity-80 disabled:opacity-40"
       style={{
-        color: isFavorite ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+        color: isFilled || isPartial ? 'var(--color-accent)' : 'var(--color-text-secondary)',
         transitionDuration: 'var(--duration-fast)',
         transitionTimingFunction: 'var(--ease-out-expo)',
       }}
     >
       <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
-        {isFavorite && (
+        {isPartial && (
+          <defs>
+            <clipPath id={clipId}>
+              {/* Clip to the bottom half of the icon so only the lower
+                  portion gets filled, producing the half-saved indicator. */}
+              <rect x="0" y="12" width="24" height="12" />
+            </clipPath>
+          </defs>
+        )}
+        {isFilled && (
           <path
             d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"
             fill="currentColor"
             stroke="none"
+          />
+        )}
+        {isPartial && (
+          <path
+            d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"
+            fill="currentColor"
+            stroke="none"
+            clipPath={`url(#${clipId})`}
           />
         )}
         <path

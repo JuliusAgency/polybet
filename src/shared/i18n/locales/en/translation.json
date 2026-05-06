@@ -260,6 +260,7 @@
     },
     "favorite": "Save market",
     "unfavorite": "Remove from saved",
+    "partialFavorite": "Some markets in this event are saved",
     "removeEvent": "Remove event from saved",
     "removeEventConfirm": "Remove all {{count}} saved markets from this event?",
     "searchPlaceholder": "Search markets…",

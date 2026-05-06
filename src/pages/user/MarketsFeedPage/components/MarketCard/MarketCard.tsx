@@ -185,7 +185,7 @@ export const MarketCard = ({
             </span>
           )}
           {userBet && <BetMarker />}
-          <BookmarkButton marketId={market.id} />
+          <BookmarkButton marketId={market.id} eventId={market.event_id} />
           {showRefreshAction && market.polymarket_id && (
             <button
               type="button"

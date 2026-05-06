@@ -139,7 +139,7 @@ export const EventMarketRow = ({
       </div>
 
       {userBet && <BetMarker />}
-      <BookmarkButton marketId={market.id} stopPropagation />
+      <BookmarkButton marketId={market.id} eventId={market.event_id} stopPropagation />
     </div>
   );
 };
