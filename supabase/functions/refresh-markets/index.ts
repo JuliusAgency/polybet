@@ -158,16 +158,21 @@ Deno.serve(async (req: Request) => {
         continue;
       }
 
+      // Preserve the actual price coming back from Polymarket — including 0.
+      // The previous "0 → 0.5" substitution injected a fake 50% probability for
+      // genuinely zero-priced outcomes (e.g. the losing side of a resolved
+      // market where Polymarket returns [0, 1]) and surfaced as wrong %/odds.
+      // priceToOdds already handles price <= 0 safely.
       const outcomeRows = names
         .map((name, i) => {
-          const price = parseFloat(prices[i] ?? '0');
-          const safePrice = price > 0 ? price : 0.5;
-          const odds = priceToOdds(safePrice);
+          const raw = parseFloat(prices[i] ?? '');
+          const price = Number.isFinite(raw) ? Math.max(0, Math.min(1, raw)) : 0;
+          const odds = priceToOdds(price);
           return {
             market_id: marketId,
             polymarket_token_id: tokenIds[i] ?? null,
             name,
-            price: safePrice,
+            price,
             odds,
             effective_odds: odds,
             updated_at: changedAt,

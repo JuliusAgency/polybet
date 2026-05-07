@@ -352,6 +352,16 @@ Deno.serve(async (req: Request) => {
         DEFAULT_ARCHIVE_AFTER_HOURS
       );
 
+      // ── Refresh Trending rankings from Polymarket featured list ──────────
+      // Bug 6: the curated `trending` tab order is driven by events.trending_rank
+      // (denormalized to markets.trending_rank by migration 075). Previously
+      // this RPC ran only inside `mode='full'`, but cron on prod uses
+      // hot_set/active_page → trending_rank stayed NULL → the Trending tab
+      // sorted by `volume_24hr DESC NULLS LAST, id DESC` and didn't match
+      // Polymarket. Run it for every mode — single HTTP fetch + one RPC,
+      // cheap enough.
+      await syncTrendingRankings(supabase, stats);
+
       // ── mode: resolved_only — settle open bets for recently resolved markets ─
       if (mode === 'resolved_only') {
         await updateRun({ phase: 'fetching_resolved' });
@@ -818,12 +828,11 @@ Deno.serve(async (req: Request) => {
         });
       }
 
-      // ── 5. Refresh Trending rankings from Polymarket featured list ──────────
-      //    Bug 5: the curated `trending` order on the markets feed was driven by
-      //    sort_volume DESC, which doesn't match Polymarket. We pull featured
-      //    events and stamp `trending_rank` + `volume_24hr` on the matching
-      //    events; the markets feed sorts by those fields for the trending tag.
-      await syncTrendingRankings(supabase, stats);
+      // Trending rankings are now refreshed at the top of `runSync` so they
+      // apply to every cron mode (hot_set / active_page / full) — see comment
+      // there. The previous placement here meant trending only updated during
+      // the rare `mode='full'` runs, leaving the Trending tab stale on prod
+      // where cron typically uses hot_set/active_page (Bug 6).
 
       await archiveResolvedMarkets(supabase, archiveAfterHours, stats);
       await updateRun(
@@ -1020,15 +1029,21 @@ async function upsertOutcomes(
     );
   }
 
+  // Preserve the actual price coming back from Polymarket — including 0.
+  // The previous "0 → 0.5" substitution injected a fake 50% probability for
+  // genuinely zero-priced outcomes (e.g. the losing side of a resolved market
+  // where Polymarket returns [0, 1]) and surfaced as wrong %/odds in the UI.
+  // priceToOdds already handles price <= 0 safely (returns 1).
   const rows = names
     .map((name, i) => {
-      const price = parseFloat(prices[i] ?? '0');
-      const odds = priceToOdds(price > 0 ? price : 0.5);
+      const raw = parseFloat(prices[i] ?? '');
+      const price = Number.isFinite(raw) ? Math.max(0, Math.min(1, raw)) : 0;
+      const odds = priceToOdds(price);
       return {
         market_id: marketId,
         polymarket_token_id: tokenIds[i] ?? null,
         name,
-        price: price > 0 ? price : 0.5,
+        price,
         odds,
         effective_odds: odds,
         updated_at: changedAt,
