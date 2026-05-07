@@ -81,10 +81,17 @@ const MarketsFeedPage = () => {
   const { data: balance } = useUserBalance();
   const { data: bets } = useMyBets();
 
-  const myBetMarketIds = Array.from(new Set((bets ?? []).map((b) => b.market_id)));
-  // Bug 3: don't apply the status filter to My Bets — an open bet whose market
-  // has since closed/resolved still locks stake in In-Play, so it must remain
-  // visible in My Bets. Status pills still scope the main feed and Saved.
+  // My Bets must match the In-Play drawer (which lists `status='open'` bets) —
+  // settled (won/lost/cancelled) bets disappear from My Bets the moment they
+  // are settled. The user gets the result via toast (useBetResultNotifications)
+  // and balance is returned by settle_market RPC. Settlement history lives on
+  // the dedicated /my-bets page, not in this feed tab.
+  const openBets = (bets ?? []).filter((b) => b.status === 'open');
+  const myBetMarketIds = Array.from(new Set(openBets.map((b) => b.market_id)));
+  // Don't apply the status filter to My Bets — an open bet whose market has
+  // since closed/resolved (transient pre-settle window) still locks stake in
+  // In-Play, so it must remain visible. Status pills still scope the main feed
+  // and Saved.
   const {
     data: myBetsMarkets,
     isLoading: isLoadingMyBets,
@@ -108,7 +115,17 @@ const MarketsFeedPage = () => {
     isError: isErrorSavedEvents,
     error: errorSavedEvents,
   } = useEventsByIds(savedEventIds, statusFilter, true);
-  const savedMarkets = [...(savedEventMarkets ?? []), ...(savedStandaloneMarkets ?? [])];
+  // Saved view dedupe (Bug 4):
+  //   Drop any standalone-favourited market whose parent event is ALSO
+  //   event-favourited — otherwise the same market surfaces twice (as a
+  //   standalone card AND inside the event card preview), and toggling the
+  //   bookmark on the duplicated market doesn't appear to remove it because
+  //   the parent-event row keeps the market visible until the event itself
+  //   is unsaved.
+  const savedStandaloneFiltered = (savedStandaloneMarkets ?? []).filter(
+    (m) => !m.event_id || !favoriteEventSet.has(m.event_id)
+  );
+  const savedMarkets = [...(savedEventMarkets ?? []), ...savedStandaloneFiltered];
   const isLoadingSaved = isLoadingSavedMarkets || isLoadingSavedEvents;
   const isErrorSaved = isErrorSavedMarkets || isErrorSavedEvents;
   const errorSaved = errorSavedMarkets ?? errorSavedEvents;
@@ -133,13 +150,15 @@ const MarketsFeedPage = () => {
 
   const availableBalance = balance?.available ?? 0;
   const inPlay = balance?.in_play ?? 0;
-  const openBetsCount = (bets ?? []).filter((b) => b.status === 'open').length;
+  const openBetsCount = openBets.length;
 
   const hasBets = myBetMarketIds.length > 0;
 
-  const userBetForMarket = (marketId: string) => (bets ?? []).find((b) => b.market_id === marketId);
+  // Lookups operate on open bets only — settled bets must not surface in the
+  // feed UI (badges, "your stake" lines). They live in the My Bets history page.
+  const userBetForMarket = (marketId: string) => openBets.find((b) => b.market_id === marketId);
   const betCountForMarket = (marketId: string) =>
-    (bets ?? []).filter((b) => b.market_id === marketId).length;
+    openBets.filter((b) => b.market_id === marketId).length;
 
   const sourceMarkets = savedOnly ? savedMarkets : myBetsOnly ? (myBetsMarkets ?? []) : markets;
 
