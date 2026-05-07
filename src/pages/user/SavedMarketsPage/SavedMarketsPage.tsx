@@ -55,7 +55,13 @@ const SavedMarketsPage = () => {
 
   // Combine both sources, then group. Saved standalone markets stay as
   // market-cards (event_id is null), saved events collapse into event-cards.
-  const allSavedMarkets = [...(savedEventMarkets ?? []), ...(savedStandaloneMarkets ?? [])];
+  // Dedupe (Bug 4): if a market is favourited individually AND its parent
+  // event is event-favourited, drop the standalone copy — it'd otherwise
+  // duplicate inside the event card preview.
+  const savedStandaloneFiltered = (savedStandaloneMarkets ?? []).filter(
+    (m) => !m.event_id || !favoriteEventSet.has(m.event_id)
+  );
+  const allSavedMarkets = [...(savedEventMarkets ?? []), ...savedStandaloneFiltered];
 
   // Drive live odds refresh for the top N visible saved markets — same cadence
   // as the main feed (~30s).
