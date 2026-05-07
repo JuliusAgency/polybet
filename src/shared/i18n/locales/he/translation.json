@@ -274,6 +274,8 @@
     "noSaved": "עדיין לא שמרת שווקים",
     "closingToday": "נסגר היום",
     "betPlacedMarker": "יש לך הימור כאן",
+    "betPlacedMarkerCount_one": "יש לך {{count}} הימור כאן",
+    "betPlacedMarkerCount_other": "יש לך {{count}} הימורים כאן",
     "volume": "נפח",
     "marketId": "מזהה פנימי",
     "polymarketId": "מזהה Polymarket",

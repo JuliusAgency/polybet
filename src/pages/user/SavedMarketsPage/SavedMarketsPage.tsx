@@ -80,6 +80,8 @@ const SavedMarketsPage = () => {
   const openBetsCount = (bets ?? []).filter((b) => b.status === 'open').length;
 
   const userBetForMarket = (marketId: string) => (bets ?? []).find((b) => b.market_id === marketId);
+  const betCountForMarket = (marketId: string) =>
+    (bets ?? []).filter((b) => b.market_id === marketId).length;
 
   const feedItems = groupMarketsByEvent(allSavedMarkets);
 
@@ -123,7 +125,7 @@ const SavedMarketsPage = () => {
       )}
 
       {!isLoading && !isError && feedItems.length > 0 && (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {feedItems.map((item) => {
             const card =
               item.type === 'event' ? (
@@ -138,6 +140,7 @@ const SavedMarketsPage = () => {
                 <MarketCard
                   market={item.market}
                   userBet={userBetForMarket(item.market.id)}
+                  betCount={betCountForMarket(item.market.id)}
                   mode={
                     item.market.status === 'open' || item.market.status === 'closed'
                       ? 'interactive'

@@ -6,7 +6,7 @@ import { MarketThumbnail } from '@/shared/ui/MarketThumbnail';
 import { EventBookmarkButton } from '@/shared/ui/EventBookmarkButton';
 import { ChanceGauge } from '@/shared/ui/ChanceGauge';
 import { BetMarker } from '@/shared/ui/BetMarker';
-import { formatVolume } from '@/shared/utils';
+import { formatVolume, formatProbability } from '@/shared/utils';
 
 // Polymarket-style: at most 2 outcome rows visible in the feed card.
 // Users drill into /events/:id to see the full list — no inline expansion.
@@ -39,7 +39,18 @@ export const EventCard = ({
   const detailPath = `/events/${event.id}`;
 
   const volumeLabel = formatVolume(event.volume ?? null);
-  const betByMarketId = new Map((bets ?? []).map((b) => [b.market_id, b]));
+  // Group bets by market_id (a user can place multiple bets on the same
+  // market — Bug 3). The first entry is used wherever a single bet is
+  // needed; the array length feeds the BetMarker count badge.
+  const betsByMarketId = new Map<string, MyBet[]>();
+  for (const b of bets ?? []) {
+    const arr = betsByMarketId.get(b.market_id);
+    if (arr) arr.push(b);
+    else betsByMarketId.set(b.market_id, [b]);
+  }
+  const betByMarketId = new Map(
+    Array.from(betsByMarketId.entries(), ([id, list]) => [id, list[0]] as const)
+  );
 
   const eventExpired = event.close_at != null && new Date(event.close_at).getTime() <= Date.now();
   const eventEffectiveStatus = eventExpired && event.status === 'open' ? 'closed' : event.status;
@@ -201,7 +212,14 @@ export const EventCard = ({
           )}
         </div>
         <div className="relative z-10 flex items-center gap-1">
-          {betMarkets.length > 0 && <BetMarker />}
+          {betMarkets.length > 0 && (
+            <BetMarker
+              count={betMarkets.reduce(
+                (sum, m) => sum + (betsByMarketId.get(m.id)?.length ?? 0),
+                0
+              )}
+            />
+          )}
           <EventBookmarkButton eventId={event.id} stopPropagation={false} />
         </div>
       </footer>
@@ -238,7 +256,7 @@ function EventMarketRow({ market, mode, onOutcomeClick }: EventMarketRowProps) {
 
   const label = market.group_label ?? market.question;
   const yesOutcome = market.market_outcomes[0];
-  const yesPct = yesOutcome?.price != null ? `${Math.round(yesOutcome.price * 100)}%` : null;
+  const yesPct = yesOutcome?.price != null ? formatProbability(yesOutcome.price) : null;
 
   return (
     <div className="flex items-center gap-3 py-1.5">
@@ -278,7 +296,6 @@ function EventMarketRow({ market, mode, onOutcomeClick }: EventMarketRowProps) {
           }
         />
       </div>
-
     </div>
   );
 }

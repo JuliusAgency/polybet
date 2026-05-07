@@ -274,6 +274,8 @@
     "noSaved": "You haven't saved any markets yet",
     "closingToday": "Closing today",
     "betPlacedMarker": "You have a bet on this",
+    "betPlacedMarkerCount_one": "{{count}} bet on this",
+    "betPlacedMarkerCount_other": "{{count}} bets on this",
     "volume": "Vol",
     "marketId": "ID",
     "polymarketId": "Polymarket ID",

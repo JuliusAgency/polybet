@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   useMarkets,
@@ -41,19 +41,56 @@ const MarketsFeedPage = () => {
 
   const { data: allowedTags = [] } = useAllowedCategoryTags();
 
-  const { markets, isLoading, isError, error, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useMarkets(statusFilter, debouncedSearch, null, tagSlug);
+  const {
+    markets,
+    isLoading,
+    isFetching,
+    isError,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useMarkets(statusFilter, debouncedSearch, null, tagSlug);
+
+  // Tab-transition skeleton (Bug 1): TanStack Query keeps cached data per
+  // (tagSlug) — switching back to a previously-loaded tag is instant, so
+  // `isLoading` stays false and the skeleton never shows. Force a brief
+  // loader on every tab change so Trending and other tabs feel consistent.
+  // Cleared when isFetching settles or after TAB_TRANSITION_MS as a safety net.
+  const TAB_TRANSITION_MS = 280;
+  const [isTabTransitioning, setIsTabTransitioning] = useState(false);
+  const tabKey = `${tagSlug ?? 'all'}|${myBetsOnly ? 'mb' : ''}|${savedOnly ? 'sv' : ''}`;
+  const lastTabKeyRef = useRef(tabKey);
+  useEffect(() => {
+    if (lastTabKeyRef.current === tabKey) return;
+    lastTabKeyRef.current = tabKey;
+    setIsTabTransitioning(true);
+    const id = window.setTimeout(() => setIsTabTransitioning(false), TAB_TRANSITION_MS);
+    return () => window.clearTimeout(id);
+  }, [tabKey]);
+  // Also drop the flag immediately as soon as the underlying query reports
+  // it's no longer fetching — so when data arrives faster than the timeout,
+  // we don't keep an empty skeleton on screen.
+  useEffect(() => {
+    if (!isFetching && isTabTransitioning) {
+      const id = window.setTimeout(() => setIsTabTransitioning(false), 80);
+      return () => window.clearTimeout(id);
+    }
+  }, [isFetching, isTabTransitioning]);
 
   const { data: balance } = useUserBalance();
   const { data: bets } = useMyBets();
 
   const myBetMarketIds = Array.from(new Set((bets ?? []).map((b) => b.market_id)));
+  // Bug 3: don't apply the status filter to My Bets — an open bet whose market
+  // has since closed/resolved still locks stake in In-Play, so it must remain
+  // visible in My Bets. Status pills still scope the main feed and Saved.
   const {
     data: myBetsMarkets,
     isLoading: isLoadingMyBets,
     isError: isErrorMyBets,
     error: errorMyBets,
-  } = useMarketsByIds(myBetMarketIds, statusFilter, myBetsOnly);
+  } = useMarketsByIds(myBetMarketIds, 'all', myBetsOnly);
   const savedMarketIds = Array.from(favoriteSet);
   const savedEventIds = Array.from(favoriteEventSet);
   // Fetched regardless of `savedOnly` so the Saved button badge can always
@@ -101,18 +138,18 @@ const MarketsFeedPage = () => {
   const hasBets = myBetMarketIds.length > 0;
 
   const userBetForMarket = (marketId: string) => (bets ?? []).find((b) => b.market_id === marketId);
+  const betCountForMarket = (marketId: string) =>
+    (bets ?? []).filter((b) => b.market_id === marketId).length;
 
-  const sourceMarkets = savedOnly
-    ? savedMarkets
-    : myBetsOnly
-      ? (myBetsMarkets ?? [])
-      : markets;
+  const sourceMarkets = savedOnly ? savedMarkets : myBetsOnly ? (myBetsMarkets ?? []) : markets;
 
   // Mirror UI's effectiveStatus rule (see MarketCard/EventCard): a record counts
   // as "open" only if its own status is open, its close_at is in the future, and —
   // for markets attached to an event — the parent event is also effectively open.
+  // Skip the rule for My Bets — an open bet whose parent event has since closed
+  // still belongs in the user's list (Bug 3).
   const visibleMarkets =
-    statusFilter === 'open'
+    statusFilter === 'open' && !myBetsOnly
       ? sourceMarkets.filter((m) => {
           if (!m.event) return true;
           const ev = m.event;
@@ -139,7 +176,8 @@ const MarketsFeedPage = () => {
       : savedMarkets;
   const savedFeedCount = groupMarketsByEvent(savedVisibleMarkets).length;
 
-  const feedIsLoading = savedOnly ? isLoadingSaved : myBetsOnly ? isLoadingMyBets : isLoading;
+  const feedIsLoading =
+    isTabTransitioning || (savedOnly ? isLoadingSaved : myBetsOnly ? isLoadingMyBets : isLoading);
   const feedIsError = savedOnly ? isErrorSaved : myBetsOnly ? isErrorMyBets : isError;
   const feedError = savedOnly ? errorSaved : myBetsOnly ? errorMyBets : error;
 
@@ -278,7 +316,7 @@ const MarketsFeedPage = () => {
 
       {/* Feed grid: events grouped + standalone markets */}
       {!feedIsLoading && !feedIsError && feedItems.length > 0 && (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {feedItems.map((item) => {
             const card =
               item.type === 'event' ? (
@@ -297,6 +335,7 @@ const MarketsFeedPage = () => {
                 <MarketCard
                   market={item.market}
                   userBet={userBetForMarket(item.market.id)}
+                  betCount={betCountForMarket(item.market.id)}
                   mode={
                     item.market.status === 'open' || item.market.status === 'closed'
                       ? 'interactive'

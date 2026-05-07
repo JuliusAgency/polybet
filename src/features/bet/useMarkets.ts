@@ -57,15 +57,35 @@ export interface Market {
   // Denormalized from events.tag_slugs (migration 069). May be missing on
   // legacy cached records read before the column existed; treat as optional.
   tag_slugs?: string[];
+  // Denormalized from events.trending_rank / events.volume_24hr (migration 075).
+  // Maintained by the sync edge function from Polymarket's /events?featured=true
+  // response. Used to order the Trending tab so it matches Polymarket exactly
+  // (Bug 5). May be missing on legacy cached records — treat as optional.
+  trending_rank?: number | null;
+  volume_24hr?: number | null;
   event: MarketEvent | null;
   market_outcomes: MarketOutcome[];
 }
 
-interface Cursor {
+interface DefaultCursor {
+  kind: 'default';
   lastSortVolume: number;
   lastCreatedAt: string;
   lastId: string;
 }
+
+interface TrendingCursor {
+  kind: 'trending';
+  // null trending_rank ranks last; we encode "ranked" pages first, then a
+  // separate "unranked" stretch sorted by volume_24hr DESC.
+  lastTrendingRank: number | null;
+  lastVolume24hr: number | null;
+  lastId: string;
+}
+
+type Cursor = DefaultCursor | TrendingCursor;
+
+const TRENDING_TAG_SLUG = 'trending';
 
 /** Virtual slug that filters by `close_at` within today's local day instead of
  *  by event tag. Kept as a slug (rather than a separate prop) so the TagFilter
@@ -102,7 +122,7 @@ export function useMarkets(
       let query = supabase
         .from('markets')
         .select(
-          `id, polymarket_id, question, status, winning_outcome_id, category, image_url, close_at, last_synced_at, created_at, volume, sort_volume, event_id, group_label, ${eventJoin}, market_outcomes!market_outcomes_market_id_fkey(id, name, price, odds, effective_odds, updated_at, polymarket_token_id)`
+          `id, polymarket_id, question, status, winning_outcome_id, category, image_url, close_at, last_synced_at, created_at, volume, sort_volume, trending_rank, volume_24hr, event_id, group_label, ${eventJoin}, market_outcomes!market_outcomes_market_id_fkey(id, name, price, odds, effective_odds, updated_at, polymarket_token_id)`
         )
         .eq('is_visible', true);
 
@@ -148,23 +168,58 @@ export function useMarkets(
           .lt('close_at', tomorrowStart.toISOString());
       }
 
-      // Cursor: fetch rows after the last item of the previous page.
-      // Sort key is (sort_volume DESC, created_at DESC, id DESC) — so "after"
-      // means strictly less on the compound key (keyset pagination).
-      if (pageParam) {
-        const { lastSortVolume: v, lastCreatedAt: c, lastId: i } = pageParam;
-        query = query.or(
-          `sort_volume.lt.${v},` +
-            `and(sort_volume.eq.${v},created_at.lt.${c}),` +
-            `and(sort_volume.eq.${v},created_at.eq.${c},id.lt.${i})`
-        );
-      }
+      const isTrendingFilter = tagSlugFilter === TRENDING_TAG_SLUG;
 
-      query = query
-        .order('sort_volume', { ascending: false })
-        .order('created_at', { ascending: false })
-        .order('id', { ascending: false })
-        .limit(MARKETS_PAGE_LIMIT);
+      if (isTrendingFilter) {
+        // Trending: order by Polymarket's curated rank first, then by 24h
+        // volume (Bug 5). Cursor is (trending_rank ASC NULLS LAST,
+        // volume_24hr DESC NULLS LAST, id DESC). PostgREST has no native
+        // "nulls last" for the ordering used in keyset comparisons, so we
+        // express NULL handling explicitly via the cursor branch.
+        if (pageParam && pageParam.kind === 'trending') {
+          const { lastTrendingRank: tr, lastVolume24hr: v24, lastId: i } = pageParam;
+          if (tr != null) {
+            // Within the ranked block: strictly greater rank (worse), or same
+            // rank with smaller volume_24hr / id.
+            query = query.or(
+              `trending_rank.gt.${tr},` +
+                `and(trending_rank.eq.${tr},volume_24hr.lt.${v24 ?? 0}),` +
+                `and(trending_rank.eq.${tr},volume_24hr.eq.${v24 ?? 0},id.lt.${i}),` +
+                `trending_rank.is.null`
+            );
+          } else {
+            // Past the ranked block — staying in NULL-rank territory, sort
+            // by volume_24hr DESC then id DESC.
+            query = query
+              .is('trending_rank', null)
+              .or(`volume_24hr.lt.${v24 ?? 0},` + `and(volume_24hr.eq.${v24 ?? 0},id.lt.${i})`);
+          }
+        }
+
+        query = query
+          .order('trending_rank', { ascending: true, nullsFirst: false })
+          .order('volume_24hr', { ascending: false, nullsFirst: false })
+          .order('id', { ascending: false })
+          .limit(MARKETS_PAGE_LIMIT);
+      } else {
+        // Cursor: fetch rows after the last item of the previous page.
+        // Sort key is (sort_volume DESC, created_at DESC, id DESC) — so "after"
+        // means strictly less on the compound key (keyset pagination).
+        if (pageParam && pageParam.kind === 'default') {
+          const { lastSortVolume: v, lastCreatedAt: c, lastId: i } = pageParam;
+          query = query.or(
+            `sort_volume.lt.${v},` +
+              `and(sort_volume.eq.${v},created_at.lt.${c}),` +
+              `and(sort_volume.eq.${v},created_at.eq.${c},id.lt.${i})`
+          );
+        }
+
+        query = query
+          .order('sort_volume', { ascending: false })
+          .order('created_at', { ascending: false })
+          .order('id', { ascending: false })
+          .limit(MARKETS_PAGE_LIMIT);
+      }
 
       const { data, error } = await query;
       if (error) throw new Error(error.message);
@@ -180,7 +235,16 @@ export function useMarkets(
     getNextPageParam: (lastPage): Cursor | undefined => {
       if (lastPage.length < MARKETS_PAGE_LIMIT) return undefined;
       const last = lastPage[lastPage.length - 1];
+      if (tagSlugFilter === TRENDING_TAG_SLUG) {
+        return {
+          kind: 'trending',
+          lastTrendingRank: last.trending_rank ?? null,
+          lastVolume24hr: last.volume_24hr ?? null,
+          lastId: last.id,
+        };
+      }
       return {
+        kind: 'default',
         lastSortVolume: last.sort_volume ?? 0,
         lastCreatedAt: last.created_at,
         lastId: last.id,
@@ -199,6 +263,10 @@ export function useMarkets(
   return {
     markets,
     isLoading: result.isLoading,
+    // True for any in-flight fetch — including refetch on a fully cached
+    // queryKey. Used by the feed to flash the skeleton on every tab switch
+    // (Bug 1: Trending had no loader because cached re-mounts had isLoading=false).
+    isFetching: result.isFetching,
     isError: result.isError,
     error: result.error,
     fetchNextPage: result.fetchNextPage,

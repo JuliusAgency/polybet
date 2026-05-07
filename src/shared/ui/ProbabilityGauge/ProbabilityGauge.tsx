@@ -2,6 +2,7 @@
  * Circular probability gauge (conic-gradient). Shows the leading outcome's % plus
  * its first letter in the center. Color shifts toward win when >= 50%, loss when < 50%.
  */
+import { formatProbability } from '@/shared/utils';
 
 type GaugeSize = 'sm' | 'lg';
 
@@ -30,7 +31,10 @@ export function ProbabilityGauge({
   ariaLabel,
 }: ProbabilityGaugeProps) {
   const clamped = Math.max(0, Math.min(1, probability));
+  // Conic-gradient stop position — keep integer for the visual fill (no
+  // perceptible difference at 22–44 px). Display label uses one decimal.
   const percent = Math.round(clamped * 100);
+  const percentLabel = formatProbability(clamped);
   const dims = SIZE_MAP[size];
 
   const leaning = clamped >= 0.5;
@@ -44,7 +48,7 @@ export function ProbabilityGauge({
   return (
     <div
       role="img"
-      aria-label={ariaLabel ?? `${percent}% ${leaderName}`}
+      aria-label={ariaLabel ?? `${percentLabel} ${leaderName}`}
       className="relative shrink-0"
       style={{
         width: dims.outer,
@@ -70,7 +74,7 @@ export function ProbabilityGauge({
               className="font-mono font-semibold"
               style={{ fontSize: dims.pctFont, color: 'var(--color-text-primary)' }}
             >
-              {percent}%
+              {percentLabel}
             </span>
             <span
               className="font-medium"

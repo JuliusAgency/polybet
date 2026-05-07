@@ -4,6 +4,13 @@ interface BetMarkerProps {
   /** Tooltip override; defaults to the i18n "You have a bet on this" text. */
   title?: string;
   className?: string;
+  /**
+   * Number of bets the user has on this market/event. When > 1 a small
+   * count badge is rendered next to the bullseye so a market with multiple
+   * bets reads as multiple — keeping My Bets visually consistent with
+   * the In-Play count which sums every open bet (Bug 3).
+   */
+  count?: number;
 }
 
 /**
@@ -12,9 +19,14 @@ interface BetMarkerProps {
  * feed. Uses the same bullseye glyph and accent color as the "My bets" tag
  * chip so the two UI elements read as a matched pair.
  */
-export function BetMarker({ title, className }: BetMarkerProps) {
+export function BetMarker({ title, className, count }: BetMarkerProps) {
   const { t } = useTranslation();
-  const label = title ?? t('markets.betPlacedMarker');
+  const showCount = typeof count === 'number' && count > 1;
+  const label =
+    title ??
+    (showCount
+      ? t('markets.betPlacedMarkerCount', { count, defaultValue: '{{count}} bets on this' })
+      : t('markets.betPlacedMarker'));
 
   return (
     <span
@@ -25,9 +37,7 @@ export function BetMarker({ title, className }: BetMarkerProps) {
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        justifyContent: 'center',
-        width: 18,
-        height: 18,
+        gap: 2,
         color: 'var(--color-accent)',
         flexShrink: 0,
       }}
@@ -47,6 +57,21 @@ export function BetMarker({ title, className }: BetMarkerProps) {
         <circle cx="12" cy="12" r="6" />
         <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
       </svg>
+      {showCount && (
+        <span
+          aria-hidden="true"
+          style={{
+            fontFamily: 'var(--font-sans)',
+            fontWeight: 600,
+            fontSize: 11,
+            lineHeight: 1,
+            color: 'var(--color-accent)',
+            fontVariantNumeric: 'tabular-nums',
+          }}
+        >
+          ×{count}
+        </span>
+      )}
     </span>
   );
 }

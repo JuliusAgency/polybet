@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { formatProbability } from '@/shared/utils';
 
 interface ChanceGaugeProps {
   /** Probability in [0, 1] (Yes-outcome price). null / undefined renders nothing. */
@@ -24,7 +25,7 @@ export function ChanceGauge({ value, size = 56, label, className }: ChanceGaugeP
   if (value == null || !Number.isFinite(value)) return null;
 
   const pct = Math.max(0, Math.min(1, value));
-  const percentInt = Math.round(pct * 100);
+  const percentLabel = formatProbability(pct);
 
   // Geometry — arc occupies the upper half of a square viewBox; the bottom
   // half holds the percentage text.
@@ -59,7 +60,7 @@ export function ChanceGauge({ value, size = 56, label, className }: ChanceGaugeP
         lineHeight: 1,
       }}
       role="img"
-      aria-label={`${percentInt}% ${resolvedLabel}`}
+      aria-label={`${percentLabel} ${resolvedLabel}`}
     >
       <svg viewBox={`0 0 ${vb} ${vb}`} width={size} height={size} aria-hidden="true">
         {/* Background track */}
@@ -97,7 +98,7 @@ export function ChanceGauge({ value, size = 56, label, className }: ChanceGaugeP
             fontVariantNumeric: 'tabular-nums',
           }}
         >
-          {percentInt}%
+          {percentLabel}
         </text>
         {/* Caption — stacked directly under the percentage, inside the SVG
             so the two share a single layout box (no CSS negative margin trick). */}

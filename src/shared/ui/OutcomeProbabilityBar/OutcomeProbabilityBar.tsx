@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { formatProbability } from '@/shared/utils';
 
 /**
  * Thin horizontal probability bar for market outcomes.
@@ -34,8 +35,7 @@ function segmentColor(index: number): string {
 }
 
 function formatPercent(price: number | null): string {
-  if (price == null) return '—';
-  return `${Math.round(price * 100)}%`;
+  return formatProbability(price);
 }
 
 export function OutcomeProbabilityBar({

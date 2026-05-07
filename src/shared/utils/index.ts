@@ -5,6 +5,7 @@
  */
 
 export { formatVolume } from './formatVolume';
+export { formatProbability } from './formatProbability';
 
 /**
  * Returns a display name for a transaction/action initiator.

@@ -56,7 +56,76 @@ interface SyncRequestBody {
 const GAMMA_API_BASE = 'https://gamma-api.polymarket.com';
 const ACTIVE_MARKETS_URL = `${GAMMA_API_BASE}/markets?active=true&closed=false&limit=100`;
 const RESOLVED_MARKETS_URL = `${GAMMA_API_BASE}/markets?resolved=true&limit=50`;
+// Polymarket's curated Trending list — featured events ordered by 24h volume.
+// We pull at most 100 events; the response feeds events.trending_rank /
+// events.volume_24hr via the set_events_trending_rankings RPC (migration 075)
+// so the markets feed can sort by Polymarket's own ordering instead of our
+// internal sort_volume.
+const TRENDING_EVENTS_URL = `${GAMMA_API_BASE}/events?featured=true&closed=false&order=volume24hr&ascending=false&limit=100`;
 const DEFAULT_ARCHIVE_AFTER_HOURS = 168;
+
+interface GammaEvent {
+  slug: string | null;
+  volume24hr?: number | string | null;
+}
+
+/** Fetch the curated Trending list from Gamma and write rankings into the
+ *  events table via the set_events_trending_rankings RPC (migration 075).
+ *  Errors are surfaced through the stats.errors array — trending is a "nice
+ *  to have" sort signal, not load-bearing for the main sync. */
+async function syncTrendingRankings(
+  supabase: ReturnType<typeof createClient>,
+  stats: { errors: string[] }
+): Promise<number> {
+  let events: GammaEvent[];
+  try {
+    events = await fetchJsonWithRetry<GammaEvent[]>(TRENDING_EVENTS_URL, {
+      headers: { Accept: 'application/json' },
+    });
+  } catch (e: unknown) {
+    stats.errors.push(
+      `Failed to fetch trending events: ${e instanceof Error ? e.message : String(e)}`
+    );
+    return 0;
+  }
+
+  if (!Array.isArray(events) || events.length === 0) {
+    // Even an empty featured list is meaningful — it should clear all
+    // currently-featured rankings. Fall through to the RPC with an empty
+    // payload so previously-featured events lose their rank.
+    events = [];
+  }
+
+  const rankings = events
+    .map((e, idx) => {
+      if (!e?.slug) return null;
+      const v24 =
+        typeof e.volume24hr === 'number'
+          ? e.volume24hr
+          : typeof e.volume24hr === 'string' && e.volume24hr.trim() !== ''
+            ? Number(e.volume24hr)
+            : null;
+      return {
+        slug: e.slug,
+        trending_rank: idx + 1,
+        volume_24hr: Number.isFinite(v24 ?? Number.NaN) ? (v24 as number) : null,
+      };
+    })
+    .filter(
+      (r): r is { slug: string; trending_rank: number; volume_24hr: number | null } => r !== null
+    );
+
+  const { data, error } = await supabase.rpc('set_events_trending_rankings', {
+    p_rankings: rankings,
+  });
+
+  if (error) {
+    stats.errors.push(`set_events_trending_rankings RPC failed: ${error.message}`);
+    return 0;
+  }
+
+  return typeof data === 'number' ? data : 0;
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -748,6 +817,13 @@ Deno.serve(async (req: Request) => {
           error_message: stats.errors[0] ?? null,
         });
       }
+
+      // ── 5. Refresh Trending rankings from Polymarket featured list ──────────
+      //    Bug 5: the curated `trending` order on the markets feed was driven by
+      //    sort_volume DESC, which doesn't match Polymarket. We pull featured
+      //    events and stamp `trending_rank` + `volume_24hr` on the matching
+      //    events; the markets feed sorts by those fields for the trending tag.
+      await syncTrendingRankings(supabase, stats);
 
       await archiveResolvedMarkets(supabase, archiveAfterHours, stats);
       await updateRun(

@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import type { MarketOutcome, PriceHistoryPoint } from '@/features/bet';
 import { Spinner } from '@/shared/ui/Spinner';
+import { formatProbability } from '@/shared/utils';
 import { pickOutcomeColor } from './priceHistoryPalette';
 
 interface PriceHistoryChartProps {
@@ -219,7 +220,7 @@ const PriceTooltip = ({ active, payload, label, outcomes, locale }: PriceTooltip
             />
             <span style={{ color: 'var(--color-text-primary)' }}>{name}</span>
             <span className="ms-auto font-mono" style={{ color: 'var(--color-text-primary)' }}>
-              {Math.round(value * 100)}%
+              {formatProbability(value)}
             </span>
           </div>
         );

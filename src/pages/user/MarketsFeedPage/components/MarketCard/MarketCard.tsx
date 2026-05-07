@@ -14,6 +14,9 @@ import { formatVolume } from '@/shared/utils';
 interface MarketCardProps {
   market: Market;
   userBet?: MyBet;
+  /** Total user bets on this market — feeds the BetMarker count badge so
+   *  multi-bet markets read consistently with In-Play counts (Bug 3). */
+  betCount?: number;
   mode?: 'interactive' | 'readonly';
   onOutcomeClick?: (market: Market, outcome: MarketOutcome) => void;
   onArchive?: (market: Market) => void;
@@ -35,6 +38,7 @@ function formatClosesDate(iso: string | null, locale: string): string | null {
 export const MarketCard = ({
   market,
   userBet,
+  betCount,
   mode = 'interactive',
   onOutcomeClick,
   onArchive,
@@ -184,7 +188,7 @@ export const MarketCard = ({
               ⚠
             </span>
           )}
-          {userBet && <BetMarker />}
+          {userBet && <BetMarker count={betCount} />}
           <BookmarkButton marketId={market.id} eventId={market.event_id} />
           {showRefreshAction && market.polymarket_id && (
             <button

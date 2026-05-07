@@ -1,4 +1,5 @@
 import { useState, type CSSProperties, type ReactNode } from 'react';
+import { formatProbability } from '@/shared/utils';
 
 /**
  * Side-by-side outcome buttons for binary markets (Polymarket-style).
@@ -95,7 +96,7 @@ function formatPrice(price: number | null, format: 'percent' | 'cents' = 'percen
     const formatted = cents >= 10 ? cents.toFixed(1) : cents.toFixed(1);
     return `${formatted}¢`;
   }
-  return `${Math.round(price * 100)}%`;
+  return formatProbability(price);
 }
 
 export function OutcomeButtons({

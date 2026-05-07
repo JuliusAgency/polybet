@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { formatProbability } from '@/shared/utils';
 
 export interface OddsBarSegment {
   id: string;
@@ -44,7 +45,9 @@ export const OddsBar = ({
           } as CSSProperties
         }
         role="img"
-        aria-label={normalized.map((s) => `${s.label}: ${Math.round(s.pct)}%`).join(', ')}
+        aria-label={normalized
+          .map((s) => `${s.label}: ${formatProbability(s.pct / 100)}`)
+          .join(', ')}
       >
         {normalized.map((s, i) => (
           <div
@@ -68,7 +71,7 @@ export const OddsBar = ({
                 fontWeight: 600,
               }}
             >
-              {s.label} {Math.round(s.pct)}%
+              {s.label} {formatProbability(s.pct / 100)}
             </span>
           ))}
         </div>

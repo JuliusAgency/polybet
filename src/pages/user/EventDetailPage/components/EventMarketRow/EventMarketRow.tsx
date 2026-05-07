@@ -5,7 +5,7 @@ import { BookmarkButton } from '@/shared/ui/BookmarkButton';
 import { BetMarker } from '@/shared/ui/BetMarker';
 import { MarketThumbnail } from '@/shared/ui/MarketThumbnail';
 import { OutcomeButtons, type OutcomeButton } from '@/shared/ui/OutcomeButtons';
-import { formatVolume } from '@/shared/utils';
+import { formatVolume, formatProbability } from '@/shared/utils';
 
 interface EventMarketRowProps {
   market: Market;
@@ -44,7 +44,7 @@ export const EventMarketRow = ({
   const label = market.group_label ?? market.question;
   const volumeLabel = formatVolume(market.volume ?? null);
   const yesOutcome = market.market_outcomes[0];
-  const yesPct = yesOutcome?.price != null ? `${Math.round(yesOutcome.price * 100)}%` : null;
+  const yesPct = yesOutcome?.price != null ? formatProbability(yesOutcome.price) : null;
 
   const statusLabel =
     effectiveStatus !== 'open'
