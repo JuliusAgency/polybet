@@ -85,7 +85,7 @@ export function useMarketRefresh(
         const { data: freshMarkets } = await supabase
           .from('markets')
           .select(
-            'id, polymarket_id, question, status, winning_outcome_id, category, image_url, close_at, last_synced_at, created_at, volume, sort_volume, event_id, group_label, tag_slugs, market_outcomes!market_outcomes_market_id_fkey(id, name, price, odds, effective_odds, updated_at, polymarket_token_id)'
+            'id, polymarket_id, question, status, winning_outcome_id, category, image_url, close_at, last_synced_at, created_at, volume, sort_volume, trending_rank, volume_24hr, event_id, group_label, tag_slugs, event:event_id(id, title, description, category, image_url, close_at, status, volume, tag_slug, tag_label, tag_slugs), market_outcomes!market_outcomes_market_id_fkey(id, name, price, odds, effective_odds, updated_at, polymarket_token_id)'
           )
           .in('polymarket_id', ids);
 
