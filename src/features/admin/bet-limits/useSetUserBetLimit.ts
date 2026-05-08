@@ -1,9 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/shared/api/supabase';
-import { adminBetLimitSettingsQueryKey } from './useBetLimitSettings';
-import { allLimitsQueryKey } from './useAllLimitsData';
-
-const adminManagerUsersQueryKey = ['admin', 'manager-users'] as const;
+import { invalidateAllBetLimitCaches } from './invalidations';
 
 export interface SetUserBetLimitParams {
   userId: string;
@@ -23,11 +20,7 @@ export function useSetUserBetLimit() {
       if (error) throw new Error(error.message);
     },
     onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: adminBetLimitSettingsQueryKey }),
-        queryClient.invalidateQueries({ queryKey: adminManagerUsersQueryKey }),
-        queryClient.invalidateQueries({ queryKey: allLimitsQueryKey }),
-      ]);
+      await invalidateAllBetLimitCaches(queryClient, 'user');
     },
   });
 }

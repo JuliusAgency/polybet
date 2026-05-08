@@ -4,6 +4,7 @@ import fs from 'node:fs';
 
 test('useSimilarEvents filters by tag or category and excludes resolved/archived', () => {
   const source = fs.readFileSync('src/features/bet/useSimilarEvents.ts', 'utf8');
+  const selectSource = fs.readFileSync('src/shared/api/supabase/selects/eventSelect.ts', 'utf8');
 
   assert.match(source, /\.from\('events'\)/);
   assert.match(source, /\.eq\('is_visible',\s*true\)/);
@@ -14,9 +15,12 @@ test('useSimilarEvents filters by tag or category and excludes resolved/archived
   assert.match(source, /tag_slugs\.cs\./);
   assert.match(source, /category\.eq\./);
   assert.match(source, /\.or\(orParts\.join\(','\)\)/);
-  assert.match(source, /tag_slug/);
-  assert.match(source, /tag_label/);
-  assert.match(source, /tag_slugs/);
+
+  // Field list is centralised in the shared EVENT_SELECT constant.
+  assert.match(source, /EVENT_SELECT/);
+  assert.match(selectSource, /tag_slug/);
+  assert.match(selectSource, /tag_label/);
+  assert.match(selectSource, /tag_slugs/);
 });
 
 test('useSimilarEvents is disabled without eventId or any filter', () => {

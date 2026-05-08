@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/shared/api/supabase';
+import { supabase, EVENT_SELECT } from '@/shared/api/supabase';
 import type { MarketEvent } from '@/entities/event';
 
 const SIMILAR_EVENTS_LIMIT = 8;
@@ -36,9 +36,7 @@ export function useSimilarEvents({
 
       const { data, error } = await supabase
         .from('events')
-        .select(
-          'id, title, description, category, image_url, close_at, status, volume, tag_slug, tag_label, tag_slugs'
-        )
+        .select(EVENT_SELECT)
         .eq('is_visible', true)
         .neq('status', 'resolved')
         .neq('status', 'archived')

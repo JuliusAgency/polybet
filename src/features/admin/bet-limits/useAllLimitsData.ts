@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/shared/api/supabase';
+import { normalizePositiveLimit } from './limitCascade';
 
 export type LimitSource = 'personal' | 'manager' | 'global' | null;
 export type ManagerLimitSource = 'manager' | 'global' | null;
@@ -30,11 +31,6 @@ export interface LimitsTree {
 
 export const allLimitsQueryKey = ['admin', 'all-limits'] as const;
 
-const toPositive = (v: unknown): number | null => {
-  const n = typeof v === 'string' ? Number(v) : v;
-  return typeof n === 'number' && Number.isFinite(n) && n > 0 ? n : null;
-};
-
 const fetchAllLimitsData = async (): Promise<LimitsTree> => {
   // 1. Global limit
   const { data: settingData, error: settingError } = await supabase
@@ -44,7 +40,7 @@ const fetchAllLimitsData = async (): Promise<LimitsTree> => {
     .maybeSingle();
   if (settingError) throw new Error(settingError.message);
 
-  const globalLimit = toPositive(
+  const globalLimit = normalizePositiveLimit(
     (settingData?.value as Record<string, unknown> | null)?.global_max_bet ?? null,
   );
 
@@ -68,7 +64,7 @@ const fetchAllLimitsData = async (): Promise<LimitsTree> => {
   if (mrError) throw new Error(mrError.message);
 
   const managerLimitById = new Map<string, number | null>(
-    (managerRows ?? []).map((m) => [m.id as string, toPositive(m.max_bet_limit)]),
+    (managerRows ?? []).map((m) => [m.id as string, normalizePositiveLimit(m.max_bet_limit)]),
   );
 
   // 3. All manager→user links
@@ -105,12 +101,16 @@ const fetchAllLimitsData = async (): Promise<LimitsTree> => {
       userLimitById.set(u.id as string, {
         username: u.username as string,
         fullName: (u.full_name as string | null) ?? null,
-        ownLimit: toPositive(u.max_bet_limit),
+        ownLimit: normalizePositiveLimit(u.max_bet_limit),
       });
     }
   }
 
   // 5. Build tree
+  // Cascade is computed inline (not via deriveUser/ManagerEffectiveLimit from
+  // ./limitCascade) because LimitsTree publishes a different source vocabulary:
+  // 'personal' | 'manager' | 'global', whereas BetLimitSource uses 'user'. The
+  // duplication is intentional — unifying would silently change this public API.
   const managers: ManagerLimitNode[] = managerProfiles.map((mp) => {
     const managerId = mp.id as string;
     const ownLimit = managerLimitById.get(managerId) ?? null;

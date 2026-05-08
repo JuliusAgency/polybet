@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/shared/api/supabase';
+import { supabase, isMissingRelationError } from '@/shared/api/supabase';
 import type { SystemKpi } from '@/shared/types';
 
 const KPIS_REFETCH_INTERVAL_MS = 30_000;
@@ -28,10 +28,7 @@ export function useSystemKpis() {
       if (error) {
         // Prod/local DB can be behind migrations and miss this view.
         // Keep the dashboard usable with zeros until migrations are applied.
-        const missingKpisView =
-          error.code === 'PGRST205' || error.code === '42P01' || /system_kpis/i.test(error.message);
-
-        if (missingKpisView) {
+        if (isMissingRelationError(error, 'system_kpis')) {
           return FALLBACK_KPIS;
         }
 

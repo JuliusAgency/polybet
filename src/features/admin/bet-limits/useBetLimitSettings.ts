@@ -1,8 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/shared/api/supabase';
+import {
+  normalizePositiveLimit,
+  deriveManagerEffectiveLimit,
+  deriveUserEffectiveLimit,
+} from './limitCascade';
+import type { EffectiveManagerBetLimit, EffectiveUserBetLimit } from './limitCascade';
 
-export type BetLimitSource = 'user' | 'manager' | 'global' | null;
-export type ManagerBetLimitSource = 'manager' | 'global' | null;
+export type { BetLimitSource, ManagerBetLimitSource, EffectiveManagerBetLimit, EffectiveUserBetLimit } from './limitCascade';
 
 interface BetLimitSettingValue {
   global_max_bet?: unknown;
@@ -45,19 +50,6 @@ export interface UserBetLimitRecord {
   maxBetLimit: number | null;
 }
 
-export interface EffectiveManagerBetLimit {
-  managerId: string;
-  effectiveMaxBetLimit: number | null;
-  source: ManagerBetLimitSource;
-}
-
-export interface EffectiveUserBetLimit {
-  userId: string;
-  managerId: string;
-  effectiveMaxBetLimit: number | null;
-  source: BetLimitSource;
-}
-
 export interface BetLimitSettingsData {
   global: GlobalBetLimitRecord;
   manager: ManagerBetLimitRecord | null;
@@ -72,87 +64,6 @@ export const betLimitSettingsQueryKey = (managerId: string) =>
   ['admin', 'bet-limit-settings', managerId] as const;
 
 export const adminBetLimitSettingsQueryKey = ['admin', 'bet-limit-settings'] as const;
-
-const normalizePositiveLimit = (value: unknown): number | null => {
-  if (typeof value === 'number') {
-    return Number.isFinite(value) && value > 0 ? value : null;
-  }
-
-  if (typeof value === 'string' && value.trim() !== '') {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-  }
-
-  return null;
-};
-
-const deriveManagerEffectiveLimit = (
-  managerId: string,
-  managerLimit: number | null,
-  globalLimit: number | null,
-): EffectiveManagerBetLimit => {
-  if (managerLimit != null) {
-    return {
-      managerId,
-      effectiveMaxBetLimit: managerLimit,
-      source: 'manager',
-    };
-  }
-
-  if (globalLimit != null) {
-    return {
-      managerId,
-      effectiveMaxBetLimit: globalLimit,
-      source: 'global',
-    };
-  }
-
-  return {
-    managerId,
-    effectiveMaxBetLimit: null,
-    source: null,
-  };
-};
-
-const deriveUserEffectiveLimit = (
-  user: UserBetLimitRecord,
-  managerLimit: number | null,
-  globalLimit: number | null,
-): EffectiveUserBetLimit => {
-  if (user.maxBetLimit != null) {
-    return {
-      userId: user.userId,
-      managerId: user.managerId,
-      effectiveMaxBetLimit: user.maxBetLimit,
-      source: 'user',
-    };
-  }
-
-  if (managerLimit != null) {
-    return {
-      userId: user.userId,
-      managerId: user.managerId,
-      effectiveMaxBetLimit: managerLimit,
-      source: 'manager',
-    };
-  }
-
-  if (globalLimit != null) {
-    return {
-      userId: user.userId,
-      managerId: user.managerId,
-      effectiveMaxBetLimit: globalLimit,
-      source: 'global',
-    };
-  }
-
-  return {
-    userId: user.userId,
-    managerId: user.managerId,
-    effectiveMaxBetLimit: null,
-    source: null,
-  };
-};
 
 const fetchBetLimitSettings = async (managerId: string): Promise<BetLimitSettingsData> => {
   const { data: globalSettingData, error: globalSettingError } = await supabase
