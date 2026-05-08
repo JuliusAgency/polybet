@@ -7,7 +7,8 @@ import { Input } from '@/shared/ui/Input';
 import { Button } from '@/shared/ui/Button';
 import { Badge } from '@/shared/ui/Badge';
 import { usePlaceBet } from '@/features/bet';
-import type { Market, MarketOutcome, EventWithMarkets } from '@/features/bet';
+import type { Market, MarketOutcome } from '@/entities/market';
+import type { EventWithMarkets } from '@/features/bet';
 
 interface BetSlipProps {
   market: Market;

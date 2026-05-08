@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMarkets, useMarketCategories } from '@/features/bet';
-import type { MarketStatusFilter } from '@/features/bet';
+import type { MarketStatusFilter } from '@/entities/market';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { useIntersectionObserver } from '@/shared/hooks/useIntersectionObserver';
 import { MarketCard } from '@/pages/user/MarketsFeedPage/components/MarketCard';

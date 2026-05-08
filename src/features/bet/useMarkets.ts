@@ -2,71 +2,13 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { supabase } from '@/shared/api/supabase';
 import { MARKET_SELECT_FULL } from '@/shared/api/supabase/selects';
 import { MARKETS_PAGE_LIMIT, MARKETS_REFRESH_MAX_IDS } from '@/shared/config/markets';
+import type { Market, MarketStatusFilter } from '@/entities/market';
+import {
+  applyMarketStatusFilter,
+  TRENDING_TAG_SLUG,
+  CLOSING_TODAY_TAG_SLUG,
+} from '@/entities/market';
 import { useMarketRefresh } from './useMarketRefresh';
-
-export type MarketStatusFilter = 'all' | 'open' | 'closed' | 'resolved' | 'archived';
-
-type MarketStatus = 'open' | 'closed' | 'resolved' | 'archived';
-
-const STATUS_MAP: Record<MarketStatusFilter, MarketStatus[]> = {
-  all: ['open', 'closed', 'resolved', 'archived'],
-  open: ['open'],
-  closed: ['closed'],
-  resolved: ['resolved'],
-  archived: ['archived'],
-};
-
-export interface MarketOutcome {
-  id: string;
-  name: string;
-  price: number | null;
-  odds: number;
-  effective_odds: number;
-  updated_at: string;
-  polymarket_token_id: string | null;
-}
-
-export interface MarketEvent {
-  id: string;
-  title: string;
-  description: string | null;
-  category: string | null;
-  image_url: string | null;
-  close_at: string | null;
-  status: 'open' | 'closed' | 'resolved' | 'archived';
-  volume?: number | null;
-  tag_slug: string | null;
-  tag_label: string | null;
-  tag_slugs: string[] | null;
-}
-
-export interface Market {
-  id: string;
-  polymarket_id: string;
-  question: string;
-  status: 'open' | 'closed' | 'resolved' | 'archived';
-  winning_outcome_id: string | null;
-  category: string | null;
-  image_url: string | null;
-  close_at: string | null;
-  last_synced_at: string | null;
-  created_at: string;
-  volume?: number | null;
-  sort_volume?: number | null;
-  event_id: string | null;
-  group_label: string | null;
-  // Denormalized from events.tag_slugs (migration 069). May be missing on
-  // legacy cached records read before the column existed; treat as optional.
-  tag_slugs?: string[];
-  // Denormalized from events.trending_rank / events.volume_24hr (migration 075).
-  // Maintained by the sync edge function from Polymarket's /events?featured=true
-  // response. Used to order the Trending tab so it matches Polymarket exactly
-  // (Bug 5). May be missing on legacy cached records — treat as optional.
-  trending_rank?: number | null;
-  volume_24hr?: number | null;
-  event: MarketEvent | null;
-  market_outcomes: MarketOutcome[];
-}
 
 interface DefaultCursor {
   kind: 'default';
@@ -86,12 +28,6 @@ interface TrendingCursor {
 
 type Cursor = DefaultCursor | TrendingCursor;
 
-const TRENDING_TAG_SLUG = 'trending';
-
-/** Virtual slug that filters by `close_at` within today's local day instead of
- *  by event tag. Kept as a slug (rather than a separate prop) so the TagFilter
- *  pill stays mutually-exclusive with the other category chips. */
-export const CLOSING_TODAY_TAG_SLUG = 'closing-today';
 
 export function useMarkets(
   statusFilter: MarketStatusFilter = 'all',
@@ -119,18 +55,9 @@ export function useMarkets(
       let query = supabase.from('markets').select(MARKET_SELECT_FULL).eq('is_visible', true);
 
       // For 'all' the IN covers the full status domain, which tricks the planner
-      // into a Seq Scan. Skip the predicate so it walks idx_markets_visible_feed.
-      // For 'open'/'closed' we also align with the UI's effectiveStatus rule:
-      // a market with status='open' but close_at in the past renders as closed.
-      if (statusFilter === 'open') {
-        const nowIso = new Date().toISOString();
-        query = query.eq('status', 'open').or(`close_at.is.null,close_at.gt.${nowIso}`);
-      } else if (statusFilter === 'closed') {
-        const nowIso = new Date().toISOString();
-        query = query.or(`status.eq.closed,and(status.eq.open,close_at.lte.${nowIso})`);
-      } else if (statusFilter !== 'all') {
-        query = query.in('status', STATUS_MAP[statusFilter]);
-      }
+      // into a Seq Scan. The shared helper skips the predicate so the planner
+      // walks idx_markets_visible_feed.
+      query = applyMarketStatusFilter(query, statusFilter, new Date());
 
       if (searchQuery.trim()) {
         query = query.ilike('question', `%${searchQuery.trim()}%`);

@@ -1,5 +1,4 @@
-export { useMarkets, CLOSING_TODAY_TAG_SLUG } from './useMarkets';
-export type { Market, MarketOutcome, MarketEvent, MarketStatusFilter } from './useMarkets';
+export { useMarkets } from './useMarkets';
 
 export { useMarketsByIds } from './useMarketsByIds';
 export { useEventsByIds } from './useEventsByIds';
@@ -21,7 +20,6 @@ export { usePlaceBet } from './usePlaceBet';
 export type { PlaceBetInput } from './usePlaceBet';
 
 export { useMyBets } from './useMyBets';
-export type { MyBet } from './useMyBets';
 
 export { useBetResultNotifications } from './useBetResultNotifications';
 export { useUnseenBetsCount } from './useUnseenBetsCount';

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/shared/api/supabase';
 import { useAuth } from '@/shared/hooks/useAuth';
-import type { MyBet } from './useMyBets';
+import type { MyBet } from '@/entities/bet';
 
 export function useBetResultNotifications() {
   const { session } = useAuth();

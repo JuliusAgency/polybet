@@ -1,4 +1,5 @@
-import type { Market, MarketEvent } from './useMarkets';
+import type { Market } from '@/entities/market';
+import type { MarketEvent } from '@/entities/event';
 
 /**
  * A feed item is either a standalone market (event_id is null)

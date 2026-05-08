@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import type { MarketStatusFilter } from '@/features/bet';
+import type { MarketStatusFilter } from '@/entities/market';
 
 interface StatusFilterProps {
   value: MarketStatusFilter;

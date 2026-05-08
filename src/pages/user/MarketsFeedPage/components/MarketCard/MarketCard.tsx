@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import type { Market, MarketOutcome, MyBet } from '@/features/bet';
+import type { Market, MarketOutcome } from '@/entities/market';
+import { getMarketEffectiveStatus } from '@/entities/market';
+import type { MyBet } from '@/entities/bet';
 import { useMarketRefresh } from '@/features/bet';
 import { OutcomeButtons, type OutcomeButton } from '@/shared/ui/OutcomeButtons';
 import { MarketThumbnail } from '@/shared/ui/MarketThumbnail';
@@ -59,7 +61,7 @@ export const MarketCard = ({
     ? Date.now() - new Date(market.last_synced_at).getTime() > MARKETS_STALE_THRESHOLD_MS
     : true;
   const isExpired = market.close_at != null && new Date(market.close_at).getTime() <= Date.now();
-  const effectiveStatus = isExpired && market.status === 'open' ? 'closed' : market.status;
+  const effectiveStatus = getMarketEffectiveStatus(market);
   const isInteractive = mode === 'interactive' && effectiveStatus === 'open' && !isExpired;
 
   const winnerOutcome = market.winning_outcome_id

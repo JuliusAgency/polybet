@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import type { Market, MyBet } from '@/features/bet';
+import type { Market } from '@/entities/market';
+import type { MyBet } from '@/entities/bet';
 
 interface EventUserActivityProps {
   markets: Market[];

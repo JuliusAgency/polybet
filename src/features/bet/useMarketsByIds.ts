@@ -1,15 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/shared/api/supabase';
 import { MARKET_SELECT_FULL } from '@/shared/api/supabase/selects';
-import type { Market, MarketStatusFilter } from './useMarkets';
-
-const STATUS_MAP: Record<MarketStatusFilter, ('open' | 'closed' | 'resolved' | 'archived')[]> = {
-  all: ['open', 'closed', 'resolved', 'archived'],
-  open: ['open'],
-  closed: ['closed'],
-  resolved: ['resolved'],
-  archived: ['archived'],
-};
+import type { Market, MarketStatusFilter } from '@/entities/market';
+import { applyMarketStatusFilter } from '@/entities/market';
 
 /**
  * Fetches a fixed set of markets by id, applying the same status rules as
@@ -27,16 +20,8 @@ export function useMarketsByIds(ids: string[], statusFilter: MarketStatusFilter,
     queryFn: async () => {
       let query = supabase.from('markets').select(MARKET_SELECT_FULL).in('id', sortedIds);
 
-      // Mirror useMarkets status rules so open/closed tabs stay consistent
-      if (statusFilter === 'open') {
-        const nowIso = new Date().toISOString();
-        query = query.eq('status', 'open').or(`close_at.is.null,close_at.gt.${nowIso}`);
-      } else if (statusFilter === 'closed') {
-        const nowIso = new Date().toISOString();
-        query = query.or(`status.eq.closed,and(status.eq.open,close_at.lte.${nowIso})`);
-      } else if (statusFilter !== 'all') {
-        query = query.in('status', STATUS_MAP[statusFilter]);
-      }
+      // Mirror useMarkets status rules so open/closed tabs stay consistent.
+      query = applyMarketStatusFilter(query, statusFilter, new Date());
 
       query = query
         .order('sort_volume', { ascending: false })

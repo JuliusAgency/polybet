@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/shared/api/supabase';
-import type { MarketEvent } from './useMarkets';
+import type { MarketEvent } from '@/entities/event';
 
 const SIMILAR_EVENTS_LIMIT = 8;
 

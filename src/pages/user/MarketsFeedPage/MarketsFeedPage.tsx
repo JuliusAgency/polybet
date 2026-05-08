@@ -10,7 +10,9 @@ import {
   groupMarketsByEvent,
 } from '@/features/bet';
 import { useFavoriteMarkets, useFavoriteEvents } from '@/features/favorites';
-import type { Market, MarketOutcome, MarketStatusFilter } from '@/features/bet';
+import type { Market, MarketOutcome } from '@/entities/market';
+import type { MarketStatusFilter } from '@/entities/market';
+import { isMarketEffectivelyOpen } from '@/entities/market';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { useIntersectionObserver } from '@/shared/hooks/useIntersectionObserver';
 import { Spinner } from '@/shared/ui/Spinner';
@@ -169,13 +171,7 @@ const MarketsFeedPage = () => {
   // still belongs in the user's list (Bug 3).
   const visibleMarkets =
     statusFilter === 'open' && !myBetsOnly
-      ? sourceMarkets.filter((m) => {
-          if (!m.event) return true;
-          const ev = m.event;
-          if (ev.status !== 'open') return false;
-          if (ev.close_at != null && new Date(ev.close_at).getTime() <= Date.now()) return false;
-          return true;
-        })
+      ? sourceMarkets.filter((m) => isMarketEffectivelyOpen(m, m.event))
       : sourceMarkets;
 
   const feedItems = groupMarketsByEvent(visibleMarkets);
@@ -185,13 +181,7 @@ const MarketsFeedPage = () => {
   // the user will actually see after clicking Saved.
   const savedVisibleMarkets =
     statusFilter === 'open'
-      ? savedMarkets.filter((m) => {
-          if (!m.event) return true;
-          const ev = m.event;
-          if (ev.status !== 'open') return false;
-          if (ev.close_at != null && new Date(ev.close_at).getTime() <= Date.now()) return false;
-          return true;
-        })
+      ? savedMarkets.filter((m) => isMarketEffectivelyOpen(m, m.event))
       : savedMarkets;
   const savedFeedCount = groupMarketsByEvent(savedVisibleMarkets).length;
 

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Market, MarketOutcome, MyBet, PriceHistoryWindow } from '@/features/bet';
+import type { Market, MarketOutcome } from '@/entities/market';
+import type { MyBet } from '@/entities/bet';
+import type { PriceHistoryWindow } from '@/features/bet';
 import { usePriceHistory } from '@/features/bet';
 import { MarketCard } from '@/pages/user/MarketsFeedPage/components/MarketCard';
 import { PriceHistoryChart, PriceHistoryWindowToggle } from '@/shared/ui/PriceHistoryChart';

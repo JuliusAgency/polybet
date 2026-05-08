@@ -9,14 +9,23 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import type { MarketOutcome, PriceHistoryPoint } from '@/features/bet';
+import type { PriceHistoryPoint } from '@/features/bet';
+
+// Structural subset of OutcomeForChart needed by the chart. Defined locally so
+// shared/ does not import from features/ (FSD violation) or entities/ (also
+// forbidden — shared must not import above its own layer).
+interface OutcomeForChart {
+  id: string;
+  name: string;
+  price: number | null;
+}
 import { Spinner } from '@/shared/ui/Spinner';
 import { formatProbability } from '@/shared/utils';
 import { pickOutcomeColor } from './priceHistoryPalette';
 
 interface PriceHistoryChartProps {
   points: PriceHistoryPoint[];
-  outcomes: MarketOutcome[];
+  outcomes: OutcomeForChart[];
   isLoading?: boolean;
   height?: number;
 }
@@ -26,7 +35,7 @@ interface ChartRow {
   [outcomeId: string]: number;
 }
 
-function buildChartRows(points: PriceHistoryPoint[], outcomes: MarketOutcome[]): ChartRow[] {
+function buildChartRows(points: PriceHistoryPoint[], outcomes: OutcomeForChart[]): ChartRow[] {
   // Collect all bucket timestamps, then pivot by outcome_id with forward-fill
   // so a missing bucket for an outcome still renders as a continuous line.
   const byTs = new Map<number, Record<string, number>>();
@@ -184,7 +193,7 @@ interface PriceTooltipProps {
   active?: boolean;
   payload?: TooltipEntry[];
   label?: number | string;
-  outcomes: MarketOutcome[];
+  outcomes: OutcomeForChart[];
   locale: string;
 }
 

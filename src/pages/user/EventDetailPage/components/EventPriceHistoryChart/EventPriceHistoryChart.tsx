@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Market, MarketOutcome, PriceHistoryPoint, PriceHistoryWindow } from '@/features/bet';
+import type { Market, MarketOutcome } from '@/entities/market';
+import type { PriceHistoryPoint, PriceHistoryWindow } from '@/features/bet';
 import { useEventPriceHistory } from '@/features/bet';
 import { PriceHistoryChart, PriceHistoryWindowToggle } from '@/shared/ui/PriceHistoryChart';
 

@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { CLOSING_TODAY_TAG_SLUG, type AllowedCategoryTag } from '@/features/bet';
+import { CLOSING_TODAY_TAG_SLUG } from '@/entities/market';
+import type { AllowedCategoryTag } from '@/features/bet';
 import './trendingChip.css';
 
 interface TagFilterProps {

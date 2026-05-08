@@ -2,7 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/shared/api/supabase';
 import { EVENT_SELECT, MARKET_SELECT_NO_EVENT } from '@/shared/api/supabase/selects';
 import { MARKETS_REFRESH_INTERVAL_MS } from '@/shared/config/markets';
-import type { Market, MarketEvent } from './useMarkets';
+import type { Market } from '@/entities/market';
+import type { MarketEvent } from '@/entities/event';
 
 export interface EventWithMarkets {
   event: MarketEvent;

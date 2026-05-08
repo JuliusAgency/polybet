@@ -4,7 +4,7 @@ import { supabase } from '@/shared/api/supabase';
 import { invokeSupabaseFunction } from '@/shared/api/supabase/invokeSupabaseFunction';
 import { MARKET_SELECT_FULL } from '@/shared/api/supabase/selects';
 import { MARKETS_REFRESH_INTERVAL_MS, MARKETS_REFRESH_MAX_IDS } from '@/shared/config/markets';
-import type { Market } from './useMarkets';
+import type { Market } from '@/entities/market';
 
 interface RefreshMarketsResponse {
   updated: number;

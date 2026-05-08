@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import type { MarketEvent } from '@/features/bet';
+import type { MarketEvent } from '@/entities/event';
 import { MarketThumbnail } from '@/shared/ui/MarketThumbnail';
 import { formatVolume } from '@/shared/utils';
 

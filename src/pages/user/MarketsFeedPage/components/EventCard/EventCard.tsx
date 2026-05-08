@@ -1,6 +1,10 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import type { Market, MarketEvent, MarketOutcome, MyBet } from '@/features/bet';
+import type { Market, MarketOutcome } from '@/entities/market';
+import { getMarketEffectiveStatus } from '@/entities/market';
+import type { MarketEvent } from '@/entities/event';
+import { getEventEffectiveStatus } from '@/entities/event';
+import type { MyBet } from '@/entities/bet';
 import { OutcomeButtons, type OutcomeButton } from '@/shared/ui/OutcomeButtons';
 import { MarketThumbnail } from '@/shared/ui/MarketThumbnail';
 import { EventBookmarkButton } from '@/shared/ui/EventBookmarkButton';
@@ -52,8 +56,7 @@ export const EventCard = ({
     Array.from(betsByMarketId.entries(), ([id, list]) => [id, list[0]] as const)
   );
 
-  const eventExpired = event.close_at != null && new Date(event.close_at).getTime() <= Date.now();
-  const eventEffectiveStatus = eventExpired && event.status === 'open' ? 'closed' : event.status;
+  const eventEffectiveStatus = getEventEffectiveStatus(event);
 
   const statusLabel =
     eventEffectiveStatus !== 'open'
@@ -72,10 +75,7 @@ export const EventCard = ({
 
   const singleIsExpired =
     singleMarket?.close_at != null && new Date(singleMarket.close_at).getTime() <= Date.now();
-  const singleEffectiveStatus =
-    singleMarket && singleIsExpired && singleMarket.status === 'open'
-      ? 'closed'
-      : (singleMarket?.status ?? null);
+  const singleEffectiveStatus = singleMarket ? getMarketEffectiveStatus(singleMarket) : null;
   const singleIsInteractive =
     !!singleMarket &&
     mode === 'interactive' &&
@@ -239,7 +239,7 @@ function EventMarketRow({ market, mode, onOutcomeClick }: EventMarketRowProps) {
   const isHebrew = i18n.language === 'he';
 
   const isExpired = market.close_at != null && new Date(market.close_at).getTime() <= Date.now();
-  const effectiveStatus = isExpired && market.status === 'open' ? 'closed' : market.status;
+  const effectiveStatus = getMarketEffectiveStatus(market);
   const isInteractive = mode === 'interactive' && effectiveStatus === 'open' && !isExpired;
 
   const winnerOutcome = market.winning_outcome_id

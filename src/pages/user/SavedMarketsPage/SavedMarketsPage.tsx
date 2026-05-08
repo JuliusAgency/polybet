@@ -9,7 +9,7 @@ import {
   useMarketRefresh,
   groupMarketsByEvent,
 } from '@/features/bet';
-import type { Market, MarketOutcome } from '@/features/bet';
+import type { Market, MarketOutcome } from '@/entities/market';
 import { useFavoriteMarkets, useFavoriteEvents } from '@/features/favorites';
 import { ROUTES } from '@/app/router/routes';
 import { CardGridSkeleton } from '@/shared/ui/CardGridSkeleton';

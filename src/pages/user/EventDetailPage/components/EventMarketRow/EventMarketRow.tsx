@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import type { Market, MarketOutcome, MyBet } from '@/features/bet';
+import type { Market, MarketOutcome } from '@/entities/market';
+import type { MyBet } from '@/entities/bet';
 import { Badge } from '@/shared/ui/Badge';
 import { BookmarkButton } from '@/shared/ui/BookmarkButton';
 import { BetMarker } from '@/shared/ui/BetMarker';
