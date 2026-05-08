@@ -4,8 +4,7 @@ import fs from 'node:fs';
 
 const useMarketsPath = 'src/features/bet/useMarkets.ts';
 const marketSelectPath = 'src/shared/api/supabase/selects/marketSelect.ts';
-const marketCardPath =
-  'src/pages/user/MarketsFeedPage/components/MarketCard/MarketCard.tsx';
+const marketCardPath = 'src/widgets/MarketCard/MarketCard.tsx';
 
 test('useMarkets selects status, sync timestamp and outcome probability fields', () => {
   // The SELECT fields live in the shared MARKET_SELECT_FULL constant. The event

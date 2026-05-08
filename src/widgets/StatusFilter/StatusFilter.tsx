@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import type { MarketStatusFilter } from '@/entities/market';
 
-interface StatusFilterProps {
+export interface StatusFilterProps {
   value: MarketStatusFilter;
   onChange: (value: MarketStatusFilter) => void;
 }

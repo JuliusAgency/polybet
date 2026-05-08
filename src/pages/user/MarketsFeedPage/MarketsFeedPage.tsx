@@ -17,12 +17,12 @@ import { useDebounce } from '@/shared/hooks/useDebounce';
 import { useIntersectionObserver } from '@/shared/hooks/useIntersectionObserver';
 import { Spinner } from '@/shared/ui/Spinner';
 import { CardGridSkeleton } from '@/shared/ui/CardGridSkeleton';
-import { BetSlip } from './components/BetSlip';
-import { MarketCard } from './components/MarketCard';
-import { EventCard } from './components/EventCard';
-import { BalanceWidget } from './components/BalanceWidget';
-import { ActiveBetsDrawer } from './components/ActiveBetsDrawer';
-import { StatusFilter } from './components/StatusFilter';
+import { BetSlip } from '@/widgets/BetSlip';
+import { MarketCard } from '@/widgets/MarketCard';
+import { EventCard } from '@/widgets/EventCard';
+import { BalanceWidget } from '@/widgets/BalanceWidget';
+import { ActiveBetsDrawer } from '@/widgets/ActiveBetsDrawer';
+import { StatusFilter } from '@/widgets/StatusFilter';
 import { TagFilter } from './components/TagFilter';
 
 interface SelectedBet {

@@ -13,7 +13,7 @@ import { MARKETS_STALE_THRESHOLD_MS } from '@/shared/config/markets';
 import { useTicker } from '@/shared/hooks/useTicker';
 import { formatVolume } from '@/shared/utils';
 
-interface MarketCardProps {
+export interface MarketCardProps {
   market: Market;
   userBet?: MyBet;
   /** Total user bets on this market — feeds the BetMarker count badge so

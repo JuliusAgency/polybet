@@ -10,7 +10,7 @@ import {
   useUserBalance,
 } from '@/features/bet';
 import type { Market, MarketOutcome } from '@/entities/market';
-import { BetSlip } from '@/pages/user/MarketsFeedPage/components/BetSlip';
+import { BetSlip } from '@/widgets/BetSlip';
 import { MarketThumbnail } from '@/shared/ui/MarketThumbnail';
 import { Spinner } from '@/shared/ui/Spinner';
 import { formatVolume } from '@/shared/utils';

@@ -4,7 +4,7 @@ import fs from 'node:fs';
 
 test('MarketCard wires question, category, close_at and outcome data to new Polymarket-style layout', () => {
   const source = fs.readFileSync(
-    'src/pages/user/MarketsFeedPage/components/MarketCard/MarketCard.tsx',
+    'src/widgets/MarketCard/MarketCard.tsx',
     'utf8'
   );
 

@@ -14,11 +14,11 @@ import { useFavoriteMarkets, useFavoriteEvents } from '@/features/favorites';
 import { ROUTES } from '@/app/router/routes';
 import { CardGridSkeleton } from '@/shared/ui/CardGridSkeleton';
 import { MARKETS_REFRESH_MAX_IDS } from '@/shared/config/markets';
-import { BalanceWidget } from '../MarketsFeedPage/components/BalanceWidget';
-import { BetSlip } from '../MarketsFeedPage/components/BetSlip';
-import { MarketCard } from '../MarketsFeedPage/components/MarketCard';
-import { EventCard } from '../MarketsFeedPage/components/EventCard';
-import { ActiveBetsDrawer } from '../MarketsFeedPage/components/ActiveBetsDrawer';
+import { BalanceWidget } from '@/widgets/BalanceWidget';
+import { BetSlip } from '@/widgets/BetSlip';
+import { MarketCard } from '@/widgets/MarketCard';
+import { EventCard } from '@/widgets/EventCard';
+import { ActiveBetsDrawer } from '@/widgets/ActiveBetsDrawer';
 
 interface SelectedBet {
   market: Market;

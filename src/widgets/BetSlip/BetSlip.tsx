@@ -10,7 +10,7 @@ import { usePlaceBet } from '@/features/bet';
 import type { Market, MarketOutcome } from '@/entities/market';
 import type { EventWithMarkets } from '@/features/bet';
 
-interface BetSlipProps {
+export interface BetSlipProps {
   market: Market;
   outcome: MarketOutcome;
   availableBalance: number;

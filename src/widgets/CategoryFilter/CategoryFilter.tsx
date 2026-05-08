@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-interface CategoryFilterProps {
+export interface CategoryFilterProps {
   value: string | null;
   onChange: (value: string | null) => void;
   categories: string[];

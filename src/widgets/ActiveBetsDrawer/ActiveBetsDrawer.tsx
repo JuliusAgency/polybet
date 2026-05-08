@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useMyBets } from '@/features/bet';
 import { Spinner } from '@/shared/ui/Spinner';
 
-interface ActiveBetsDrawerProps {
+export interface ActiveBetsDrawerProps {
   isOpen: boolean;
   onClose: () => void;
 }

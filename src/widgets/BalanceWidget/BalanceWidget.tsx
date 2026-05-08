@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Spinner } from '@/shared/ui/Spinner';
 
-interface BalanceWidgetProps {
+export interface BalanceWidgetProps {
   available: number;
   inPlay: number;
   openBetsCount: number;

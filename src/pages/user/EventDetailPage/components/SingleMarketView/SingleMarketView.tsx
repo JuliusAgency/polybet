@@ -4,7 +4,7 @@ import type { Market, MarketOutcome } from '@/entities/market';
 import type { MyBet } from '@/entities/bet';
 import type { PriceHistoryWindow } from '@/features/bet';
 import { usePriceHistory } from '@/features/bet';
-import { MarketCard } from '@/pages/user/MarketsFeedPage/components/MarketCard';
+import { MarketCard } from '@/widgets/MarketCard';
 import { PriceHistoryChart, PriceHistoryWindowToggle } from '@/shared/ui/PriceHistoryChart';
 
 interface SingleMarketViewProps {

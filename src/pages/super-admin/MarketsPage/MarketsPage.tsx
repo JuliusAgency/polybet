@@ -6,9 +6,9 @@ import type { MarketStatusFilter } from '@/entities/market';
 import { useArchiveMarket } from '@/features/admin/markets/useArchiveMarket';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { useIntersectionObserver } from '@/shared/hooks/useIntersectionObserver';
-import { MarketCard } from '@/pages/user/MarketsFeedPage/components/MarketCard';
-import { StatusFilter } from '@/pages/user/MarketsFeedPage/components/StatusFilter';
-import { CategoryFilter } from '@/pages/user/MarketsFeedPage/components/CategoryFilter';
+import { MarketCard } from '@/widgets/MarketCard';
+import { StatusFilter } from '@/widgets/StatusFilter';
+import { CategoryFilter } from '@/widgets/CategoryFilter';
 import { CardGridSkeleton } from '@/shared/ui/CardGridSkeleton';
 import { Spinner } from '@/shared/ui/Spinner';
 

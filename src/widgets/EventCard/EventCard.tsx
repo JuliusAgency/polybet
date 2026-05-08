@@ -16,7 +16,7 @@ import { formatVolume, formatProbability } from '@/shared/utils';
 // Users drill into /events/:id to see the full list — no inline expansion.
 const FEED_VISIBLE_LIMIT = 2;
 
-interface EventCardProps {
+export interface EventCardProps {
   event: MarketEvent;
   markets: Market[];
   bets?: MyBet[];
