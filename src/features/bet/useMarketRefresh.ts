@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { type InfiniteData, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/shared/api/supabase';
 import { invokeSupabaseFunction } from '@/shared/api/supabase/invokeSupabaseFunction';
+import { MARKET_SELECT_FULL } from '@/shared/api/supabase/selects';
 import { MARKETS_REFRESH_INTERVAL_MS, MARKETS_REFRESH_MAX_IDS } from '@/shared/config/markets';
 import type { Market } from './useMarkets';
 
@@ -84,9 +85,7 @@ export function useMarketRefresh(
       if (data && data.updated > 0) {
         const { data: freshMarkets } = await supabase
           .from('markets')
-          .select(
-            'id, polymarket_id, question, status, winning_outcome_id, category, image_url, close_at, last_synced_at, created_at, volume, sort_volume, trending_rank, volume_24hr, event_id, group_label, tag_slugs, event:event_id(id, title, description, category, image_url, close_at, status, volume, tag_slug, tag_label, tag_slugs), market_outcomes!market_outcomes_market_id_fkey(id, name, price, odds, effective_odds, updated_at, polymarket_token_id)'
-          )
+          .select(MARKET_SELECT_FULL)
           .in('polymarket_id', ids);
 
         if (freshMarkets && freshMarkets.length > 0) {

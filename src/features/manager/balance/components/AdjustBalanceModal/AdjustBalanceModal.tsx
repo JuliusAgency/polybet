@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Input, Modal } from '@/shared/ui';
+import { Button } from '@/shared/ui/Button';
+import { Input } from '@/shared/ui/Input';
+import { Modal } from '@/shared/ui/Modal';
 import { useManagerAdjustBalance } from '../../useManagerAdjustBalance';
 
 interface AdjustBalanceModalProps {
@@ -81,7 +83,7 @@ export const AdjustBalanceModal = ({
             onClose();
           }, 2000);
         },
-      },
+      }
     );
   };
 
@@ -91,9 +93,7 @@ export const AdjustBalanceModal = ({
       : t('treasury.withdrawalTitle', { username });
 
   const genericError =
-    mutation.error && !showSuccess
-      ? mutation.error.message || t('common.unknownError')
-      : null;
+    mutation.error && !showSuccess ? mutation.error.message || t('common.unknownError') : null;
 
   const isSubmitting = mutation.isPending;
   const handleClose = isSubmitting ? () => {} : onClose;
@@ -101,10 +101,7 @@ export const AdjustBalanceModal = ({
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title={title}>
       {showSuccess ? (
-        <p
-          className="py-4 text-center text-sm font-medium"
-          style={{ color: 'var(--color-win)' }}
-        >
+        <p className="py-4 text-center text-sm font-medium" style={{ color: 'var(--color-win)' }}>
           {t('treasury.success')}
         </p>
       ) : (
@@ -132,22 +129,13 @@ export const AdjustBalanceModal = ({
             />
 
             {genericError && (
-              <p
-                role="alert"
-                className="text-sm"
-                style={{ color: 'var(--color-loss)' }}
-              >
+              <p role="alert" className="text-sm" style={{ color: 'var(--color-loss)' }}>
                 {genericError}
               </p>
             )}
 
             <div className="flex justify-end gap-3 pt-2">
-              <Button
-                variant="secondary"
-                type="button"
-                onClick={onClose}
-                disabled={isSubmitting}
-              >
+              <Button variant="secondary" type="button" onClick={onClose} disabled={isSubmitting}>
                 {t('common.cancel')}
               </Button>
               <Button variant="primary" type="submit" disabled={isSubmitting}>

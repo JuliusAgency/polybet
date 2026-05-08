@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/shared/api/supabase';
+import { EVENT_SELECT, MARKET_SELECT_NO_EVENT } from '@/shared/api/supabase/selects';
 import { MARKETS_REFRESH_INTERVAL_MS } from '@/shared/config/markets';
 import type { Market, MarketEvent } from './useMarkets';
 
@@ -7,9 +8,6 @@ export interface EventWithMarkets {
   event: MarketEvent;
   markets: Market[];
 }
-
-const MARKET_SELECT =
-  'id, polymarket_id, question, status, winning_outcome_id, category, image_url, close_at, last_synced_at, created_at, volume, event_id, group_label, market_outcomes!market_outcomes_market_id_fkey(id, name, price, odds, effective_odds, updated_at, polymarket_token_id)';
 
 export function useEventById(eventId: string | undefined) {
   return useQuery<EventWithMarkets | null, Error>({
@@ -25,9 +23,7 @@ export function useEventById(eventId: string | undefined) {
 
       const { data: eventRow, error: eventError } = await supabase
         .from('events')
-        .select(
-          'id, title, description, category, image_url, close_at, status, volume, tag_slug, tag_label, tag_slugs'
-        )
+        .select(EVENT_SELECT)
         .eq('id', eventId)
         .maybeSingle();
 
@@ -36,7 +32,7 @@ export function useEventById(eventId: string | undefined) {
 
       const { data: marketRows, error: marketsError } = await supabase
         .from('markets')
-        .select(MARKET_SELECT)
+        .select(MARKET_SELECT_NO_EVENT)
         .eq('event_id', eventId)
         .eq('is_visible', true)
         .order('created_at', { ascending: true });

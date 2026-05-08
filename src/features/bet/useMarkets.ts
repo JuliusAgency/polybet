@@ -1,5 +1,6 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { supabase } from '@/shared/api/supabase';
+import { MARKET_SELECT_FULL } from '@/shared/api/supabase/selects';
 import { MARKETS_PAGE_LIMIT, MARKETS_REFRESH_MAX_IDS } from '@/shared/config/markets';
 import { useMarketRefresh } from './useMarketRefresh';
 
@@ -112,19 +113,10 @@ export function useMarkets(
     staleTime: 5 * 60 * 1000,
     queryFn: async ({ pageParam }) => {
       const isClosingTodayFilter = tagSlugFilter === CLOSING_TODAY_TAG_SLUG;
-      // tag_slugs is denormalized onto markets (migration 069), so the tag
-      // filter applies directly on markets and the inner join is no longer
-      // required. A plain left join still attaches the event payload for
-      // markets that have one, while standalone legacy markets stay visible.
-      const eventJoin =
-        'event:event_id(id, title, description, category, image_url, close_at, status, volume, tag_slug, tag_label, tag_slugs)';
-
-      let query = supabase
-        .from('markets')
-        .select(
-          `id, polymarket_id, question, status, winning_outcome_id, category, image_url, close_at, last_synced_at, created_at, volume, sort_volume, trending_rank, volume_24hr, event_id, group_label, ${eventJoin}, market_outcomes!market_outcomes_market_id_fkey(id, name, price, odds, effective_odds, updated_at, polymarket_token_id)`
-        )
-        .eq('is_visible', true);
+      // MARKET_SELECT_FULL includes tag_slugs (migration 069) and the event join.
+      // tag_slugs is denormalized onto markets, so the tag filter applies directly
+      // on markets without a nested loop join through events.
+      let query = supabase.from('markets').select(MARKET_SELECT_FULL).eq('is_visible', true);
 
       // For 'all' the IN covers the full status domain, which tricks the planner
       // into a Seq Scan. Skip the predicate so it walks idx_markets_visible_feed.

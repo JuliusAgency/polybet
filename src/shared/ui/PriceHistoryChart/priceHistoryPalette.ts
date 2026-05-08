@@ -1,6 +1,6 @@
 // Deterministic palette for outcome lines. Order matches typical Yes/No/first-listed ordering.
 // Picked from OKLCH tokens in shared/theme for cohesion with the dark surface.
-export const OUTCOME_LINE_COLORS: readonly string[] = [
+const OUTCOME_LINE_COLORS: readonly string[] = [
   'oklch(70% 0.15 230)', // accent blue
   'oklch(72% 0.17 150)', // win green
   'oklch(66% 0.2 25)', // loss red

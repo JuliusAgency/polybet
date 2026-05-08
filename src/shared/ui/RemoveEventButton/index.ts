@@ -1,1 +1,0 @@
-export { RemoveEventButton } from './RemoveEventButton';
