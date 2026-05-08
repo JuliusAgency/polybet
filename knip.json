@@ -1,0 +1,19 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "src/main.tsx",
+    "tests/*.test.ts",
+    "scripts/*.ts"
+  ],
+  "project": [
+    "src/**/*.{ts,tsx}",
+    "tests/**/*.ts",
+    "scripts/**/*.ts"
+  ],
+  "ignore": [
+    "src/shared/types/database.ts"
+  ],
+  "ignoreDependencies": [
+    "@tailwindcss/postcss"
+  ]
+}
