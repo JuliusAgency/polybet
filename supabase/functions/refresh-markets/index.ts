@@ -6,10 +6,10 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { authorizeEdgeCall } from '../_shared/edgeAuth.ts';
 import { buildCorsPreflightResponse, jsonWithCors } from '../_shared/cors.ts';
+import { fetchGammaMarketsByConditionIds, buildConditionIdsUrl } from '../_shared/gammaUrls.ts';
 import { fetchJsonWithRetry } from '../_shared/gammaFetch.ts';
 import { resolveWinnerTokenId } from '../_shared/polymarketWinner.ts';
 
-const GAMMA_API_BASE = 'https://gamma-api.polymarket.com';
 const MAX_MARKET_IDS = 20;
 
 // ─── Gamma API types ──────────────────────────────────────────────────────────
@@ -89,24 +89,29 @@ Deno.serve(async (req: Request) => {
 
   const supabase = authResult.adminClient;
 
-  // Fetch each market from Gamma API in parallel.
-  // Use condition_ids (snake_case) — the correct Gamma API query parameter.
-  const results = await Promise.allSettled(
-    marketIds.map(async (conditionId) => {
-      const items = await fetchJsonWithRetry<GammaMarket[]>(
-        `${GAMMA_API_BASE}/markets?condition_ids=${conditionId}`,
-        {
-          headers: { Accept: 'application/json' },
-          timeoutMs: 10_000,
-          maxAttempts: 2,
-        }
-      );
-      if (!Array.isArray(items) || items.length === 0) {
-        throw new Error('Market not found in Gamma API');
-      }
-      return items[0];
-    })
-  );
+  // Fetch all markets in one batched request (paired closed=false/closed=true
+  // calls under the hood, since Gamma hides closed markets by default — see
+  // _shared/gammaUrls.ts). Replaces the previous N×1 single-id fetches.
+  let gmMap: Map<string, GammaMarket>;
+  let batchError: Error | null = null;
+  try {
+    gmMap = await fetchGammaMarketsByConditionIds<GammaMarket>(marketIds, {
+      timeoutMs: 10_000,
+      maxAttempts: 2,
+    });
+  } catch (e: unknown) {
+    gmMap = new Map();
+    batchError = e instanceof Error ? e : new Error(String(e));
+  }
+
+  const results: PromiseSettledResult<GammaMarket>[] = marketIds.map((cid) => {
+    const gm = gmMap.get(cid);
+    if (gm) return { status: 'fulfilled', value: gm };
+    return {
+      status: 'rejected',
+      reason: batchError ?? new Error('Market not found in Gamma API'),
+    };
+  });
 
   const changedAt = new Date().toISOString();
   let updated = 0;
@@ -219,8 +224,12 @@ Deno.serve(async (req: Request) => {
           market: gm,
           fetchMarketDetails: async () => {
             try {
+              // closed=true is mandatory here — by the time we reach this branch
+              // the market is `resolved`, so the default-hides-closed filter
+              // would return [] and resolveWinnerTokenId would never get
+              // payload data for the price-fallback path.
               const items = await fetchJsonWithRetry<GammaMarket[]>(
-                `${GAMMA_API_BASE}/markets?condition_ids=${conditionId}`,
+                buildConditionIdsUrl([conditionId], { closed: true, limit: 1 }),
                 { headers: { Accept: 'application/json' }, timeoutMs: 10_000, maxAttempts: 2 }
               );
               return Array.isArray(items) && items.length > 0 ? items[0] : null;

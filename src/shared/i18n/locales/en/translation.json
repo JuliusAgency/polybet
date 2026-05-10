@@ -330,7 +330,9 @@
     "marketCount_one": "{{count}} market",
     "marketCount_other": "{{count}} markets",
     "moreMarkets_one": "+{{count}} more",
-    "moreMarkets_other": "+{{count}} more"
+    "moreMarkets_other": "+{{count}} more",
+    "closedMarkets_one": "+{{count}} closed market",
+    "closedMarkets_other": "+{{count}} closed markets"
   },
   "eventDetail": {
     "back": "Back to markets",

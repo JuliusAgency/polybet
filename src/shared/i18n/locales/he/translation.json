@@ -330,7 +330,9 @@
     "marketCount_one": "שוק {{count}}",
     "marketCount_other": "{{count}} שווקים",
     "moreMarkets_one": "+{{count}} נוסף",
-    "moreMarkets_other": "+{{count}} נוספים"
+    "moreMarkets_other": "+{{count}} נוספים",
+    "closedMarkets_one": "+{{count}} שוק סגור",
+    "closedMarkets_other": "+{{count}} שווקים סגורים"
   },
   "eventDetail": {
     "back": "חזרה לשווקים",

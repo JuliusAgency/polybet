@@ -28,6 +28,14 @@ export interface EventCardProps {
   // collapse into the single-market visual just because the other rows
   // are filtered out.
   forceMultiRow?: boolean;
+  // Total number of markets this event has across all statuses (incl. closed).
+  // Drives the same "don't collapse to single" rule for events that originally
+  // had many candidate markets but where all but one have since resolved —
+  // a Yes/No on "GPT-5.5 released by…?" is meaningless, the question is a
+  // multi-choice over date candidates.
+  // When undefined, falls back to the legacy `visibleMarkets.length === 1`
+  // collapse rule for back-compat with consumers that don't yet pass it.
+  totalMarketsCount?: number;
 }
 
 export const EventCard = ({
@@ -37,6 +45,7 @@ export const EventCard = ({
   mode = 'interactive',
   onOutcomeClick,
   forceMultiRow = false,
+  totalMarketsCount,
 }: EventCardProps) => {
   const { t, i18n } = useTranslation();
   const isHebrew = i18n.language === 'he';
@@ -70,7 +79,19 @@ export const EventCard = ({
   const orderedMarkets = [...betMarkets, ...nonBetMarkets];
   const visibleMarkets = orderedMarkets.slice(0, FEED_VISIBLE_LIMIT);
 
-  const isSingle = !forceMultiRow && visibleMarkets.length === 1;
+  // Collapse to the single-market visual ONLY when the event truly has just
+  // one market in total. If the event originally had multiple candidate markets
+  // and the rest have since closed/resolved (leaving one open), we still want
+  // the multi-row event layout — a Yes/No on a multi-choice question reads as
+  // a bug. `totalMarketsCount === undefined` keeps the legacy behavior for
+  // consumers that don't pass the count yet.
+  const knownTotal = totalMarketsCount;
+  const isSingle =
+    !forceMultiRow && visibleMarkets.length === 1 && (knownTotal === undefined || knownTotal <= 1);
+  const hiddenClosedCount =
+    knownTotal !== undefined && knownTotal > orderedMarkets.length
+      ? knownTotal - orderedMarkets.length
+      : 0;
   const singleMarket = isSingle ? visibleMarkets[0] : null;
 
   const singleIsExpired =
@@ -182,6 +203,11 @@ export const EventCard = ({
               onOutcomeClick={onOutcomeClick}
             />
           ))}
+          {hiddenClosedCount > 0 && (
+            <span className="mt-1 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+              {t('events.closedMarkets', { count: hiddenClosedCount })}
+            </span>
+          )}
         </div>
       )}
 

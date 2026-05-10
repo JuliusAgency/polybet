@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   useMarkets,
@@ -7,6 +7,7 @@ import {
   useUserBalance,
   useMyBets,
   useAllowedCategoryTags,
+  useEventMarketCounts,
   groupMarketsByEvent,
 } from '@/features/bet';
 import { useFavoriteMarkets, useFavoriteEvents } from '@/features/favorites';
@@ -176,6 +177,16 @@ const MarketsFeedPage = () => {
 
   const feedItems = groupMarketsByEvent(visibleMarkets);
 
+  // Pull total markets count per event (incl. closed/resolved) so EventCard
+  // can avoid collapsing into the single Yes/No visual when only one market
+  // is currently open but the event was originally multi-choice. Reuses the
+  // same RPC + cache as EventBookmarkButton (`['event-market-counts', ...]`).
+  const eventIdsInFeed = useMemo(
+    () => feedItems.flatMap((item) => (item.type === 'event' ? [item.event.id] : [])),
+    [feedItems]
+  );
+  const { data: eventMarketCounts } = useEventMarketCounts(eventIdsInFeed);
+
   // Grouped saved cards count for the Saved button badge — applies the same
   // open-event visibility rule as the main feed so the number matches what
   // the user will actually see after clicking Saved.
@@ -339,6 +350,7 @@ const MarketsFeedPage = () => {
                   // force multi-row so a truly multi-market event doesn't collapse
                   // into the single-market visual just because siblings were filtered out.
                   forceMultiRow={myBetsOnly}
+                  totalMarketsCount={eventMarketCounts?.[item.event.id]}
                 />
               ) : (
                 <MarketCard

@@ -7,6 +7,11 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { authorizeEdgeCall } from '../_shared/edgeAuth.ts';
 import { buildCorsPreflightResponse, jsonWithCors } from '../_shared/cors.ts';
 import { fetchJsonWithRetry } from '../_shared/gammaFetch.ts';
+import {
+  GAMMA_API_BASE,
+  buildConditionIdsUrl,
+  fetchGammaMarketsByConditionIds,
+} from '../_shared/gammaUrls.ts';
 import { buildArchiveCutoffIso, parseArchiveAfterHours } from '../_shared/marketLifecycle.ts';
 import {
   buildMarketCreatedDelta,
@@ -53,9 +58,13 @@ interface SyncRequestBody {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const GAMMA_API_BASE = 'https://gamma-api.polymarket.com';
 const ACTIVE_MARKETS_URL = `${GAMMA_API_BASE}/markets?active=true&closed=false&limit=100`;
 const RESOLVED_MARKETS_URL = `${GAMMA_API_BASE}/markets?resolved=true&limit=50`;
+// Limbo bucket: closed by Polymarket but UMA hasn't finalized resolution yet
+// (`resolved=null`). Without this pool, ACTIVE (closed=false) and RESOLVED
+// (resolved=true) both miss these markets and they stay `status='open'`
+// in our DB until close_at expires (or forever if close_at is in the future).
+const LIMBO_MARKETS_URL = `${GAMMA_API_BASE}/markets?closed=true&resolved=false&limit=50`;
 // Polymarket's curated Trending list — featured events ordered by 24h volume.
 // We pull at most 100 events; the response feeds events.trending_rank /
 // events.volume_24hr via the set_events_trending_rankings RPC (migration 075)
@@ -198,9 +207,12 @@ async function fetchGammaMarkets(
 }
 
 async function fetchGammaMarketDetails(conditionId: string): Promise<GammaMarket | null> {
+  // closed=true is required — Gamma hides closed markets when no `closed` flag
+  // is supplied, and this helper is the fallback used by resolveWinnerTokenId
+  // for resolved/limbo markets, which by definition are closed=true.
   try {
     const items = await fetchJsonWithRetry<GammaMarket[]>(
-      `${GAMMA_API_BASE}/markets?condition_ids=${conditionId}`,
+      buildConditionIdsUrl([conditionId], { closed: true, limit: 1 }),
       { headers: { Accept: 'application/json' } }
     );
     if (!Array.isArray(items) || items.length === 0) return null;
@@ -214,23 +226,16 @@ async function fetchGammaMarketDetails(conditionId: string): Promise<GammaMarket
   }
 }
 
-/** Fetch multiple markets by condition IDs in one request (batch lookup).
- *  Returns a map of conditionId → GammaMarket for found markets. */
+/** Fetch multiple markets by condition IDs in one batched request (dual-call
+ *  under the hood — Gamma hides closed markets by default, so we issue paired
+ *  closed=false/closed=true queries and merge). Returns a map of conditionId →
+ *  GammaMarket for found markets. */
 async function fetchGammaMarketsBatch(conditionIds: string[]): Promise<Map<string, GammaMarket>> {
   if (conditionIds.length === 0) return new Map();
-  const params = conditionIds.map((id) => `condition_ids=${encodeURIComponent(id)}`).join('&');
-  // Gamma silently caps responses at 20 rows without an explicit `limit`.
-  const limitParam = `limit=${conditionIds.length}`;
   try {
-    const items = await fetchJsonWithRetry<GammaMarket[]>(
-      `${GAMMA_API_BASE}/markets?${limitParam}&${params}`,
-      {
-        headers: { Accept: 'application/json' },
-        timeoutMs: 30_000,
-      }
-    );
-    if (!Array.isArray(items)) return new Map();
-    return new Map(items.map((m) => [m.conditionId, m]));
+    return await fetchGammaMarketsByConditionIds<GammaMarket>(conditionIds, {
+      timeoutMs: 30_000,
+    });
   } catch (e: unknown) {
     console.error(
       `fetchGammaMarketsBatch failed for ${conditionIds.length} markets:`,
@@ -766,9 +771,48 @@ Deno.serve(async (req: Request) => {
         return [] as GammaMarket[];
       });
 
-      totalCount = activeMarkets.length + resolvedMarkets.length;
+      // Limbo bucket: closed by Polymarket but UMA hasn't finalized resolution
+      // yet. Without this fetch, ACTIVE (closed=false) and RESOLVED
+      // (resolved=true) both miss these markets, so the full sync never
+      // settles them and they stay status='open' forever (until close_at
+      // expires — and not even then, if it's in the future).
+      const limboMarkets = await fetchGammaMarkets(
+        LIMBO_MARKETS_URL,
+        maxPages,
+        0,
+        ({ fetchedCount }) =>
+          updateRun({
+            phase: 'fetching_resolved',
+            progress_current: activeMarkets.length + resolvedMarkets.length + fetchedCount,
+            progress_total: 0,
+          }),
+        ({ fetchedCount }) =>
+          updateRun({
+            phase: 'fetching_resolved',
+            progress_current: activeMarkets.length + resolvedMarkets.length + fetchedCount,
+            progress_total: 0,
+          })
+      ).catch((e: unknown) => {
+        stats.errors.push(
+          `Failed to fetch limbo markets: ${e instanceof Error ? e.message : String(e)}`
+        );
+        return [] as GammaMarket[];
+      });
 
-      await updateRun(buildFetchedProgressUpdate(activeMarkets.length, resolvedMarkets.length));
+      // Dedupe — Polymarket can briefly flip a market through both buckets
+      // during a sync window. resolvedMarkets already wrote to the same path,
+      // so prefer those and drop limbo duplicates.
+      const resolvedIds = new Set(resolvedMarkets.map((m) => m.conditionId));
+      const uniqueLimboMarkets = limboMarkets.filter((m) => !resolvedIds.has(m.conditionId));
+
+      totalCount = activeMarkets.length + resolvedMarkets.length + uniqueLimboMarkets.length;
+
+      await updateRun(
+        buildFetchedProgressUpdate(
+          activeMarkets.length,
+          resolvedMarkets.length + uniqueLimboMarkets.length
+        )
+      );
 
       // ── 3. Upsert active markets ────────────────────────────────────────────
       for (const gm of activeMarkets) {
@@ -811,6 +855,34 @@ Deno.serve(async (req: Request) => {
         } catch (e: unknown) {
           stats.errors.push(
             `Error processing resolved market ${gm.conditionId}: ${e instanceof Error ? e.message : String(e)}`
+          );
+        }
+        processedCount++;
+        await updateRun({
+          ...buildIncrementedProgressUpdate({
+            processedCount,
+            activeCount: activeMarkets.length,
+            totalCount,
+          }),
+          markets_synced: stats.markets_synced,
+          outcomes_updated: stats.outcomes_updated,
+          markets_settled: stats.markets_settled,
+          errors: stats.errors,
+          error_message: stats.errors[0] ?? null,
+        });
+      }
+
+      // ── 5. Process limbo markets (closed=true, resolved=null) ───────────────
+      // processResolvedMarket has a price-fallback inside resolveWinnerTokenId
+      // that handles outcomePrices like ["1","0"] without the resolved flag,
+      // so de-facto-decided limbo markets settle correctly. Genuinely
+      // ambiguous payloads (e.g. ["0.5","0.5"]) are skipped safely.
+      for (const gm of uniqueLimboMarkets) {
+        try {
+          await processResolvedMarket(supabase, gm, autoShowAll, runId, stats);
+        } catch (e: unknown) {
+          stats.errors.push(
+            `Error processing limbo market ${gm.conditionId}: ${e instanceof Error ? e.message : String(e)}`
           );
         }
         processedCount++;
