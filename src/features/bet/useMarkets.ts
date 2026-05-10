@@ -28,7 +28,6 @@ interface TrendingCursor {
 
 type Cursor = DefaultCursor | TrendingCursor;
 
-
 export function useMarkets(
   statusFilter: MarketStatusFilter = 'all',
   searchQuery = '',

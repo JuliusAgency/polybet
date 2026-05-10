@@ -38,7 +38,7 @@ export const normalizePositiveLimit = (value: unknown): number | null => {
 export const deriveManagerEffectiveLimit = (
   managerId: string,
   managerLimit: number | null,
-  globalLimit: number | null,
+  globalLimit: number | null
 ): EffectiveManagerBetLimit => {
   if (managerLimit != null) {
     return { managerId, effectiveMaxBetLimit: managerLimit, source: 'manager' };
@@ -62,7 +62,7 @@ export interface UserBetLimitInput {
 export const deriveUserEffectiveLimit = (
   user: UserBetLimitInput,
   managerLimit: number | null,
-  globalLimit: number | null,
+  globalLimit: number | null
 ): EffectiveUserBetLimit => {
   if (user.maxBetLimit != null) {
     return {

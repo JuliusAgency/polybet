@@ -41,7 +41,7 @@ const fetchAllLimitsData = async (): Promise<LimitsTree> => {
   if (settingError) throw new Error(settingError.message);
 
   const globalLimit = normalizePositiveLimit(
-    (settingData?.value as Record<string, unknown> | null)?.global_max_bet ?? null,
+    (settingData?.value as Record<string, unknown> | null)?.global_max_bet ?? null
   );
 
   // 2. All manager profiles + manager rows
@@ -64,7 +64,7 @@ const fetchAllLimitsData = async (): Promise<LimitsTree> => {
   if (mrError) throw new Error(mrError.message);
 
   const managerLimitById = new Map<string, number | null>(
-    (managerRows ?? []).map((m) => [m.id as string, normalizePositiveLimit(m.max_bet_limit)]),
+    (managerRows ?? []).map((m) => [m.id as string, normalizePositiveLimit(m.max_bet_limit)])
   );
 
   // 3. All manager→user links

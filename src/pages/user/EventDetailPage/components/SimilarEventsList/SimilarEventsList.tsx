@@ -74,7 +74,9 @@ export const SimilarEventsList = ({ events, isLoading = false }: SimilarEventsLi
                           {e.tag_label}
                         </span>
                       )}
-                      {e.category && <span className={isHebrew ? '' : 'uppercase'}>{e.category}</span>}
+                      {e.category && (
+                        <span className={isHebrew ? '' : 'uppercase'}>{e.category}</span>
+                      )}
                       {vol && (
                         <span className="font-mono">
                           {t('markets.volumeShort', { value: vol })}

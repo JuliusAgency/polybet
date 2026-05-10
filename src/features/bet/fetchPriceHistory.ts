@@ -11,11 +11,11 @@ interface PriceHistoryFunctionResponse {
  * cache key shape consistent (same queryFn means same stale data is reused). */
 export async function fetchPriceHistory(
   marketId: string,
-  historyWindow: PriceHistoryWindow,
+  historyWindow: PriceHistoryWindow
 ): Promise<PriceHistoryPoint[]> {
   const { data, error } = await invokeSupabaseFunction<PriceHistoryFunctionResponse>(
     'market-price-history',
-    { body: { market_id: marketId, window: historyWindow } },
+    { body: { market_id: marketId, window: historyWindow } }
   );
 
   if (error) {

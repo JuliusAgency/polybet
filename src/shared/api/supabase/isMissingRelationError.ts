@@ -6,7 +6,7 @@ import type { PostgrestError } from '@supabase/supabase-js';
  * that specific case into a fallback when a feature is opt-in. */
 export function isMissingRelationError(
   error: PostgrestError | null,
-  relationName: string,
+  relationName: string
 ): boolean {
   if (!error) return false;
   if (error.code === '42P01' || error.code === 'PGRST205') return true;

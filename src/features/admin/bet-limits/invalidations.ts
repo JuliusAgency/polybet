@@ -12,11 +12,16 @@ export type BetLimitScope = 'global' | 'manager' | 'user';
  * because user-level limits don't change manager rows. */
 export async function invalidateAllBetLimitCaches(
   qc: QueryClient,
-  scope: BetLimitScope,
+  scope: BetLimitScope
 ): Promise<void> {
   const keys: ReadonlyArray<readonly unknown[]> =
     scope === 'user'
       ? [adminBetLimitSettingsQueryKey, adminManagerUsersQueryKey, allLimitsQueryKey]
-      : [adminBetLimitSettingsQueryKey, adminManagersQueryKey, adminManagerUsersQueryKey, allLimitsQueryKey];
+      : [
+          adminBetLimitSettingsQueryKey,
+          adminManagersQueryKey,
+          adminManagerUsersQueryKey,
+          allLimitsQueryKey,
+        ];
   await Promise.all(keys.map((queryKey) => qc.invalidateQueries({ queryKey })));
 }

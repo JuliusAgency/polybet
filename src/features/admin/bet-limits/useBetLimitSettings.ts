@@ -7,7 +7,12 @@ import {
 } from './limitCascade';
 import type { EffectiveManagerBetLimit, EffectiveUserBetLimit } from './limitCascade';
 
-export type { BetLimitSource, ManagerBetLimitSource, EffectiveManagerBetLimit, EffectiveUserBetLimit } from './limitCascade';
+export type {
+  BetLimitSource,
+  ManagerBetLimitSource,
+  EffectiveManagerBetLimit,
+  EffectiveUserBetLimit,
+} from './limitCascade';
 
 interface BetLimitSettingValue {
   global_max_bet?: unknown;
@@ -139,8 +144,8 @@ const fetchBetLimitSettings = async (managerId: string): Promise<BetLimitSetting
       new Set(
         allLinks
           .map((link) => link.manager_id)
-          .filter((linkedManagerId): linkedManagerId is string => !!linkedManagerId),
-      ),
+          .filter((linkedManagerId): linkedManagerId is string => !!linkedManagerId)
+      )
     );
 
     if (linkedManagerIds.length > 0) {
@@ -155,7 +160,7 @@ const fetchBetLimitSettings = async (managerId: string): Promise<BetLimitSetting
         ((linkedManagerData as ManagerLimitRow[] | null) ?? []).map((linkedManager) => [
           linkedManager.id,
           normalizePositiveLimit(linkedManager.max_bet_limit),
-        ]),
+        ])
       );
 
       for (const link of allLinks) {
@@ -167,7 +172,7 @@ const fetchBetLimitSettings = async (managerId: string): Promise<BetLimitSetting
         const currentFloor = managerFloorByUserId.get(link.user_id) ?? null;
         managerFloorByUserId.set(
           link.user_id,
-          currentFloor == null ? managerLimit : Math.min(currentFloor, managerLimit),
+          currentFloor == null ? managerLimit : Math.min(currentFloor, managerLimit)
         );
       }
     }
@@ -189,8 +194,8 @@ const fetchBetLimitSettings = async (managerId: string): Promise<BetLimitSetting
         deriveUserEffectiveLimit(
           user,
           managerFloorByUserId.get(user.userId) ?? null,
-          globalMaxBetLimit,
-        ),
+          globalMaxBetLimit
+        )
       ),
     },
   };

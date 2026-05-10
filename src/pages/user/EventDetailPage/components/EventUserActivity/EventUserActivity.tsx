@@ -64,15 +64,7 @@ export const EventUserActivity = ({ markets, bets }: EventUserActivityProps) => 
   );
 };
 
-const Stat = ({
-  label,
-  value,
-  isHebrew,
-}: {
-  label: string;
-  value: string;
-  isHebrew: boolean;
-}) => (
+const Stat = ({ label, value, isHebrew }: { label: string; value: string; isHebrew: boolean }) => (
   <div>
     <dt
       className={`text-[11px] ${isHebrew ? '' : 'uppercase'}`}

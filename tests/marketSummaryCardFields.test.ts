@@ -3,10 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 test('MarketCard wires question, category, close_at and outcome data to new Polymarket-style layout', () => {
-  const source = fs.readFileSync(
-    'src/widgets/MarketCard/MarketCard.tsx',
-    'utf8'
-  );
+  const source = fs.readFileSync('src/widgets/MarketCard/MarketCard.tsx', 'utf8');
 
   assert.match(source, /market\.id/);
   assert.match(source, /market\.polymarket_id/);
