@@ -10,6 +10,7 @@ import {
   useUserBalance,
 } from '@/features/bet';
 import type { Market, MarketOutcome } from '@/entities/market';
+import { sortMarketsByYesDesc } from '@/entities/market';
 import { BetSlip } from '@/widgets/BetSlip';
 import { MarketThumbnail } from '@/shared/ui/MarketThumbnail';
 import { Spinner } from '@/shared/ui/Spinner';
@@ -71,7 +72,10 @@ const EventDetailPage = () => {
     );
   }
 
-  const { event, markets } = eventData;
+  const { event, markets: rawMarkets } = eventData;
+  // Multi-outcome events render best with leading candidates at the top —
+  // matches Polymarket's layout. Single-market events skip the sort.
+  const markets = rawMarkets.length > 1 ? sortMarketsByYesDesc(rawMarkets) : rawMarkets;
   const betByMarketId = new Map(bets.map((b) => [b.market_id, b]));
   const volumeLabel = formatVolume(event.volume ?? null);
   const closesDate = event.close_at

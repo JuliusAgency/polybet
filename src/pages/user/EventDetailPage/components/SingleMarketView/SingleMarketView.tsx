@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Market, MarketOutcome } from '@/entities/market';
+import { getOrderedOutcomes } from '@/entities/market';
 import type { MyBet } from '@/entities/bet';
 import type { PriceHistoryWindow } from '@/features/bet';
 import { usePriceHistory } from '@/features/bet';
@@ -43,7 +44,7 @@ export const SingleMarketView = ({
         </div>
         <PriceHistoryChart
           points={points}
-          outcomes={market.market_outcomes}
+          outcomes={getOrderedOutcomes(market)}
           isLoading={isLoading}
         />
       </section>

@@ -51,7 +51,13 @@ export function useMarkets(
       // MARKET_SELECT_FULL includes tag_slugs (migration 069) and the event join.
       // tag_slugs is denormalized onto markets, so the tag filter applies directly
       // on markets without a nested loop join through events.
-      let query = supabase.from('markets').select(MARKET_SELECT_FULL).eq('is_visible', true);
+      let query = supabase
+        .from('markets')
+        .select(MARKET_SELECT_FULL)
+        .eq('is_visible', true)
+        // Canonical Yes/No ordering inside the embedded outcomes list.
+        // See migration 20260510150927 — position 0 = Yes, 1 = No.
+        .order('position', { referencedTable: 'market_outcomes', ascending: true });
 
       // For 'all' the IN covers the full status domain, which tricks the planner
       // into a Seq Scan. The shared helper skips the predicate so the planner

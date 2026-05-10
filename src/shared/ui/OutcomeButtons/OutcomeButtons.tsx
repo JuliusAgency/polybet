@@ -35,6 +35,16 @@ interface OutcomeButtonsProps {
   hoverShowsPercentage?: boolean;
   /** Price display format. Default 'percent' (e.g. 8%). Use 'cents' for Polymarket-style (e.g. 8.3¢). */
   priceFormat?: 'percent' | 'cents';
+  /**
+   * When true, applies Polymarket-style "long-tail" treatment:
+   *  - the leading (Yes) outcome is dimmed (de-facto eliminated)
+   *  - the trailing (No) outcome is intensified (the dominant action)
+   *
+   * Caller decides when to flip this on (typically when Yes price < threshold
+   * or the market's effective status is no longer 'open'). Indices are
+   * interpreted as [Yes, No] — outcomes must already be ordered canonically.
+   */
+  longTail?: boolean;
 }
 
 const SIZE_STYLES: Record<ButtonSize, { padY: string; padX: string; name: string; odds: string }> =
@@ -59,7 +69,12 @@ const SIZE_STYLES: Record<ButtonSize, { padY: string; padX: string; name: string
     },
   };
 
-function tintFor(index: number, isWinner: boolean, disabled: boolean): CSSProperties {
+function tintFor(
+  index: number,
+  isWinner: boolean,
+  disabled: boolean,
+  longTail: boolean
+): CSSProperties {
   const role = index === 0 ? 'win' : 'loss';
   const tintVar = role === 'win' ? 'var(--color-win)' : 'var(--color-loss)';
 
@@ -67,6 +82,24 @@ function tintFor(index: number, isWinner: boolean, disabled: boolean): CSSProper
     return {
       backgroundColor: `color-mix(in oklch, ${tintVar} 18%, var(--color-bg-base))`,
       borderColor: `color-mix(in oklch, ${tintVar} 55%, transparent)`,
+      color: tintVar,
+    };
+  }
+
+  // Long-tail dimming: the eliminated Yes side fades into a neutral pill so
+  // the eye lands on the dominant No action instead. Mirrors Polymarket's
+  // treatment of <1% sub-markets in multi-outcome events.
+  if (longTail) {
+    if (index === 0) {
+      return {
+        backgroundColor: 'var(--color-bg-base)',
+        borderColor: 'var(--color-border)',
+        color: 'var(--color-text-muted)',
+      };
+    }
+    return {
+      backgroundColor: `color-mix(in oklch, ${tintVar} 14%, var(--color-bg-base))`,
+      borderColor: `color-mix(in oklch, ${tintVar} 45%, transparent)`,
       color: tintVar,
     };
   }
@@ -108,6 +141,7 @@ export function OutcomeButtons({
   showPercentage = true,
   hoverShowsPercentage = false,
   priceFormat = 'percent',
+  longTail = false,
 }: OutcomeButtonsProps) {
   const styles = SIZE_STYLES[size];
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -137,7 +171,7 @@ export function OutcomeButtons({
     <div className="grid grid-cols-2 gap-2">
       {outcomes.map((o, index) => {
         const isHovered = hoveredId === o.id && !disabled;
-        const baseStyle = tintFor(index, !!o.isWinner, disabled);
+        const baseStyle = tintFor(index, !!o.isWinner, disabled, longTail);
         const style: CSSProperties = isHovered ? hoverTintFor(index) : baseStyle;
         const pct = showPercentage ? formatPrice(o.price, priceFormat) : null;
         const hoverPct = hoverShowsPercentage ? formatPrice(o.price, priceFormat) : null;

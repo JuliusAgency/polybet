@@ -1,7 +1,13 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { Market, MarketOutcome } from '@/entities/market';
-import { getMarketEffectiveStatus } from '@/entities/market';
+import {
+  getMarketEffectiveStatus,
+  getOrderedOutcomes,
+  getYesProbability,
+  isBinaryMarket,
+  isLongTailMarket,
+} from '@/entities/market';
 import type { MyBet } from '@/entities/bet';
 import { useMarketRefresh } from '@/features/bet';
 import { OutcomeButtons, type OutcomeButton } from '@/shared/ui/OutcomeButtons';
@@ -68,7 +74,12 @@ export const MarketCard = ({
     ? (market.market_outcomes.find((o) => o.id === market.winning_outcome_id) ?? null)
     : null;
 
-  const outcomeButtons: OutcomeButton[] = market.market_outcomes.map((o) => ({
+  // Canonical [Yes, No] order — OutcomeButtons relies on index 0 == Yes for
+  // colours and the long-tail dimming. Without this, a market whose embedded
+  // outcomes happened to land in [No, Yes] order would render with the
+  // colours and dim treatment swapped.
+  const orderedOutcomes = getOrderedOutcomes(market);
+  const outcomeButtons: OutcomeButton[] = orderedOutcomes.map((o) => ({
     id: o.id,
     name: o.name,
     price: o.price,
@@ -76,12 +87,10 @@ export const MarketCard = ({
     isWinner: winnerOutcome?.id === o.id,
   }));
 
-  const yesOutcome = market.market_outcomes[0];
-  // Arc gauge only reads outcome[0].price, so limit it to binary (Yes/No)
-  // markets where that price is the "Yes chance". For multi-outcome markets
-  // outcome[0] is just one of many and a single gauge would be misleading.
-  const isBinary = market.market_outcomes.length === 2;
-  const yesProbability = isBinary && yesOutcome?.price != null ? yesOutcome.price : null;
+  // Gauge: only meaningful for binary markets where Yes is well-defined.
+  const isBinary = isBinaryMarket(market);
+  const yesProbability = isBinary ? getYesProbability(market) : null;
+  const longTail = isBinary && isLongTailMarket(market);
 
   const volumeLabel = formatVolume(market.volume ?? null);
   const closesDate = formatClosesDate(market.close_at, i18n.language);
@@ -139,6 +148,7 @@ export const MarketCard = ({
             disabled={!isInteractive}
             showPercentage={false}
             hoverShowsPercentage
+            longTail={longTail}
             onClick={
               isInteractive && onOutcomeClick
                 ? (outcomeId) => {

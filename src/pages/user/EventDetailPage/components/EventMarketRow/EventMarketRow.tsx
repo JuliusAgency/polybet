@@ -1,5 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import type { Market, MarketOutcome } from '@/entities/market';
+import {
+  getOrderedOutcomes,
+  getYesProbability,
+  isBinaryMarket,
+  isLongTailMarket,
+} from '@/entities/market';
 import type { MyBet } from '@/entities/bet';
 import { Badge } from '@/shared/ui/Badge';
 import { BookmarkButton } from '@/shared/ui/BookmarkButton';
@@ -34,7 +40,8 @@ export const EventMarketRow = ({
     ? (market.market_outcomes.find((o) => o.id === market.winning_outcome_id) ?? null)
     : null;
 
-  const outcomeButtons: OutcomeButton[] = market.market_outcomes.map((o) => ({
+  const orderedOutcomes = getOrderedOutcomes(market);
+  const outcomeButtons: OutcomeButton[] = orderedOutcomes.map((o) => ({
     id: o.id,
     name: o.name,
     price: o.price,
@@ -44,8 +51,9 @@ export const EventMarketRow = ({
 
   const label = market.group_label ?? market.question;
   const volumeLabel = formatVolume(market.volume ?? null);
-  const yesOutcome = market.market_outcomes[0];
-  const yesPct = yesOutcome?.price != null ? formatProbability(yesOutcome.price) : null;
+  const yesPrice = getYesProbability(market);
+  const yesPct = yesPrice != null ? formatProbability(yesPrice) : null;
+  const longTail = isBinaryMarket(market) && isLongTailMarket(market);
 
   const statusLabel =
     effectiveStatus !== 'open'
@@ -113,7 +121,7 @@ export const EventMarketRow = ({
         <div className="shrink-0 ps-4 pe-6 text-center">
           <div
             className="text-lg font-bold tabular-nums"
-            style={{ color: 'var(--color-text-primary)' }}
+            style={{ color: longTail ? 'var(--color-text-muted)' : 'var(--color-text-primary)' }}
           >
             {yesPct}
           </div>
@@ -127,6 +135,7 @@ export const EventMarketRow = ({
           disabled={!isInteractive}
           showPercentage
           priceFormat="cents"
+          longTail={longTail}
           ctaLabel={t('markets.buy', { defaultValue: 'Buy' })}
           onClick={
             isInteractive && onOutcomeClick

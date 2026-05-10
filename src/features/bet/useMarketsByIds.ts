@@ -18,7 +18,11 @@ export function useMarketsByIds(ids: string[], statusFilter: MarketStatusFilter,
     enabled: enabled && sortedIds.length > 0,
     staleTime: 60 * 1000,
     queryFn: async () => {
-      let query = supabase.from('markets').select(MARKET_SELECT_FULL).in('id', sortedIds);
+      let query = supabase
+        .from('markets')
+        .select(MARKET_SELECT_FULL)
+        .in('id', sortedIds)
+        .order('position', { referencedTable: 'market_outcomes', ascending: true });
 
       // Mirror useMarkets status rules so open/closed tabs stay consistent.
       query = applyMarketStatusFilter(query, statusFilter, new Date());

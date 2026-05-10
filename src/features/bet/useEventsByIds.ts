@@ -24,7 +24,8 @@ export function useEventsByIds(
       let query = supabase
         .from('markets')
         .select(MARKET_SELECT_FULL)
-        .in('event_id', sortedEventIds);
+        .in('event_id', sortedEventIds)
+        .order('position', { referencedTable: 'market_outcomes', ascending: true });
 
       // Mirror useMarkets status rules for consistency between feed and saved.
       query = applyMarketStatusFilter(query, statusFilter, new Date());

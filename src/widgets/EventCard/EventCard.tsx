@@ -1,7 +1,14 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { Market, MarketOutcome } from '@/entities/market';
-import { getMarketEffectiveStatus } from '@/entities/market';
+import {
+  getMarketEffectiveStatus,
+  getOrderedOutcomes,
+  getYesProbability,
+  isBinaryMarket,
+  isLongTailMarket,
+  sortMarketsByYesDesc,
+} from '@/entities/market';
 import type { MarketEvent } from '@/entities/event';
 import { getEventEffectiveStatus } from '@/entities/event';
 import type { MyBet } from '@/entities/bet';
@@ -74,8 +81,12 @@ export const EventCard = ({
         })
       : null;
 
+  // Order: user's bets first (so In-Play context surfaces), then the remaining
+  // markets sorted by Yes-probability DESC (Polymarket-style — leading
+  // candidates float to the top of the preview block, eliminated outcomes
+  // sink). Stable sort keeps multi-market events visually predictable.
   const betMarkets = markets.filter((m) => betByMarketId.has(m.id));
-  const nonBetMarkets = markets.filter((m) => !betByMarketId.has(m.id));
+  const nonBetMarkets = sortMarketsByYesDesc(markets.filter((m) => !betByMarketId.has(m.id)));
   const orderedMarkets = [...betMarkets, ...nonBetMarkets];
   const visibleMarkets = orderedMarkets.slice(0, FEED_VISIBLE_LIMIT);
 
@@ -105,19 +116,18 @@ export const EventCard = ({
   const singleWinner = singleMarket?.winning_outcome_id
     ? (singleMarket.market_outcomes.find((o) => o.id === singleMarket.winning_outcome_id) ?? null)
     : null;
-  const singleOutcomeButtons: OutcomeButton[] = singleMarket
-    ? singleMarket.market_outcomes.map((o) => ({
-        id: o.id,
-        name: o.name,
-        price: o.price,
-        effectiveOdds: o.effective_odds,
-        isWinner: singleWinner?.id === o.id,
-      }))
-    : [];
-  const singleYes = singleMarket?.market_outcomes[0];
-  // Arc gauge only applies to binary markets (see MarketCard rationale).
-  const singleIsBinary = (singleMarket?.market_outcomes.length ?? 0) === 2;
-  const singleYesProbability = singleIsBinary && singleYes?.price != null ? singleYes.price : null;
+  // Canonical [Yes, No] ordering — see MarketCard rationale.
+  const singleOrderedOutcomes = singleMarket ? getOrderedOutcomes(singleMarket) : [];
+  const singleOutcomeButtons: OutcomeButton[] = singleOrderedOutcomes.map((o) => ({
+    id: o.id,
+    name: o.name,
+    price: o.price,
+    effectiveOdds: o.effective_odds,
+    isWinner: singleWinner?.id === o.id,
+  }));
+  const singleIsBinary = !!singleMarket && isBinaryMarket(singleMarket);
+  const singleYesProbability = singleMarket ? getYesProbability(singleMarket) : null;
+  const singleLongTail = !!singleMarket && singleIsBinary && isLongTailMarket(singleMarket);
 
   return (
     <article
@@ -181,6 +191,7 @@ export const EventCard = ({
               disabled={!singleIsInteractive}
               showPercentage={false}
               hoverShowsPercentage
+              longTail={singleLongTail}
               onClick={
                 singleIsInteractive && onOutcomeClick
                   ? (outcomeId) => {
@@ -272,7 +283,8 @@ function EventMarketRow({ market, mode, onOutcomeClick }: EventMarketRowProps) {
     ? (market.market_outcomes.find((o) => o.id === market.winning_outcome_id) ?? null)
     : null;
 
-  const outcomeButtons: OutcomeButton[] = market.market_outcomes.map((o) => ({
+  const orderedOutcomes = getOrderedOutcomes(market);
+  const outcomeButtons: OutcomeButton[] = orderedOutcomes.map((o) => ({
     id: o.id,
     name: o.name,
     price: o.price,
@@ -281,15 +293,16 @@ function EventMarketRow({ market, mode, onOutcomeClick }: EventMarketRowProps) {
   }));
 
   const label = market.group_label ?? market.question;
-  const yesOutcome = market.market_outcomes[0];
-  const yesPct = yesOutcome?.price != null ? formatProbability(yesOutcome.price) : null;
+  const yesPrice = getYesProbability(market);
+  const yesPct = yesPrice != null ? formatProbability(yesPrice) : null;
+  const longTail = isBinaryMarket(market) && isLongTailMarket(market);
 
   return (
     <div className="flex items-center gap-3 py-1.5">
       <span
         className="min-w-0 flex-1 line-clamp-2 text-sm font-medium leading-snug underline-offset-2 decoration-1 group-hover/card:underline"
         style={{
-          color: 'var(--color-text-primary)',
+          color: longTail ? 'var(--color-text-muted)' : 'var(--color-text-primary)',
           ...(isHebrew && { direction: 'ltr' as const, textAlign: 'right' as const }),
         }}
       >
@@ -299,7 +312,7 @@ function EventMarketRow({ market, mode, onOutcomeClick }: EventMarketRowProps) {
       {yesPct && (
         <span
           className="shrink-0 text-sm font-semibold tabular-nums"
-          style={{ color: 'var(--color-text-primary)' }}
+          style={{ color: longTail ? 'var(--color-text-muted)' : 'var(--color-text-primary)' }}
         >
           {yesPct}
         </span>
@@ -312,6 +325,7 @@ function EventMarketRow({ market, mode, onOutcomeClick }: EventMarketRowProps) {
           disabled={!isInteractive}
           showPercentage={false}
           hoverShowsPercentage
+          longTail={longTail}
           onClick={
             isInteractive && onOutcomeClick
               ? (outcomeId) => {

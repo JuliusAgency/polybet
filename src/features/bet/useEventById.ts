@@ -36,7 +36,8 @@ export function useEventById(eventId: string | undefined) {
         .select(MARKET_SELECT_NO_EVENT)
         .eq('event_id', eventId)
         .eq('is_visible', true)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: true })
+        .order('position', { referencedTable: 'market_outcomes', ascending: true });
 
       if (marketsError) throw new Error(marketsError.message);
 

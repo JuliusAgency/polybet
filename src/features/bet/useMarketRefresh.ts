@@ -86,7 +86,8 @@ export function useMarketRefresh(
         const { data: freshMarkets } = await supabase
           .from('markets')
           .select(MARKET_SELECT_FULL)
-          .in('polymarket_id', ids);
+          .in('polymarket_id', ids)
+          .order('position', { referencedTable: 'market_outcomes', ascending: true });
 
         if (freshMarkets && freshMarkets.length > 0) {
           const freshById = Object.fromEntries(freshMarkets.map((m) => [m.id, m]));
