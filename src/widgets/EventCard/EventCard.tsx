@@ -7,6 +7,7 @@ import {
   getYesProbability,
   isBinaryMarket,
   isLongTailMarket,
+  isOutcomeTradable,
   sortMarketsByYesDesc,
 } from '@/entities/market';
 import type { MarketEvent } from '@/entities/event';
@@ -124,6 +125,7 @@ export const EventCard = ({
     price: o.price,
     effectiveOdds: o.effective_odds,
     isWinner: singleWinner?.id === o.id,
+    untradable: !isOutcomeTradable(o.price),
   }));
   const singleIsBinary = !!singleMarket && isBinaryMarket(singleMarket);
   const singleYesProbability = singleMarket ? getYesProbability(singleMarket) : null;
@@ -196,7 +198,9 @@ export const EventCard = ({
                 singleIsInteractive && onOutcomeClick
                   ? (outcomeId) => {
                       const outcome = singleMarket.market_outcomes.find((o) => o.id === outcomeId);
-                      if (outcome) onOutcomeClick(singleMarket, outcome);
+                      if (outcome && isOutcomeTradable(outcome.price)) {
+                        onOutcomeClick(singleMarket, outcome);
+                      }
                     }
                   : undefined
               }
@@ -290,6 +294,7 @@ function EventMarketRow({ market, mode, onOutcomeClick }: EventMarketRowProps) {
     price: o.price,
     effectiveOdds: o.effective_odds,
     isWinner: winnerOutcome?.id === o.id,
+    untradable: !isOutcomeTradable(o.price),
   }));
 
   const label = market.group_label ?? market.question;
@@ -330,7 +335,9 @@ function EventMarketRow({ market, mode, onOutcomeClick }: EventMarketRowProps) {
             isInteractive && onOutcomeClick
               ? (outcomeId) => {
                   const outcome = market.market_outcomes.find((o) => o.id === outcomeId);
-                  if (outcome) onOutcomeClick(market, outcome);
+                  if (outcome && isOutcomeTradable(outcome.price)) {
+                    onOutcomeClick(market, outcome);
+                  }
                 }
               : undefined
           }
