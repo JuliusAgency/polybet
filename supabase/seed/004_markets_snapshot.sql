@@ -1,0 +1,21 @@
+-- Markets snapshot — anonymous dump of recent events/markets/market_outcomes
+-- captured from production for use in E2E and DB integration tests.
+--
+-- This file is intentionally EMPTY by default — on first checkout E2E falls
+-- back to the "no markets available" empty state, which the smoke spec
+-- (e2e/authed/feed.spec.ts) accepts. To populate it with real-looking data:
+--
+--   1) From the polybet/ directory:
+--        npm run snapshot:refresh
+--   2) Inspect the generated INSERTs in this file.
+--   3) Commit.
+--
+-- The data is fully public (Polymarket markets, no PII) so it is safe to
+-- check into the repo. If you ever decide to anonymise event titles or
+-- categories, do it in the refresh script — never edit the dump by hand.
+
+-- NB: Migration 048 introduced `events`, 057 added `markets.sort_volume`
+-- (kept in sync via triggers — do NOT write sort_volume directly), 069
+-- added `markets.tag_slugs` (also denormalised — also do NOT write it
+-- directly). The refresh script should omit those columns from INSERTs
+-- and let the triggers fill them.

@@ -29,3 +29,10 @@ dist-ssr
 .vercel
 
 .worktrees/
+
+# Playwright artefacts + per-role auth state captured by e2e/auth.setup.ts
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/e2e/.auth/
