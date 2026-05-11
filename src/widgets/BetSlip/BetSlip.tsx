@@ -92,10 +92,11 @@ export const BetSlip = ({
   const handleConfirm = () => {
     if (isPending) return;
     if (!isValidStake || isInsufficient) return;
-    if (isUntradable) {
-      setSubmitError(t('markets.outcomeUntradable'));
-      return;
-    }
+    // Floor/ceiling prices are still a real order book on Polymarket — let
+    // the user confirm if they want to. The warning above the buttons makes
+    // the state visible; we no longer hard-block submission. The backend
+    // place-bet RPC will surface a transactional failure if liquidity has
+    // actually dried up by the time the bet is placed.
 
     // Detect stale odds: check if live cache has updated prices
     const liveOdds = getLiveOdds(queryClient, market, outcome.id);
@@ -127,7 +128,7 @@ export const BetSlip = ({
     );
   };
 
-  const isConfirmDisabled = !isValidStake || isInsufficient || isPending || isUntradable;
+  const isConfirmDisabled = !isValidStake || isInsufficient || isPending;
 
   return (
     <Modal isOpen onClose={onClose} title={t('markets.betSlipTitle')}>

@@ -5,7 +5,6 @@ import {
   getYesProbability,
   isBinaryMarket,
   isLongTailMarket,
-  isOutcomeTradable,
 } from '@/entities/market';
 import type { MyBet } from '@/entities/bet';
 import { Badge } from '@/shared/ui/Badge';
@@ -42,13 +41,17 @@ export const EventMarketRow = ({
     : null;
 
   const orderedOutcomes = getOrderedOutcomes(market);
+  // Per-screen tradability policy: on the event detail page we mirror
+  // Polymarket and let the user click any side (incl. floor/ceiling prices)
+  // — the order book is open at those prices and someone may want to take
+  // the trade. BetSlip surfaces the floor/ceiling state as a warning, but
+  // does not block submission. The feed (EventCard) keeps the hard gate.
   const outcomeButtons: OutcomeButton[] = orderedOutcomes.map((o) => ({
     id: o.id,
     name: o.name,
     price: o.price,
     effectiveOdds: o.effective_odds,
     isWinner: winnerOutcome?.id === o.id,
-    untradable: !isOutcomeTradable(o.price),
   }));
 
   const label = market.group_label ?? market.question;
@@ -143,9 +146,9 @@ export const EventMarketRow = ({
             isInteractive && onOutcomeClick
               ? (outcomeId) => {
                   const outcome = market.market_outcomes.find((o) => o.id === outcomeId);
-                  if (outcome && isOutcomeTradable(outcome.price)) {
-                    onOutcomeClick(market, outcome);
-                  }
+                  // Detail page: open BetSlip for any side, even at floor/ceiling.
+                  // BetSlip itself shows a warning when isOutcomeTradable is false.
+                  if (outcome) onOutcomeClick(market, outcome);
                 }
               : undefined
           }
