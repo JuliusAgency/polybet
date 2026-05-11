@@ -8,6 +8,7 @@ import { Button } from '@/shared/ui/Button';
 import { Badge } from '@/shared/ui/Badge';
 import { usePlaceBet } from '@/features/bet';
 import type { Market, MarketOutcome } from '@/entities/market';
+import { isOutcomeTradable } from '@/entities/market';
 import type { EventWithMarkets } from '@/features/bet';
 
 export interface BetSlipProps {
@@ -38,6 +39,19 @@ const getLiveOdds = (
   return liveOutcome?.effective_odds ?? null;
 };
 
+const getLivePrice = (
+  queryClient: ReturnType<typeof useQueryClient>,
+  market: Market,
+  outcomeId: string
+): number | null => {
+  const eventData = queryClient.getQueryData<EventWithMarkets>(['event', market.event_id]);
+  if (!eventData) return null;
+  const liveMarket = eventData.markets.find((m) => m.id === market.id);
+  if (!liveMarket) return null;
+  const liveOutcome = liveMarket.market_outcomes?.find((o) => o.id === outcomeId);
+  return liveOutcome?.price ?? null;
+};
+
 export const BetSlip = ({
   market,
   outcome,
@@ -57,6 +71,12 @@ export const BetSlip = ({
   const lockedOddsRef = useRef(outcome.effective_odds);
   const displayOdds = oddsAtConfirm ?? lockedOddsRef.current;
 
+  // Re-check tradability against the live cache so a 30s-stale parent screen
+  // can't keep the slip clickable after the market has gone illiquid.
+  const livePrice = getLivePrice(queryClient, market, outcome.id);
+  const effectivePrice = livePrice ?? outcome.price;
+  const isUntradable = !isOutcomeTradable(effectivePrice);
+
   const stake = parseStake(amount);
   const isValidStake = stake !== null;
   const isInsufficient = isValidStake && stake! > availableBalance;
@@ -72,6 +92,10 @@ export const BetSlip = ({
   const handleConfirm = () => {
     if (isPending) return;
     if (!isValidStake || isInsufficient) return;
+    if (isUntradable) {
+      setSubmitError(t('markets.outcomeUntradable'));
+      return;
+    }
 
     // Detect stale odds: check if live cache has updated prices
     const liveOdds = getLiveOdds(queryClient, market, outcome.id);
@@ -103,7 +127,7 @@ export const BetSlip = ({
     );
   };
 
-  const isConfirmDisabled = !isValidStake || isInsufficient || isPending;
+  const isConfirmDisabled = !isValidStake || isInsufficient || isPending || isUntradable;
 
   return (
     <Modal isOpen onClose={onClose} title={t('markets.betSlipTitle')}>
@@ -207,6 +231,13 @@ export const BetSlip = ({
               {potentialPayout.toFixed(2)}
             </span>
           </div>
+        )}
+
+        {/* Untradable warning shown on open, before user submits */}
+        {isUntradable && !submitError && (
+          <p className="text-sm" style={{ color: 'var(--color-error)' }}>
+            {t('markets.outcomeUntradable')}
+          </p>
         )}
 
         {/* Submit error */}

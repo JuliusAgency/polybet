@@ -18,6 +18,8 @@ export interface OutcomeButton {
   effectiveOdds: number;
   /** True if this outcome is the resolved winner. */
   isWinner?: boolean;
+  /** True if this side has no realistic liquidity (price near 0 or 1). */
+  untradable?: boolean;
 }
 
 type ButtonSize = 'sm' | 'lg' | 'xl';
@@ -170,8 +172,9 @@ export function OutcomeButtons({
   return (
     <div className="grid grid-cols-2 gap-2">
       {outcomes.map((o, index) => {
-        const isHovered = hoveredId === o.id && !disabled;
-        const baseStyle = tintFor(index, !!o.isWinner, disabled, longTail);
+        const isUntradable = !!o.untradable && !o.isWinner;
+        const isHovered = hoveredId === o.id && !disabled && !isUntradable;
+        const baseStyle = tintFor(index, !!o.isWinner, disabled || isUntradable, longTail);
         const style: CSSProperties = isHovered ? hoverTintFor(index) : baseStyle;
         const pct = showPercentage ? formatPrice(o.price, priceFormat) : null;
         const hoverPct = hoverShowsPercentage ? formatPrice(o.price, priceFormat) : null;
@@ -197,12 +200,14 @@ export function OutcomeButtons({
 
         const baseClass = `rounded-lg border ${styles.padY} ${styles.padX} transition-colors`;
 
-        if (disabled || !onClick) {
+        if (disabled || isUntradable || !onClick) {
+          const dimmed = (disabled || isUntradable) && !o.isWinner;
           return (
             <div
               key={o.id}
               className={baseClass}
-              style={{ ...style, opacity: disabled && !o.isWinner ? 0.7 : 1 }}
+              style={{ ...style, opacity: dimmed ? 0.55 : 1 }}
+              aria-disabled={isUntradable || undefined}
             >
               {body}
             </div>

@@ -5,6 +5,7 @@ import {
   getYesProbability,
   isBinaryMarket,
   isLongTailMarket,
+  isOutcomeTradable,
 } from '@/entities/market';
 import type { MyBet } from '@/entities/bet';
 import { Badge } from '@/shared/ui/Badge';
@@ -47,6 +48,7 @@ export const EventMarketRow = ({
     price: o.price,
     effectiveOdds: o.effective_odds,
     isWinner: winnerOutcome?.id === o.id,
+    untradable: !isOutcomeTradable(o.price),
   }));
 
   const label = market.group_label ?? market.question;
@@ -141,7 +143,9 @@ export const EventMarketRow = ({
             isInteractive && onOutcomeClick
               ? (outcomeId) => {
                   const outcome = market.market_outcomes.find((o) => o.id === outcomeId);
-                  if (outcome) onOutcomeClick(market, outcome);
+                  if (outcome && isOutcomeTradable(outcome.price)) {
+                    onOutcomeClick(market, outcome);
+                  }
                 }
               : undefined
           }

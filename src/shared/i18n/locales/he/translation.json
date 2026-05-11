@@ -237,6 +237,7 @@
     "potentialPayout": "תשואה פוטנציאלית",
     "confirmBet": "אשר הימור",
     "oddsChanged": "המקדמים עודכנו ל-{{odds}}. לחץ אישור שוב כדי להמשיך.",
+    "outcomeUntradable": "תוצאה זו אינה זמינה עוד למסחר — היחס הגיע לרצפה. בחר שוק אחר.",
     "betPlaced": "ההימור הונח בהצלחה!",
     "filterAll": "הכל",
     "filterOpen": "פתוח",
