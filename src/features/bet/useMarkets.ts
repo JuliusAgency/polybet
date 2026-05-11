@@ -72,11 +72,24 @@ export function useMarkets(
         query = query.eq('category', categoryFilter);
       }
 
+      const isTrendingFilter = tagSlugFilter === TRENDING_TAG_SLUG;
+
       if (tagSlugFilter && !isClosingTodayFilter) {
-        // Array containment on the denormalized markets.tag_slugs column
-        // (migration 069). Hits idx_markets_tag_slugs_visible (GIN) and
-        // avoids the events nested loop that previously timed out under load.
-        query = query.contains('tag_slugs', [tagSlugFilter]);
+        if (isTrendingFilter) {
+          // Trending = "currently featured on Polymarket". `trending_rank` is
+          // populated by `set_events_trending_rankings` (migration 075) and
+          // cleared for events that drop off the featured list — so this
+          // filter naturally tracks Polymarket's current selection instead
+          // of accumulating every event that was ever featured (which the
+          // sticky `tag_slugs` would do — `bulk_upsert_events` union-merges
+          // tags, never removes them).
+          query = query.not('trending_rank', 'is', null);
+        } else {
+          // Array containment on the denormalized markets.tag_slugs column
+          // (migration 069). Hits idx_markets_tag_slugs_visible (GIN) and
+          // avoids the events nested loop that previously timed out under load.
+          query = query.contains('tag_slugs', [tagSlugFilter]);
+        }
       }
 
       if (isClosingTodayFilter) {
@@ -91,8 +104,6 @@ export function useMarkets(
           .gte('close_at', todayStart.toISOString())
           .lt('close_at', tomorrowStart.toISOString());
       }
-
-      const isTrendingFilter = tagSlugFilter === TRENDING_TAG_SLUG;
 
       if (isTrendingFilter) {
         // Trending: order by Polymarket's curated rank first, then by 24h
