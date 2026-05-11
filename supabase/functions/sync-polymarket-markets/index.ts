@@ -138,9 +138,15 @@ async function syncTrendingRankings(
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+// Floor at 0.01 — see refresh-markets/index.ts and market-tracker
+// batchWriter.ts. Keeps odds bounded so a near-resolved losing side can't
+// surface as 2000x payout.
+const MIN_TRADABLE_PRICE = 0.01;
+
 function priceToOdds(price: number): number {
   if (!Number.isFinite(price) || price <= 0 || price > 1) return 1;
-  return 1 / price;
+  const clamped = Math.max(MIN_TRADABLE_PRICE, price);
+  return 1 / clamped;
 }
 
 function parseJsonField<T>(value: string | null | undefined, fallback: T): T {

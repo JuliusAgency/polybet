@@ -34,17 +34,15 @@ function deriveMarketStatus(gm: GammaMarket): 'open' | 'closed' | 'resolved' {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-// Mirror Polymarket's `0¢ / 100¢` clamp by capping the implied odds into
-// [1.01, 100]. Stored `price` keeps the raw probability so the UI still shows
-// the cents accurately; only `odds` / `effective_odds` are bounded so a
-// near-resolved market can't surface a 2000x payout. See market-tracker
-// `batchWriter.ts` for the matching server-side definition.
+// Floor `price` at 0.01 before computing odds so an almost-resolved outcome
+// can't surface as 2000x payout. The high side is left untouched — buying a
+// near-certain outcome is a real bet, just with near-zero EV. See market-
+// tracker `batchWriter.ts` for the matching server-side definition.
 const MIN_TRADABLE_PRICE = 0.01;
-const MAX_TRADABLE_PRICE = 1 - MIN_TRADABLE_PRICE;
 
 function priceToOdds(price: number): number {
   if (!Number.isFinite(price) || price <= 0 || price > 1) return 1;
-  const clamped = Math.min(MAX_TRADABLE_PRICE, Math.max(MIN_TRADABLE_PRICE, price));
+  const clamped = Math.max(MIN_TRADABLE_PRICE, price);
   return 1 / clamped;
 }
 
