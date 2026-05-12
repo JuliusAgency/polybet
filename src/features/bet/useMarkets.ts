@@ -20,9 +20,9 @@ interface DefaultCursor {
 interface TrendingCursor {
   kind: 'trending';
   // null trending_rank ranks last; we encode "ranked" pages first, then a
-  // separate "unranked" stretch sorted by volume_24hr DESC.
+  // separate "unranked" stretch sorted by sort_volume DESC.
   lastTrendingRank: number | null;
-  lastVolume24hr: number | null;
+  lastSortVolume: number | null;
   lastId: string;
 }
 
@@ -76,14 +76,14 @@ export function useMarkets(
 
       if (tagSlugFilter && !isClosingTodayFilter) {
         if (isTrendingFilter) {
-          // Trending = "currently featured on Polymarket". `trending_rank` is
-          // populated by `set_events_trending_rankings` (migration 075) and
-          // cleared for events that drop off the featured list — so this
-          // filter naturally tracks Polymarket's current selection instead
-          // of accumulating every event that was ever featured (which the
-          // sticky `tag_slugs` would do — `bulk_upsert_events` union-merges
-          // tags, never removes them).
-          query = query.not('trending_rank', 'is', null);
+          // Trending = Polymarket featured first (trending_rank ASC, populated
+          // by `set_events_trending_rankings`, migration 075/076), followed by
+          // the rest of visible markets ordered by sort_volume DESC.
+          // sort_volume is denormalized from events.volume (migration 057) and
+          // is populated for every visible market — unlike events.volume_24hr,
+          // which is only written for events currently in Polymarket's
+          // featured set. The compound ORDER BY + cursor logic below handle
+          // the ranked → unranked transition in a single query.
         } else {
           // Array containment on the denormalized markets.tag_slugs column
           // (migration 069). Hits idx_markets_tag_slugs_visible (GIN) and
@@ -106,34 +106,37 @@ export function useMarkets(
       }
 
       if (isTrendingFilter) {
-        // Trending: order by Polymarket's curated rank first, then by 24h
-        // volume (Bug 5). Cursor is (trending_rank ASC NULLS LAST,
-        // volume_24hr DESC NULLS LAST, id DESC). PostgREST has no native
+        // Trending: order by Polymarket's curated rank first, then by event
+        // sort_volume (so the unranked tail is meaningfully ordered by
+        // popularity). Cursor is (trending_rank ASC NULLS LAST,
+        // sort_volume DESC NULLS LAST, id DESC). PostgREST has no native
         // "nulls last" for the ordering used in keyset comparisons, so we
         // express NULL handling explicitly via the cursor branch.
         if (pageParam && pageParam.kind === 'trending') {
-          const { lastTrendingRank: tr, lastVolume24hr: v24, lastId: i } = pageParam;
+          const { lastTrendingRank: tr, lastSortVolume: sv, lastId: i } = pageParam;
           if (tr != null) {
             // Within the ranked block: strictly greater rank (worse), or same
-            // rank with smaller volume_24hr / id.
+            // rank with smaller sort_volume / id, or anything in the unranked
+            // tail (trending_rank IS NULL) — which comes after the ranked block
+            // because of NULLS LAST ordering.
             query = query.or(
               `trending_rank.gt.${tr},` +
-                `and(trending_rank.eq.${tr},volume_24hr.lt.${v24 ?? 0}),` +
-                `and(trending_rank.eq.${tr},volume_24hr.eq.${v24 ?? 0},id.lt.${i}),` +
+                `and(trending_rank.eq.${tr},sort_volume.lt.${sv ?? 0}),` +
+                `and(trending_rank.eq.${tr},sort_volume.eq.${sv ?? 0},id.lt.${i}),` +
                 `trending_rank.is.null`
             );
           } else {
             // Past the ranked block — staying in NULL-rank territory, sort
-            // by volume_24hr DESC then id DESC.
+            // by sort_volume DESC then id DESC.
             query = query
               .is('trending_rank', null)
-              .or(`volume_24hr.lt.${v24 ?? 0},` + `and(volume_24hr.eq.${v24 ?? 0},id.lt.${i})`);
+              .or(`sort_volume.lt.${sv ?? 0},` + `and(sort_volume.eq.${sv ?? 0},id.lt.${i})`);
           }
         }
 
         query = query
           .order('trending_rank', { ascending: true, nullsFirst: false })
-          .order('volume_24hr', { ascending: false, nullsFirst: false })
+          .order('sort_volume', { ascending: false, nullsFirst: false })
           .order('id', { ascending: false })
           .limit(MARKETS_PAGE_LIMIT);
       } else {
@@ -174,7 +177,7 @@ export function useMarkets(
         return {
           kind: 'trending',
           lastTrendingRank: last.trending_rank ?? null,
-          lastVolume24hr: last.volume_24hr ?? null,
+          lastSortVolume: last.sort_volume ?? null,
           lastId: last.id,
         };
       }
