@@ -2,13 +2,15 @@ import { describe, expect, it } from 'vitest';
 import type { PoolClient } from 'pg';
 import { withTransaction } from '../helpers/pg';
 
-// Regression coverage for migration 20260514091027_place_bet_hard_guards.
+// Regression coverage for place_bet hard guards (originally migration
+// 20260514091027, floor lowered for Polymarket parity in
+// 20260514160116_lower_min_tradable_price).
 //
 // place_bet now enforces (in order):
 //   1. close_at NOT NULL AND > now()                 [`Market is not available for betting`]
 //   2. market.last_synced_at within 3 min            [`Market price feed is stale`]
-//   3. price in [0.01, 0.99)                         [`Outcome is untradable (price at floor|ceiling)`]
-//   4. effective_odds <= 110                         [`Outcome odds out of bounds`]
+//   3. price in [0.001, 0.99)                        [`Outcome is untradable (price at floor|ceiling)`]
+//   4. effective_odds <= 1010                        [`Outcome odds out of bounds`]
 //   5. outcome.updated_at within 3 min               [`Outcome price feed is stale`]
 //   6. optional drift |expected - actual| / actual <= 2 %  [`Odds changed`, ERRCODE P0002]
 //
@@ -97,7 +99,7 @@ async function callPlaceBet(c: PoolClient, args: PlaceBetArgs): Promise<string> 
 }
 
 describe('place_bet hard guards (migration 20260514091027)', () => {
-  it('rejects when effective_odds exceeds the 110 cap', async () => {
+  it('rejects when effective_odds exceeds the 1010 cap', async () => {
     await withTransaction(async (c) => {
       const { marketId, outcomeId } = await seedFreshMarket(
         c,
@@ -111,17 +113,46 @@ describe('place_bet hard guards (migration 20260514091027)', () => {
     });
   });
 
-  it('rejects when price is at the floor (< 0.01)', async () => {
+  it('rejects when price is below the floor (< 0.001)', async () => {
+    await withTransaction(async (c) => {
+      const { marketId, outcomeId } = await seedFreshMarket(
+        c,
+        {},
+        {
+          price: 0.0005,
+          effective_odds: 500,
+        }
+      );
+      await expect(callPlaceBet(c, { marketId, outcomeId })).rejects.toThrow(/untradable.*floor/i);
+    });
+  });
+
+  it('accepts a sub-cent price at 0.005 (Polymarket parity)', async () => {
+    // Regression for QA bug: 0.5¢ outcomes used to be rejected at the 0.01
+    // floor. After the parity migration the RPC must accept them.
     await withTransaction(async (c) => {
       const { marketId, outcomeId } = await seedFreshMarket(
         c,
         {},
         {
           price: 0.005,
-          effective_odds: 50,
+          effective_odds: 200,
         }
       );
-      await expect(callPlaceBet(c, { marketId, outcomeId })).rejects.toThrow(/untradable.*floor/i);
+      const betId = await callPlaceBet(c, {
+        marketId,
+        outcomeId,
+        stake: 1,
+        expectedOdds: 200,
+      });
+      expect(betId).toMatch(/^[0-9a-f-]{36}$/);
+
+      const bet = await c.query<{ locked_odds: string; potential_payout: string }>(
+        'SELECT locked_odds, potential_payout FROM bets WHERE id = $1',
+        [betId]
+      );
+      expect(Number(bet.rows[0].locked_odds)).toBe(200);
+      expect(Number(bet.rows[0].potential_payout)).toBe(200);
     });
   });
 

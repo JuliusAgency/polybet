@@ -74,17 +74,17 @@ describe('EventCard — tradability gating on multi-row body', () => {
   // Mid-market candidate: both Yes and No prices are inside the tradable
   // band, so the buttons render as real <button> elements that fire onClick.
   const tradable = market('tradable', 'Tradable Candidate', 0.45, 'Tradable Candidate');
-  // Floor candidate: Yes price 0.003 < MIN_TRADABLE_PRICE (0.01), so the
-  // Yes side must render as a non-interactive aria-disabled div. This is
-  // the exact shape that caused the original feed-card bug.
-  const floor = market('floor', 'Floor Candidate', 0.003, 'Floor Candidate');
+  // Sub-cent candidate: Yes at 0.5¢ stays tradable (Polymarket parity).
+  // No at 99.5¢ lands at the ceiling and is non-interactive.
+  const subCent = market('subcent', 'Sub-cent Candidate', 0.005, 'Sub-cent Candidate');
+  // True-floor candidate: Yes at 0.05¢ is below MIN_TRADABLE_PRICE (0.001)
+  // and No at 99.95¢ is above the ceiling — both sides non-interactive.
+  const floor = market('floor', 'Floor Candidate', 0.0005, 'Floor Candidate');
 
-  it('renders Yes side as aria-disabled (not a button) when price is at the floor', () => {
+  it('renders Yes side as aria-disabled (not a button) when price is below the floor', () => {
     renderWithProviders(<EventCard event={event} markets={[tradable, floor]} />);
 
     const row = findRow('Floor Candidate');
-    // The disabled Yes side: present in the DOM, marked aria-disabled, and
-    // crucially NOT exposed as a button — so a click cannot reach BetSlip.
     expect(within(row).queryByRole('button', { name: /yes/i })).toBeNull();
     expect(within(row).getByText(/yes/i).closest('[aria-disabled="true"]')).not.toBeNull();
   });
@@ -106,11 +106,29 @@ describe('EventCard — tradability gating on multi-row body', () => {
     expect(clickedOutcome.name).toBe('Yes');
   });
 
-  it('disables BOTH sides for a long-tail candidate (Yes at floor, No at ceiling)', () => {
-    // When Yes = 0.3¢ the complementary No = 99.7¢ — both prices land outside
-    // the tradable band [0.01, 0.99]. The whole row becomes non-interactive
-    // by design: there is no liquid side to bet on. This is the exact
-    // behaviour the BetSlip then surfaces if the gate is bypassed.
+  it('keeps sub-cent Yes side clickable (Polymarket parity)', async () => {
+    // Regression for QA bug: Yes at 0.5% on a long-tail market must remain
+    // a clickable button — Polymarket itself keeps both sides live there.
+    // Both Yes (0.5¢) and No (99.5¢) are inside the tradable band [0.001, 1).
+    const onOutcomeClick = vi.fn();
+    const user = userEvent.setup();
+    renderWithProviders(
+      <EventCard event={event} markets={[tradable, subCent]} onOutcomeClick={onOutcomeClick} />
+    );
+
+    const row = findRow('Sub-cent Candidate');
+    const yesBtn = within(row).getByRole('button', { name: /yes/i });
+    await user.click(yesBtn);
+
+    expect(onOutcomeClick).toHaveBeenCalledTimes(1);
+    const [, clickedOutcome] = onOutcomeClick.mock.calls[0];
+    expect(clickedOutcome.name).toBe('Yes');
+    // No side is also tradable (Polymarket allows betting on near-certain
+    // outcomes — low EV but legitimate). Must remain a button.
+    expect(within(row).getByRole('button', { name: /no/i })).toBeInTheDocument();
+  });
+
+  it('disables BOTH sides when Yes is below floor and No is above ceiling', () => {
     renderWithProviders(<EventCard event={event} markets={[tradable, floor]} />);
 
     const row = findRow('Floor Candidate');

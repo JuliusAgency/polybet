@@ -94,7 +94,10 @@ describe('BetSlip — guards against stale/untradable odds', () => {
   });
 
   it('disables Confirm when the outcome price is at the floor', async () => {
-    const outcome = makeOutcome({ price: 0.005, effective_odds: 200 });
+    // Floor is 0.001 (Polymarket parity). 0.0005 is below it and must trigger
+    // the untradable warning + disabled Confirm. A 0.005 price is now legal
+    // and would let the test pass through to the happy path.
+    const outcome = makeOutcome({ price: 0.0005, effective_odds: 2000 });
     const market = makeMarket(outcome);
 
     renderWithProviders(

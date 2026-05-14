@@ -138,10 +138,10 @@ async function syncTrendingRankings(
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-// Floor at 0.01 — see refresh-markets/index.ts and market-tracker
-// batchWriter.ts. Keeps odds bounded so a near-resolved losing side can't
-// surface as 2000x payout.
-const MIN_TRADABLE_PRICE = 0.01;
+// Floor at 0.001 (0.1¢) for Polymarket parity — preserves sub-cent prices
+// so the UI can render a real 0.5¢ outcome instead of clamping it up to 1¢.
+// See refresh-markets/index.ts and market-tracker batchWriter.ts.
+const MIN_TRADABLE_PRICE = 0.001;
 
 function priceToOdds(price: number): number {
   if (!Number.isFinite(price) || price <= 0 || price > 1) return 1;

@@ -1,15 +1,11 @@
 import type { Market, MarketOutcome } from './types';
 
-// A side becomes effectively untradable on Polymarket once its price collapses
-// near 0¢ — the order book thins out, asks disappear, and a click would
-// trade at displayed odds of 100x-2000x with practically no chance of winning.
-// That's the dangerous direction: stake 100 → potential payout 200_000.
-//
-// The OPPOSITE high-price side (e.g. 99.8¢) stays legitimate to buy. Yes,
-// the EV is awful (odds ≈ 1.002), but it's a real bet, the order book is
-// deep, and Polymarket itself keeps the buy button active. So we only block
-// the low side; the dominant side is always tradable as long as price < 1.
-export const MIN_TRADABLE_PRICE = 0.01;
+// Polymarket parity: a sub-cent side (e.g. 0.5¢) stays clickable — the order
+// book on Polymarket itself keeps both sides active down to 0.1¢. We only
+// guard against the true-zero floor where there is literally nothing to buy.
+// Antifraud guarantees (drift tolerance, 3-min outcome staleness, 30s frontend
+// polling) live in the place_bet RPC, not in this UI gate.
+export const MIN_TRADABLE_PRICE = 0.001;
 
 export function isOutcomeTradable(price: number | null | undefined): boolean {
   if (price == null || !Number.isFinite(price)) return true;

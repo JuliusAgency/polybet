@@ -34,11 +34,12 @@ function deriveMarketStatus(gm: GammaMarket): 'open' | 'closed' | 'resolved' {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-// Floor `price` at 0.01 before computing odds so an almost-resolved outcome
-// can't surface as 2000x payout. The high side is left untouched — buying a
-// near-certain outcome is a real bet, just with near-zero EV. See market-
-// tracker `batchWriter.ts` for the matching server-side definition.
-const MIN_TRADABLE_PRICE = 0.01;
+// Floor `price` at 0.001 (0.1¢) for Polymarket parity — sub-cent prices are
+// real and tradable on Polymarket, so we preserve them through the odds
+// computation. The floor only guards against true-zero / negative inputs.
+// Antifraud guarantees live in the place_bet RPC (drift tolerance + 3-min
+// staleness). See market-tracker `batchWriter.ts` for the matching definition.
+const MIN_TRADABLE_PRICE = 0.001;
 
 function priceToOdds(price: number): number {
   if (!Number.isFinite(price) || price <= 0 || price > 1) return 1;
