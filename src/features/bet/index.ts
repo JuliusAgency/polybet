@@ -16,7 +16,7 @@ export type { AllowedCategoryTag } from './useAllowedCategoryTags';
 export { useUserBalance } from './useUserBalance';
 export type { UserBalance } from './useUserBalance';
 
-export { usePlaceBet } from './usePlaceBet';
+export { usePlaceBet, OddsDriftError } from './usePlaceBet';
 export type { PlaceBetInput } from './usePlaceBet';
 
 export { useMyBets } from './useMyBets';

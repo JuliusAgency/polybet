@@ -1001,11 +1001,18 @@ async function upsertMarket(
   const marketStatus: 'open' | 'closed' =
     (gm.closed && !gm.resolved) || (status === 'open' && isExpiredByTime) ? 'closed' : status;
 
+  // Impute a far-future close_at when Polymarket omits endDate. NULL on an
+  // open market is treated by place_bet as a sync defect, so we never write
+  // NULL for an open row. Once Polymarket publishes a real endDate the next
+  // sync will overwrite this placeholder. Resolved-path writer (below) keeps
+  // its own ?? null because place_bet ignores closed/resolved markets anyway.
+  const imputedCloseAt =
+    gm.endDate ?? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
   const marketRow = {
     polymarket_id: gm.conditionId,
     question: gm.question,
     status: marketStatus,
-    close_at: gm.endDate ?? null,
+    close_at: marketStatus === 'open' ? imputedCloseAt : (gm.endDate ?? null),
     liquidity: parseFloat(String(gm.liquidity)) || 0,
     volume: parseFloat(String(gm.volume)) || 0,
     image_url: gm.image ?? null,

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
@@ -6,7 +6,7 @@ import { Modal } from '@/shared/ui/Modal';
 import { Input } from '@/shared/ui/Input';
 import { Button } from '@/shared/ui/Button';
 import { Badge } from '@/shared/ui/Badge';
-import { usePlaceBet } from '@/features/bet';
+import { usePlaceBet, OddsDriftError } from '@/features/bet';
 import type { Market, MarketOutcome } from '@/entities/market';
 import { isOutcomeTradable } from '@/entities/market';
 import type { EventWithMarkets } from '@/features/bet';
@@ -19,6 +19,12 @@ export interface BetSlipProps {
   onSuccess: () => void;
 }
 
+// Match the backend's odds_drift_tolerance from
+// 20260514091027_place_bet_hard_guards.sql. Constants live in sync; if the
+// backend tunes the threshold, mirror it here so the user does not get a
+// silent server rejection after a passing client-side check.
+const ODDS_DRIFT_TOLERANCE = 0.02;
+
 const parseStake = (value: string): number | null => {
   // Reject anything that isn't a plain decimal number (no commas, no trailing chars)
   if (!/^\d+(\.\d+)?$/.test(value.trim())) return null;
@@ -26,30 +32,16 @@ const parseStake = (value: string): number | null => {
   return isFinite(n) && n > 0 ? n : null;
 };
 
-const getLiveOdds = (
+const getLiveOutcome = (
   queryClient: ReturnType<typeof useQueryClient>,
   market: Market,
   outcomeId: string
-): number | null => {
+): MarketOutcome | null => {
   const eventData = queryClient.getQueryData<EventWithMarkets>(['event', market.event_id]);
   if (!eventData) return null;
   const liveMarket = eventData.markets.find((m) => m.id === market.id);
   if (!liveMarket) return null;
-  const liveOutcome = liveMarket.market_outcomes?.find((o) => o.id === outcomeId);
-  return liveOutcome?.effective_odds ?? null;
-};
-
-const getLivePrice = (
-  queryClient: ReturnType<typeof useQueryClient>,
-  market: Market,
-  outcomeId: string
-): number | null => {
-  const eventData = queryClient.getQueryData<EventWithMarkets>(['event', market.event_id]);
-  if (!eventData) return null;
-  const liveMarket = eventData.markets.find((m) => m.id === market.id);
-  if (!liveMarket) return null;
-  const liveOutcome = liveMarket.market_outcomes?.find((o) => o.id === outcomeId);
-  return liveOutcome?.price ?? null;
+  return liveMarket.market_outcomes?.find((o) => o.id === outcomeId) ?? null;
 };
 
 export const BetSlip = ({
@@ -63,18 +55,18 @@ export const BetSlip = ({
   const queryClient = useQueryClient();
   const [amount, setAmount] = useState('');
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [oddsAtConfirm, setOddsAtConfirm] = useState<number | null>(null);
+  // displayOdds is the price the user has acknowledged. Starts at the value
+  // that opened the slip; can be replaced by a drift detection so the user
+  // sees the corrected number before submitting.
+  const [displayOdds, setDisplayOdds] = useState(outcome.effective_odds);
 
-  const { mutate: placeBet, isPending } = usePlaceBet();
-
-  // Lock displayed odds at the moment the slip opened
-  const lockedOddsRef = useRef(outcome.effective_odds);
-  const displayOdds = oddsAtConfirm ?? lockedOddsRef.current;
+  const { mutateAsync: placeBet, isPending } = usePlaceBet();
 
   // Re-check tradability against the live cache so a 30s-stale parent screen
-  // can't keep the slip clickable after the market has gone illiquid.
-  const livePrice = getLivePrice(queryClient, market, outcome.id);
-  const effectivePrice = livePrice ?? outcome.price;
+  // can't keep the slip clickable after the market has gone illiquid. This
+  // is a UX gate; the authoritative check is in the place_bet RPC.
+  const liveOutcome = getLiveOutcome(queryClient, market, outcome.id);
+  const effectivePrice = liveOutcome?.price ?? outcome.price;
   const isUntradable = !isOutcomeTradable(effectivePrice);
 
   const stake = parseStake(amount);
@@ -89,46 +81,71 @@ export const BetSlip = ({
     setAmount(availableBalance.toFixed(2));
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (isPending) return;
     if (!isValidStake || isInsufficient) return;
-    // Floor/ceiling prices are still a real order book on Polymarket — let
-    // the user confirm if they want to. The warning above the buttons makes
-    // the state visible; we no longer hard-block submission. The backend
-    // place-bet RPC will surface a transactional failure if liquidity has
-    // actually dried up by the time the bet is placed.
-
-    // Detect stale odds: check if live cache has updated prices
-    const liveOdds = getLiveOdds(queryClient, market, outcome.id);
-    if (liveOdds !== null && Math.abs(liveOdds - displayOdds) > 0.001) {
-      // Show updated odds and require a second confirmation
-      setOddsAtConfirm(liveOdds);
-      setSubmitError(t('markets.oddsChanged', { odds: liveOdds.toFixed(2) }));
+    if (isUntradable) {
+      setSubmitError(t('markets.outcomeUntradable'));
       return;
     }
 
+    // Pre-submit refresh: force-fetch the latest event so the cache reflects
+    // server-side prices, not the 30s-stale snapshot. Closes the race where
+    // refresh-markets ticked between BetSlip mount and Confirm click.
     setSubmitError(null);
-    placeBet(
-      { marketId: market.id, outcomeId: outcome.id, stake: stake! },
-      {
-        onSuccess: () => {
-          toast.success(
-            t('bet.notification.placed', { outcome: outcome.name, stake: stake!.toFixed(2) }),
-            {
-              duration: 5000,
-            }
-          );
-          onSuccess();
-          onClose();
-        },
-        onError: (err) => {
-          setSubmitError(err instanceof Error ? err.message : t('common.unknownError'));
-        },
+    try {
+      await queryClient.refetchQueries({ queryKey: ['event', market.event_id] });
+    } catch {
+      // Ignore — the server-side guard still protects us if cache is stale.
+    }
+
+    const fresh = getLiveOutcome(queryClient, market, outcome.id);
+    if (fresh && fresh.price !== null && !isOutcomeTradable(fresh.price)) {
+      setSubmitError(t('markets.outcomeUntradable'));
+      setDisplayOdds(fresh.effective_odds);
+      return;
+    }
+
+    if (fresh && fresh.effective_odds > 0) {
+      const drift = Math.abs(fresh.effective_odds - displayOdds) / displayOdds;
+      if (drift > ODDS_DRIFT_TOLERANCE) {
+        // Surface the new number and require a second click. We do NOT
+        // submit on this pass — the user must explicitly accept the moved
+        // odds to prevent silent price-change surprises.
+        setDisplayOdds(fresh.effective_odds);
+        setSubmitError(t('markets.oddsChanged', { odds: fresh.effective_odds.toFixed(2) }));
+        return;
       }
-    );
+    }
+
+    try {
+      await placeBet({
+        marketId: market.id,
+        outcomeId: outcome.id,
+        stake: stake!,
+        expectedOdds: displayOdds,
+      });
+      toast.success(
+        t('bet.notification.placed', { outcome: outcome.name, stake: stake!.toFixed(2) }),
+        { duration: 5000 }
+      );
+      onSuccess();
+      onClose();
+    } catch (err) {
+      if (err instanceof OddsDriftError) {
+        if (err.latestOdds !== null) setDisplayOdds(err.latestOdds);
+        setSubmitError(
+          t('markets.oddsChanged', {
+            odds: err.latestOdds !== null ? err.latestOdds.toFixed(2) : '—',
+          })
+        );
+        return;
+      }
+      setSubmitError(err instanceof Error ? err.message : t('common.unknownError'));
+    }
   };
 
-  const isConfirmDisabled = !isValidStake || isInsufficient || isPending;
+  const isConfirmDisabled = !isValidStake || isInsufficient || isPending || isUntradable;
 
   return (
     <Modal isOpen onClose={onClose} title={t('markets.betSlipTitle')}>
@@ -148,6 +165,21 @@ export const BetSlip = ({
           <Badge variant="open">{displayOdds.toFixed(2)}</Badge>
         </div>
 
+        {/* Untradable: prominent block above the stake input so the user
+            sees it before bothering to enter an amount. */}
+        {isUntradable && (
+          <div
+            className="rounded-lg border p-3 text-sm"
+            style={{
+              borderColor: 'var(--color-error)',
+              color: 'var(--color-error)',
+              backgroundColor: 'color-mix(in oklch, var(--color-error) 8%, var(--color-bg-base))',
+            }}
+          >
+            {t('markets.outcomeUntradable')}
+          </div>
+        )}
+
         {/* Stake input */}
         <div className="flex flex-col gap-2">
           <Input
@@ -164,6 +196,7 @@ export const BetSlip = ({
             }
             error={isInsufficient ? t('markets.insufficientBalance') : undefined}
             placeholder="0.00"
+            disabled={isUntradable}
           />
 
           {/* All In button */}
@@ -172,6 +205,7 @@ export const BetSlip = ({
             onClick={handleAllIn}
             type="button"
             className="self-start text-sm"
+            disabled={isUntradable}
           >
             {t('markets.allIn')}
           </Button>
@@ -234,14 +268,7 @@ export const BetSlip = ({
           </div>
         )}
 
-        {/* Untradable warning shown on open, before user submits */}
-        {isUntradable && !submitError && (
-          <p className="text-sm" style={{ color: 'var(--color-error)' }}>
-            {t('markets.outcomeUntradable')}
-          </p>
-        )}
-
-        {/* Submit error */}
+        {/* Submit error (also reused for the drift-retry copy) */}
         {submitError && (
           <p className="text-sm" style={{ color: 'var(--color-error)' }}>
             {submitError}
