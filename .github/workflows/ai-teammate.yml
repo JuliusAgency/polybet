@@ -1,0 +1,111 @@
+name: ai-teammate
+
+# Worker workflow. Dispatched by SM (sm.yml) or run manually for a single agent.
+on:
+  workflow_dispatch:
+    inputs:
+      config_file:
+        description: 'Agent config file (e.g., agents/story_development.json)'
+        required: true
+        default: 'agents/story_development.json'
+      concurrency_key:
+        description: 'Concurrency key (usually ticket key, e.g., PET-7)'
+        required: false
+        default: 'manual'
+      project_key:
+        description: 'Project key override (e.g., PET)'
+        required: false
+        default: ''
+      encoded_config:
+        description: 'Base64-encoded JSON config override (used by SM dispatch)'
+        required: false
+        default: ''
+
+concurrency:
+  group: ai-teammate-${{ inputs.concurrency_key }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      JIRA_BASE_PATH: ${{ vars.JIRA_BASE_PATH }}
+      JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+      JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+      JIRA_AUTH_TYPE: ${{ vars.JIRA_AUTH_TYPE }}
+      AI_AGENT_PROVIDER: ${{ vars.AI_AGENT_PROVIDER }}
+      COPILOT_MODEL: ${{ vars.COPILOT_MODEL }}
+      COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+      GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+      # dmtools reads GitHub auth from SOURCE_GITHUB_* env vars (not GITHUB_TOKEN).
+      SOURCE_GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+      SOURCE_GITHUB_WORKSPACE: ${{ github.repository_owner }}
+      SOURCE_GITHUB_REPOSITORY: ${{ github.event.repository.name }}
+      SOURCE_GITHUB_BRANCH: main
+      DMTOOLS_INTEGRATIONS: 'jira,github,file'
+      PROJECT_KEY: ${{ inputs.project_key }}
+
+    steps:
+      - name: Checkout (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.PAT_TOKEN }}
+          fetch-depth: 0
+
+      - name: Install tools (java, node, dmtools, copilot)
+        # Pin dmtools to v1.7.184+ — older versions hit the deprecated Jira
+        # /rest/api/latest/search endpoint (Atlassian CHANGE-2046) and return empty.
+        run: bash agents/setup/install.sh java node dmtools:v1.7.184 copilot
+
+      - name: Configure git
+        run: |
+          git config --global user.name "AI Teammate"
+          git config --global user.email "agent.ai.native@gmail.com"
+
+      - name: Run agent
+        env:
+          ENCODED_CFG: ${{ inputs.encoded_config }}
+          CONFIG_FILE: ${{ inputs.config_file }}
+          CI_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        # dmtools `run <file> <encoded>` form: SM passes URL-encoded JSON overrides
+        # (e.g. {"params":{"inputJql":"key = PET-8"}}) that dmtools merges onto <file>.
+        #
+        # dmtools exits 0 even when the underlying CLI agent (copilot/cursor/codemie)
+        # bails or response.md is missing — it just posts an error comment to Jira.
+        # We need the workflow to surface those internal failures, so:
+        #   - pipefail catches a non-zero dmtools exit
+        #   - run.log is grepped for the specific internal-failure markers
+        run: |
+          set -o pipefail
+          if [ -n "$ENCODED_CFG" ]; then
+            echo "── encoded_config (URL-decoded preview) ──"
+            python3 -c "import os,urllib.parse; print(urllib.parse.unquote(os.environ['ENCODED_CFG']))"
+            dmtools --debug run "$CONFIG_FILE" "$ENCODED_CFG" --ciRunUrl "$CI_RUN_URL" 2>&1 | tee run.log
+          else
+            dmtools --debug run "$CONFIG_FILE" --ciRunUrl "$CI_RUN_URL" 2>&1 | tee run.log
+          fi
+
+          if grep -qE '\[ERROR\] CliExecutionHelper - Failed to execute CLI command|CLI output file \(response\.md\) is missing or empty.*requireCliOutputFile=true|Classic Personal Access Tokens.*are not supported by Copilot' run.log; then
+            echo "::error title=Agent CLI failed::The underlying CLI agent (copilot/cursor/codemie) failed or produced no response.md. See the Run agent log above."
+            exit 1
+          fi
+
+      - name: Upload run artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-teammate-${{ inputs.concurrency_key }}
+          path: |
+            outputs/
+            run.log
+            pr_body_tmp.md
+          if-no-files-found: ignore
+          retention-days: 7

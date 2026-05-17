@@ -1,0 +1,50 @@
+name: sm
+
+# Scrum Master orchestrator. Scans Jira every 20 minutes and dispatches
+# the right agent (via ai-teammate.yml) for each matching ticket.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/20 * * * *"
+
+concurrency:
+  group: sm-orchestrator
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      JIRA_BASE_PATH: ${{ vars.JIRA_BASE_PATH }}
+      JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+      JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+      JIRA_AUTH_TYPE: ${{ vars.JIRA_AUTH_TYPE }}
+      GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+      # dmtools reads GitHub auth from SOURCE_GITHUB_* env vars (not GITHUB_TOKEN).
+      SOURCE_GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+      SOURCE_GITHUB_WORKSPACE: ${{ github.repository_owner }}
+      SOURCE_GITHUB_REPOSITORY: ${{ github.event.repository.name }}
+      SOURCE_GITHUB_BRANCH: main
+      DMTOOLS_INTEGRATIONS: 'jira,github,file'
+
+    steps:
+      - name: Checkout (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.PAT_TOKEN }}
+
+      - name: Install tools (java, dmtools)
+        # Pin dmtools to v1.7.184+ — older versions hit the deprecated Jira
+        # /rest/api/latest/search endpoint (Atlassian CHANGE-2046) and return empty.
+        run: bash agents/setup/install.sh java dmtools:v1.7.184
+
+      - name: Run SM orchestrator
+        run: |
+          export CI_RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          dmtools --debug run agents/sm.json --ciRunUrl "$CI_RUN_URL"
