@@ -8,7 +8,7 @@ import { Button } from '@/shared/ui/Button';
 import { Badge } from '@/shared/ui/Badge';
 import { usePlaceBet, OddsDriftError } from '@/features/bet';
 import type { Market, MarketOutcome } from '@/entities/market';
-import { isOutcomeTradable } from '@/entities/market';
+import { MIN_TRADABLE_PRICE, isOutcomeTradable } from '@/entities/market';
 import type { EventWithMarkets } from '@/features/bet';
 
 export interface BetSlipProps {
@@ -24,6 +24,13 @@ export interface BetSlipProps {
 // backend tunes the threshold, mirror it here so the user does not get a
 // silent server rejection after a passing client-side check.
 const ODDS_DRIFT_TOLERANCE = 0.02;
+
+const getDisplayOdds = (source: Pick<MarketOutcome, 'price' | 'effective_odds'>): number => {
+  if (source.price != null && Number.isFinite(source.price) && source.price > 0 && source.price <= 1) {
+    return 1 / Math.max(MIN_TRADABLE_PRICE, source.price);
+  }
+  return source.effective_odds;
+};
 
 const parseStake = (value: string): number | null => {
   // Reject anything that isn't a plain decimal number (no commas, no trailing chars)
@@ -58,7 +65,7 @@ export const BetSlip = ({
   // displayOdds is the price the user has acknowledged. Starts at the value
   // that opened the slip; can be replaced by a drift detection so the user
   // sees the corrected number before submitting.
-  const [displayOdds, setDisplayOdds] = useState(outcome.effective_odds);
+  const [displayOdds, setDisplayOdds] = useState(getDisplayOdds(outcome));
 
   const { mutateAsync: placeBet, isPending } = usePlaceBet();
 
@@ -102,18 +109,23 @@ export const BetSlip = ({
     const fresh = getLiveOutcome(queryClient, market, outcome.id);
     if (fresh && fresh.price !== null && !isOutcomeTradable(fresh.price)) {
       setSubmitError(t('markets.outcomeUntradable'));
-      setDisplayOdds(fresh.effective_odds);
+      setDisplayOdds(getDisplayOdds(fresh));
       return;
     }
 
-    if (fresh && fresh.effective_odds > 0) {
-      const drift = Math.abs(fresh.effective_odds - displayOdds) / displayOdds;
+    if (fresh) {
+      const nextDisplayOdds = getDisplayOdds(fresh);
+      if (nextDisplayOdds <= 0) {
+        setSubmitError(t('common.unknownError'));
+        return;
+      }
+      const drift = Math.abs(nextDisplayOdds - displayOdds) / displayOdds;
       if (drift > ODDS_DRIFT_TOLERANCE) {
         // Surface the new number and require a second click. We do NOT
         // submit on this pass — the user must explicitly accept the moved
         // odds to prevent silent price-change surprises.
-        setDisplayOdds(fresh.effective_odds);
-        setSubmitError(t('markets.oddsChanged', { odds: fresh.effective_odds.toFixed(2) }));
+        setDisplayOdds(nextDisplayOdds);
+        setSubmitError(t('markets.oddsChanged', { odds: nextDisplayOdds.toFixed(2) }));
         return;
       }
     }
