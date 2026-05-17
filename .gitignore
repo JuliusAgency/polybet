@@ -36,3 +36,7 @@ dist-ssr
 /blob-report/
 /playwright/.cache/
 /e2e/.auth/
+
+# Local task artifacts
+/input/
+/cacheBasicJiraClient/

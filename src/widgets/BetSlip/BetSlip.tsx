@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
@@ -55,6 +55,7 @@ export const BetSlip = ({
   const queryClient = useQueryClient();
   const [amount, setAmount] = useState('');
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSyncingOdds, setIsSyncingOdds] = useState(Boolean(market.event_id));
   // displayOdds is the price the user has acknowledged. Starts at the value
   // that opened the slip; can be replaced by a drift detection so the user
   // sees the corrected number before submitting.
@@ -62,10 +63,28 @@ export const BetSlip = ({
 
   const { mutateAsync: placeBet, isPending } = usePlaceBet();
 
+  useEffect(() => {
+    if (!market.event_id) return;
+    let isActive = true;
+    void queryClient
+      .refetchQueries({ queryKey: ['event', market.event_id] })
+      .finally(() => isActive && setIsSyncingOdds(false));
+    return () => {
+      isActive = false;
+    };
+  }, [market.event_id, queryClient]);
+
   // Re-check tradability against the live cache so a 30s-stale parent screen
   // can't keep the slip clickable after the market has gone illiquid. This
   // is a UX gate; the authoritative check is in the place_bet RPC.
   const liveOutcome = getLiveOutcome(queryClient, market, outcome.id);
+  useEffect(() => {
+    if (!liveOutcome) return;
+    if (liveOutcome.effective_odds <= 0) return;
+    if (liveOutcome.effective_odds === displayOdds) return;
+    setDisplayOdds(liveOutcome.effective_odds);
+  }, [displayOdds, liveOutcome]);
+
   const effectivePrice = liveOutcome?.price ?? outcome.price;
   const isUntradable = !isOutcomeTradable(effectivePrice);
 
@@ -145,7 +164,8 @@ export const BetSlip = ({
     }
   };
 
-  const isConfirmDisabled = !isValidStake || isInsufficient || isPending || isUntradable;
+  const isConfirmDisabled =
+    !isValidStake || isInsufficient || isPending || isUntradable || isSyncingOdds;
 
   return (
     <Modal isOpen onClose={onClose} title={t('markets.betSlipTitle')}>
@@ -164,6 +184,19 @@ export const BetSlip = ({
           </span>
           <Badge variant="open">{displayOdds.toFixed(2)}</Badge>
         </div>
+
+        {isSyncingOdds && (
+          <div
+            className="rounded-lg border p-3 text-sm"
+            style={{
+              borderColor: 'var(--color-border)',
+              color: 'var(--color-text-secondary)',
+              backgroundColor: 'var(--color-bg-base)',
+            }}
+          >
+            {t('markets.refreshing')}
+          </div>
+        )}
 
         {/* Untradable: prominent block above the stake input so the user
             sees it before bothering to enter an amount. */}
@@ -196,7 +229,7 @@ export const BetSlip = ({
             }
             error={isInsufficient ? t('markets.insufficientBalance') : undefined}
             placeholder="0.00"
-            disabled={isUntradable}
+            disabled={isUntradable || isSyncingOdds}
           />
 
           {/* All In button */}
@@ -205,7 +238,7 @@ export const BetSlip = ({
             onClick={handleAllIn}
             type="button"
             className="self-start text-sm"
-            disabled={isUntradable}
+            disabled={isUntradable || isSyncingOdds}
           >
             {t('markets.allIn')}
           </Button>
