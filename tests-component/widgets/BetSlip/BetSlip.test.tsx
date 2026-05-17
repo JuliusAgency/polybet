@@ -88,6 +88,12 @@ async function seedEventCache(
   });
 }
 
+async function waitForInitialOddsSyncToComplete(): Promise<void> {
+  await vi.waitFor(() => {
+    expect(screen.queryByText(/refreshing/i)).toBeNull();
+  });
+}
+
 describe('BetSlip — guards against stale/untradable odds', () => {
   beforeEach(() => {
     rpcMock.mockReset();
@@ -122,6 +128,67 @@ describe('BetSlip — guards against stale/untradable odds', () => {
     expect(rpcMock).not.toHaveBeenCalled();
   });
 
+  it('syncs to the live cached odds on open (prevents stale extreme payout previews)', async () => {
+    const opened = makeOutcome({ id: 'out-yes', price: 0.005, effective_odds: 200 });
+    const market = makeMarket(opened);
+    const live = makeOutcome({ id: 'out-yes', price: 0.5, effective_odds: 2 });
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: Infinity } },
+    });
+    await seedEventCache(queryClient, market, live);
+
+    renderWithProviders(
+      <BetSlip
+        market={market}
+        outcome={opened}
+        availableBalance={500}
+        onClose={() => {}}
+        onSuccess={() => {}}
+      />,
+      { queryClient }
+    );
+
+    await vi.waitFor(() => {
+      expect(screen.getByText('2.00')).toBeInTheDocument();
+    });
+  });
+
+  it('blocks inputs while initial odds synchronization is in progress', async () => {
+    const outcome = makeOutcome({ price: 0.5, effective_odds: 2 });
+    const market = makeMarket(outcome);
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: Infinity } },
+    });
+    await seedEventCache(queryClient, market, outcome);
+
+    const refetchGate: { release: () => void } = { release: () => {} };
+    const pendingRefetch = new Promise<void>((resolve) => {
+      refetchGate.release = () => resolve();
+    });
+    vi.spyOn(queryClient, 'refetchQueries').mockReturnValue(pendingRefetch);
+
+    renderWithProviders(
+      <BetSlip
+        market={market}
+        outcome={outcome}
+        availableBalance={500}
+        onClose={() => {}}
+        onSuccess={() => {}}
+      />,
+      { queryClient }
+    );
+
+    expect(screen.getByText(/refreshing/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/stake/i)).toBeDisabled();
+    expect(screen.getByRole('button', { name: /confirm/i })).toBeDisabled();
+
+    refetchGate.release();
+    await vi.waitFor(() => {
+      expect(screen.queryByText(/refreshing/i)).toBeNull();
+    });
+    expect(screen.getByLabelText(/stake/i)).toBeEnabled();
+  });
+
   it('sends expectedOdds and stake to place_bet on the happy path', async () => {
     const outcome = makeOutcome({ price: 0.5, effective_odds: 2 });
     const market = makeMarket(outcome);
@@ -143,6 +210,7 @@ describe('BetSlip — guards against stale/untradable odds', () => {
       { queryClient }
     );
 
+    await waitForInitialOddsSyncToComplete();
     await userEvent.type(screen.getByLabelText(/stake/i), '25');
     await userEvent.click(screen.getByRole('button', { name: /confirm/i }));
 
@@ -158,8 +226,9 @@ describe('BetSlip — guards against stale/untradable odds', () => {
     });
   });
 
-  it('does not submit when live drift > 2 %; surfaces updated odds for re-confirmation', async () => {
-    // Slip opened at effective_odds=2; live cache has 2.5 (25 % drift).
+  it('submits with synced live odds when opened odds are stale', async () => {
+    // Slip opened at effective_odds=2; live cache has 2.5. Initial sync should
+    // align displayOdds before submit so no drift re-confirmation is needed.
     const opened = makeOutcome({ id: 'out-yes', price: 0.5, effective_odds: 2 });
     const market = makeMarket(opened);
     const drifted = makeOutcome({ id: 'out-yes', price: 0.4, effective_odds: 2.5 });
@@ -173,10 +242,7 @@ describe('BetSlip — guards against stale/untradable odds', () => {
     // refetch semantics (which in some versions can drop data when a
     // re-fetch resolves with a different identity).
     vi.spyOn(queryClient, 'refetchQueries').mockResolvedValue(undefined);
-    // Guard: if the pre-submit refresh has somehow lost the cache and the
-    // RPC ends up being called, surface that as a clear failure rather than
-    // a destructure crash inside usePlaceBet.
-    rpcMock.mockResolvedValue({ data: 'should-not-be-called', error: null });
+    rpcMock.mockResolvedValue({ data: 'bet-uuid-live-odds', error: null });
 
     renderWithProviders(
       <BetSlip
@@ -189,6 +255,7 @@ describe('BetSlip — guards against stale/untradable odds', () => {
       { queryClient }
     );
 
+    await waitForInitialOddsSyncToComplete();
     // Sanity-check the cache holds the drifted outcome before we click.
     const cached = queryClient.getQueryData(['event', market.event_id]) as EventWithMarkets;
     expect(cached?.markets?.[0]?.market_outcomes?.[0]?.effective_odds).toBe(2.5);
@@ -204,15 +271,14 @@ describe('BetSlip — guards against stale/untradable odds', () => {
       | undefined;
     expect(afterClick?.markets?.[0]?.market_outcomes?.[0]?.effective_odds).toBe(2.5);
 
-    // Drift branch fired → RPC must not have been called.
-    expect(rpcMock).not.toHaveBeenCalled();
-
-    await vi.waitFor(
-      () => {
-        expect(screen.getByText(/odds have been updated|המקדמים עודכנו/i)).toBeInTheDocument();
-      },
-      { timeout: 3000 }
-    );
+    await vi.waitFor(() => {
+      expect(rpcMock).toHaveBeenCalledWith('place_bet', {
+        p_market_id: market.id,
+        p_outcome_id: opened.id,
+        p_stake: 10,
+        p_expected_odds: 2.5,
+      });
+    });
   });
 
   it('surfaces the drift error when the RPC rejects with P0002', async () => {
@@ -242,6 +308,7 @@ describe('BetSlip — guards against stale/untradable odds', () => {
       { queryClient }
     );
 
+    await waitForInitialOddsSyncToComplete();
     await userEvent.type(screen.getByLabelText(/stake/i), '10');
     await userEvent.click(screen.getByRole('button', { name: /confirm/i }));
 
