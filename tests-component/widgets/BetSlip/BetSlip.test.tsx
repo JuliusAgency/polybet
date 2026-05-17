@@ -158,6 +158,42 @@ describe('BetSlip — guards against stale/untradable odds', () => {
     });
   });
 
+  it('displays and submits odds derived from price (Polymarket parity)', async () => {
+    const outcome = makeOutcome({ price: 0.4, effective_odds: 9.99 });
+    const market = makeMarket(outcome);
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: Infinity } },
+    });
+    await seedEventCache(queryClient, market, outcome);
+
+    rpcMock.mockResolvedValueOnce({ data: 'bet-uuid-2', error: null });
+
+    renderWithProviders(
+      <BetSlip
+        market={market}
+        outcome={outcome}
+        availableBalance={500}
+        onClose={() => {}}
+        onSuccess={() => {}}
+      />,
+      { queryClient }
+    );
+
+    expect(screen.getByText('2.50')).toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText(/stake/i), '20');
+    await userEvent.click(screen.getByRole('button', { name: /confirm/i }));
+
+    await vi.waitFor(() => {
+      expect(rpcMock).toHaveBeenCalledWith('place_bet', {
+        p_market_id: market.id,
+        p_outcome_id: outcome.id,
+        p_stake: 20,
+        p_expected_odds: 2.5,
+      });
+    });
+  });
+
   it('does not submit when live drift > 2 %; surfaces updated odds for re-confirmation', async () => {
     // Slip opened at effective_odds=2; live cache has 2.5 (25 % drift).
     const opened = makeOutcome({ id: 'out-yes', price: 0.5, effective_odds: 2 });
