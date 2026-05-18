@@ -238,6 +238,8 @@
     "confirmBet": "Confirm Bet",
     "oddsChanged": "Odds have been updated to {{odds}}. Click confirm again to proceed.",
     "outcomeUntradable": "This outcome is no longer tradable — odds are at the floor. Try a different market.",
+    "lowLiquidity": "Not enough liquidity at the current order book to fill this stake. Lower the amount or try another market.",
+    "quoteUpdating": "Calculating payout from the live order book…",
     "betPlaced": "Bet placed successfully!",
     "filterAll": "All",
     "filterOpen": "Open",

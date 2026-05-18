@@ -6,10 +6,10 @@ import { Modal } from '@/shared/ui/Modal';
 import { Input } from '@/shared/ui/Input';
 import { Button } from '@/shared/ui/Button';
 import { Badge } from '@/shared/ui/Badge';
-import { usePlaceBet, OddsDriftError } from '@/features/bet';
+import { Spinner } from '@/shared/ui/Spinner';
+import { usePlaceBet, OddsDriftError, useBetQuote } from '@/features/bet';
+import type { BetQuote } from '@/features/bet';
 import type { Market, MarketOutcome } from '@/entities/market';
-import { isOutcomeTradable } from '@/entities/market';
-import type { EventWithMarkets } from '@/features/bet';
 
 export interface BetSlipProps {
   market: Market;
@@ -19,10 +19,9 @@ export interface BetSlipProps {
   onSuccess: () => void;
 }
 
-// Match the backend's odds_drift_tolerance from
-// 20260514091027_place_bet_hard_guards.sql. Constants live in sync; if the
-// backend tunes the threshold, mirror it here so the user does not get a
-// silent server rejection after a passing client-side check.
+// Match place_bet's c_odds_drift_tolerance (2%). Constants live in sync; if
+// the backend tunes the threshold, mirror it here so the user doesn't get
+// a silent server rejection after a passing client-side check.
 const ODDS_DRIFT_TOLERANCE = 0.02;
 
 const parseStake = (value: string): number | null => {
@@ -30,18 +29,6 @@ const parseStake = (value: string): number | null => {
   if (!/^\d+(\.\d+)?$/.test(value.trim())) return null;
   const n = Number(value);
   return isFinite(n) && n > 0 ? n : null;
-};
-
-const getLiveOutcome = (
-  queryClient: ReturnType<typeof useQueryClient>,
-  market: Market,
-  outcomeId: string
-): MarketOutcome | null => {
-  const eventData = queryClient.getQueryData<EventWithMarkets>(['event', market.event_id]);
-  if (!eventData) return null;
-  const liveMarket = eventData.markets.find((m) => m.id === market.id);
-  if (!liveMarket) return null;
-  return liveMarket.market_outcomes?.find((o) => o.id === outcomeId) ?? null;
 };
 
 export const BetSlip = ({
@@ -55,27 +42,37 @@ export const BetSlip = ({
   const queryClient = useQueryClient();
   const [amount, setAmount] = useState('');
   const [submitError, setSubmitError] = useState<string | null>(null);
-  // displayOdds is the price the user has acknowledged. Starts at the value
-  // that opened the slip; can be replaced by a drift detection so the user
-  // sees the corrected number before submitting.
-  const [displayOdds, setDisplayOdds] = useState(outcome.effective_odds);
 
   const { mutateAsync: placeBet, isPending } = usePlaceBet();
-
-  // Re-check tradability against the live cache so a 30s-stale parent screen
-  // can't keep the slip clickable after the market has gone illiquid. This
-  // is a UX gate; the authoritative check is in the place_bet RPC.
-  const liveOutcome = getLiveOutcome(queryClient, market, outcome.id);
-  const effectivePrice = liveOutcome?.price ?? outcome.price;
-  const isUntradable = !isOutcomeTradable(effectivePrice);
 
   const stake = parseStake(amount);
   const isValidStake = stake !== null;
   const isInsufficient = isValidStake && stake! > availableBalance;
-  const potentialPayout = isValidStake && !isInsufficient ? stake! * (displayOdds - 1) : null;
+
+  // Live quote from the cached order book. The same RPC backs place_bet so
+  // what the user sees is what gets locked in. Disabled until the user has
+  // typed a valid affordable stake — otherwise we'd burn polling on noise.
+  const quoteEnabled = isValidStake && !isInsufficient && Boolean(outcome.polymarket_token_id);
+  const { data: quote, isFetching: quoteFetching } = useBetQuote({
+    tokenId: outcome.polymarket_token_id,
+    stake: isValidStake ? stake! : null,
+    enabled: quoteEnabled,
+  });
+
+  // Quote may be undefined (loading), null (RPC returned nothing), or partial.
+  const isQuoteReady = Boolean(quote && !quote.partial && quote.shares > 0);
+  const displayOdds = quote?.effective_odds ?? outcome.effective_odds;
+  const potentialPayout =
+    isValidStake && !isInsufficient && isQuoteReady ? quote!.shares - stake! : null;
   const balanceIfWin =
-    isValidStake && !isInsufficient ? availableBalance - stake! + stake! * displayOdds : null;
+    isValidStake && !isInsufficient && isQuoteReady
+      ? availableBalance - stake! + quote!.shares
+      : null;
   const balanceIfLose = isValidStake && !isInsufficient ? availableBalance - stake! : null;
+
+  const isUntradable = !outcome.polymarket_token_id;
+  const isLowLiquidity = Boolean(quote && quote.partial && stake !== null && stake > 0);
+  const isQuoteLoading = quoteEnabled && !quote && !isUntradable;
 
   const handleAllIn = () => {
     setAmount(availableBalance.toFixed(2));
@@ -88,32 +85,37 @@ export const BetSlip = ({
       setSubmitError(t('markets.outcomeUntradable'));
       return;
     }
-
-    // Pre-submit refresh: force-fetch the latest event so the cache reflects
-    // server-side prices, not the 30s-stale snapshot. Closes the race where
-    // refresh-markets ticked between BetSlip mount and Confirm click.
-    setSubmitError(null);
-    try {
-      await queryClient.refetchQueries({ queryKey: ['event', market.event_id] });
-    } catch {
-      // Ignore — the server-side guard still protects us if cache is stale.
-    }
-
-    const fresh = getLiveOutcome(queryClient, market, outcome.id);
-    if (fresh && fresh.price !== null && !isOutcomeTradable(fresh.price)) {
-      setSubmitError(t('markets.outcomeUntradable'));
-      setDisplayOdds(fresh.effective_odds);
+    if (!quote || quote.partial || quote.shares <= 0) {
+      setSubmitError(t('markets.lowLiquidity'));
       return;
     }
 
-    if (fresh && fresh.effective_odds > 0) {
+    // Pre-submit refetch of the live quote so locked_odds matches the most
+    // recent book the user saw. Closes the race where bookWriter ticked
+    // between BetSlip's last poll and Confirm click.
+    setSubmitError(null);
+    const roundedStake = Math.round(stake! * 100) / 100;
+    const quoteKey = ['bet-quote', outcome.polymarket_token_id, roundedStake] as const;
+    try {
+      await queryClient.refetchQueries({ queryKey: quoteKey });
+    } catch {
+      // Fall back to the last known quote — the server-side guard catches
+      // any actual staleness.
+    }
+    const fresh: BetQuote | null =
+      queryClient.getQueryData<BetQuote | null>(quoteKey) ?? quote ?? null;
+
+    if (!fresh || fresh.partial || fresh.shares <= 0) {
+      setSubmitError(t('markets.lowLiquidity'));
+      return;
+    }
+
+    if (fresh.effective_odds > 0 && displayOdds > 0) {
       const drift = Math.abs(fresh.effective_odds - displayOdds) / displayOdds;
       if (drift > ODDS_DRIFT_TOLERANCE) {
-        // Surface the new number and require a second click. We do NOT
-        // submit on this pass — the user must explicitly accept the moved
-        // odds to prevent silent price-change surprises.
-        setDisplayOdds(fresh.effective_odds);
-        setSubmitError(t('markets.oddsChanged', { odds: fresh.effective_odds.toFixed(2) }));
+        setSubmitError(
+          t('markets.oddsChanged', { odds: fresh.effective_odds.toFixed(2) }),
+        );
         return;
       }
     }
@@ -123,7 +125,7 @@ export const BetSlip = ({
         marketId: market.id,
         outcomeId: outcome.id,
         stake: stake!,
-        expectedOdds: displayOdds,
+        expectedOdds: fresh.effective_odds,
       });
       toast.success(
         t('bet.notification.placed', { outcome: outcome.name, stake: stake!.toFixed(2) }),
@@ -133,7 +135,6 @@ export const BetSlip = ({
       onClose();
     } catch (err) {
       if (err instanceof OddsDriftError) {
-        if (err.latestOdds !== null) setDisplayOdds(err.latestOdds);
         setSubmitError(
           t('markets.oddsChanged', {
             odds: err.latestOdds !== null ? err.latestOdds.toFixed(2) : '—',
@@ -145,7 +146,14 @@ export const BetSlip = ({
     }
   };
 
-  const isConfirmDisabled = !isValidStake || isInsufficient || isPending || isUntradable;
+  const isConfirmDisabled =
+    !isValidStake ||
+    isInsufficient ||
+    isPending ||
+    isUntradable ||
+    isLowLiquidity ||
+    isQuoteLoading ||
+    !isQuoteReady;
 
   return (
     <Modal isOpen onClose={onClose} title={t('markets.betSlipTitle')}>
@@ -165,8 +173,6 @@ export const BetSlip = ({
           <Badge variant="open">{displayOdds.toFixed(2)}</Badge>
         </div>
 
-        {/* Untradable: prominent block above the stake input so the user
-            sees it before bothering to enter an amount. */}
         {isUntradable && (
           <div
             className="rounded-lg border p-3 text-sm"
@@ -199,7 +205,6 @@ export const BetSlip = ({
             disabled={isUntradable}
           />
 
-          {/* All In button */}
           <Button
             variant="secondary"
             onClick={handleAllIn}
@@ -210,6 +215,20 @@ export const BetSlip = ({
             {t('markets.allIn')}
           </Button>
         </div>
+
+        {/* Low-liquidity warning: book depth ran out before stake was filled. */}
+        {isLowLiquidity && (
+          <div
+            className="rounded-lg border p-3 text-sm"
+            style={{
+              borderColor: 'var(--color-error)',
+              color: 'var(--color-error)',
+              backgroundColor: 'color-mix(in oklch, var(--color-error) 8%, var(--color-bg-base))',
+            }}
+          >
+            {t('markets.lowLiquidity')}
+          </div>
+        )}
 
         {/* Balance preview after bet */}
         {balanceIfWin !== null && balanceIfLose !== null && (
@@ -253,7 +272,7 @@ export const BetSlip = ({
           </div>
         )}
 
-        {/* Potential payout */}
+        {/* Potential payout (profit only — book quote shares minus stake) */}
         {potentialPayout !== null && (
           <div
             className="flex items-center justify-between rounded-lg p-3"
@@ -264,18 +283,32 @@ export const BetSlip = ({
             </span>
             <span className="text-sm font-semibold" style={{ color: 'var(--color-win)' }}>
               {potentialPayout.toFixed(2)}
+              {quoteFetching && (
+                <span className="ms-2 inline-block align-middle">
+                  <Spinner size="sm" />
+                </span>
+              )}
             </span>
           </div>
         )}
 
-        {/* Submit error (also reused for the drift-retry copy) */}
+        {/* Quote is loading and we don't have a payout to render yet */}
+        {isQuoteLoading && potentialPayout === null && (
+          <div
+            className="flex items-center gap-2 rounded-lg p-3 text-sm"
+            style={{ backgroundColor: 'var(--color-bg-base)', color: 'var(--color-text-secondary)' }}
+          >
+            <Spinner size="sm" />
+            {t('markets.quoteUpdating')}
+          </div>
+        )}
+
         {submitError && (
           <p className="text-sm" style={{ color: 'var(--color-error)' }}>
             {submitError}
           </p>
         )}
 
-        {/* Action buttons */}
         <div className="flex gap-2">
           <Button
             variant="primary"

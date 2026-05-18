@@ -19,6 +19,9 @@ export type { UserBalance } from './useUserBalance';
 export { usePlaceBet, OddsDriftError } from './usePlaceBet';
 export type { PlaceBetInput } from './usePlaceBet';
 
+export { useBetQuote } from './useBetQuote';
+export type { BetQuote } from './useBetQuote';
+
 export { useMyBets } from './useMyBets';
 
 export { useBetResultNotifications } from './useBetResultNotifications';
