@@ -59,19 +59,43 @@ export const BetSlip = ({
     enabled: quoteEnabled,
   });
 
-  // Quote may be undefined (loading), null (RPC returned nothing), or partial.
-  const isQuoteReady = Boolean(quote && !quote.partial && quote.shares > 0);
-  const displayOdds = quote?.effective_odds ?? outcome.effective_odds;
-  const potentialPayout =
-    isValidStake && !isInsufficient && isQuoteReady ? quote!.shares - stake! : null;
-  const balanceIfWin =
-    isValidStake && !isInsufficient && isQuoteReady
-      ? availableBalance - stake! + quote!.shares
+  // Book-derived quote vs indicative fallback. The server applies the same
+  // logic in place_bet: if the book row is missing (rollout window or an
+  // outcome the tracker isn't subscribed to yet), use market_outcomes.
+  // effective_odds. Don't block the user in that case — the legacy formula
+  // is the safe default, and we'd otherwise lock out every bet until
+  // market-tracker is fully populated.
+  const bookAvailable = Boolean(quote && quote.book_updated_at !== null);
+  const isQuoteReadyFromBook = Boolean(
+    quote && bookAvailable && !quote.partial && quote.shares > 0
+  );
+  const isUsingFallback = Boolean(quote && !bookAvailable);
+  const effectiveShares =
+    isValidStake && !isInsufficient
+      ? isQuoteReadyFromBook
+        ? quote!.shares
+        : isUsingFallback
+          ? stake! * outcome.effective_odds
+          : null
       : null;
+  const effectiveOddsForBet = isQuoteReadyFromBook
+    ? quote!.effective_odds
+    : isUsingFallback
+      ? outcome.effective_odds
+      : null;
+  const displayOdds = effectiveOddsForBet ?? outcome.effective_odds;
+
+  const potentialPayout = effectiveShares !== null ? effectiveShares - stake! : null;
+  const balanceIfWin =
+    effectiveShares !== null ? availableBalance - stake! + effectiveShares : null;
   const balanceIfLose = isValidStake && !isInsufficient ? availableBalance - stake! : null;
 
   const isUntradable = !outcome.polymarket_token_id;
-  const isLowLiquidity = Boolean(quote && quote.partial && stake !== null && stake > 0);
+  // Only treat as "low liquidity" when the book row exists and reports partial.
+  // Missing-row case is handled by the indicative-odds fallback above.
+  const isLowLiquidity = Boolean(
+    quote && bookAvailable && quote.partial && stake !== null && stake > 0
+  );
   const isQuoteLoading = quoteEnabled && !quote && !isUntradable;
 
   const handleAllIn = () => {
@@ -85,7 +109,9 @@ export const BetSlip = ({
       setSubmitError(t('markets.outcomeUntradable'));
       return;
     }
-    if (!quote || quote.partial || quote.shares <= 0) {
+    // Allow the bet when the book is genuinely missing (fallback path). Only
+    // block on partial when the book actually exists and is fresh.
+    if (quote && quote.book_updated_at !== null && (quote.partial || quote.shares <= 0)) {
       setSubmitError(t('markets.lowLiquidity'));
       return;
     }
@@ -105,17 +131,23 @@ export const BetSlip = ({
     const fresh: BetQuote | null =
       queryClient.getQueryData<BetQuote | null>(quoteKey) ?? quote ?? null;
 
-    if (!fresh || fresh.partial || fresh.shares <= 0) {
+    // Determine the odds to lock — book-derived when book is present and
+    // fillable, indicative fallback otherwise. Mirror the server's logic in
+    // place_bet so the drift-guard sees consistent numbers.
+    const freshBookAvailable = Boolean(fresh && fresh.book_updated_at !== null);
+    if (fresh && freshBookAvailable && (fresh.partial || fresh.shares <= 0)) {
       setSubmitError(t('markets.lowLiquidity'));
       return;
     }
+    const lockOdds =
+      fresh && freshBookAvailable && !fresh.partial && fresh.shares > 0
+        ? fresh.effective_odds
+        : outcome.effective_odds;
 
-    if (fresh.effective_odds > 0 && displayOdds > 0) {
-      const drift = Math.abs(fresh.effective_odds - displayOdds) / displayOdds;
+    if (lockOdds > 0 && displayOdds > 0) {
+      const drift = Math.abs(lockOdds - displayOdds) / displayOdds;
       if (drift > ODDS_DRIFT_TOLERANCE) {
-        setSubmitError(
-          t('markets.oddsChanged', { odds: fresh.effective_odds.toFixed(2) }),
-        );
+        setSubmitError(t('markets.oddsChanged', { odds: lockOdds.toFixed(2) }));
         return;
       }
     }
@@ -125,7 +157,7 @@ export const BetSlip = ({
         marketId: market.id,
         outcomeId: outcome.id,
         stake: stake!,
-        expectedOdds: fresh.effective_odds,
+        expectedOdds: lockOdds,
       });
       toast.success(
         t('bet.notification.placed', { outcome: outcome.name, stake: stake!.toFixed(2) }),
@@ -153,7 +185,7 @@ export const BetSlip = ({
     isUntradable ||
     isLowLiquidity ||
     isQuoteLoading ||
-    !isQuoteReady;
+    effectiveShares === null;
 
   return (
     <Modal isOpen onClose={onClose} title={t('markets.betSlipTitle')}>
@@ -296,7 +328,10 @@ export const BetSlip = ({
         {isQuoteLoading && potentialPayout === null && (
           <div
             className="flex items-center gap-2 rounded-lg p-3 text-sm"
-            style={{ backgroundColor: 'var(--color-bg-base)', color: 'var(--color-text-secondary)' }}
+            style={{
+              backgroundColor: 'var(--color-bg-base)',
+              color: 'var(--color-text-secondary)',
+            }}
           >
             <Spinner size="sm" />
             {t('markets.quoteUpdating')}
