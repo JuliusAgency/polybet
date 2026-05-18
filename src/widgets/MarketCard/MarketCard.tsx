@@ -6,7 +6,6 @@ import {
   getOrderedOutcomes,
   getYesProbability,
   isBinaryMarket,
-  isLongTailMarket,
   isOutcomeTradable,
 } from '@/entities/market';
 import type { MyBet } from '@/entities/bet';
@@ -92,7 +91,8 @@ export const MarketCard = ({
   // Gauge: only meaningful for binary markets where Yes is well-defined.
   const isBinary = isBinaryMarket(market);
   const yesProbability = isBinary ? getYesProbability(market) : null;
-  const longTail = isBinary && isLongTailMarket(market);
+  // Cards (feed + single-market event view) render outcomes at full strength.
+  // Long-tail fading is reserved for the multi-market list on the event detail page.
 
   const volumeLabel = formatVolume(market.volume ?? null);
   const closesDate = formatClosesDate(market.close_at, i18n.language);
@@ -150,7 +150,7 @@ export const MarketCard = ({
             disabled={!isInteractive}
             showPercentage={false}
             hoverShowsPercentage
-            longTail={longTail}
+            longTail={false}
             onClick={
               isInteractive && onOutcomeClick
                 ? (outcomeId) => {

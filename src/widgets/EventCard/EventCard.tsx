@@ -5,8 +5,6 @@ import {
   getMarketEffectiveStatus,
   getOrderedOutcomes,
   getYesProbability,
-  isBinaryMarket,
-  isLongTailMarket,
   isOutcomeTradable,
   sortMarketsByYesDesc,
 } from '@/entities/market';
@@ -127,9 +125,9 @@ export const EventCard = ({
     isWinner: singleWinner?.id === o.id,
     untradable: !isOutcomeTradable(o.price),
   }));
-  const singleIsBinary = !!singleMarket && isBinaryMarket(singleMarket);
   const singleYesProbability = singleMarket ? getYesProbability(singleMarket) : null;
-  const singleLongTail = !!singleMarket && singleIsBinary && isLongTailMarket(singleMarket);
+  // Feed cards never dim outcomes — long-tail fading is reserved for the event
+  // detail page list, where <1% sub-markets sink to the bottom but stay readable.
 
   return (
     <article
@@ -193,7 +191,7 @@ export const EventCard = ({
               disabled={!singleIsInteractive}
               showPercentage={false}
               hoverShowsPercentage
-              longTail={singleLongTail}
+              longTail={false}
               onClick={
                 singleIsInteractive && onOutcomeClick
                   ? (outcomeId) => {
@@ -300,14 +298,14 @@ function EventMarketRow({ market, mode, onOutcomeClick }: EventMarketRowProps) {
   const label = market.group_label ?? market.question;
   const yesPrice = getYesProbability(market);
   const yesPct = yesPrice != null ? formatProbability(yesPrice) : null;
-  const longTail = isBinaryMarket(market) && isLongTailMarket(market);
+  // Feed rows render outcomes at full strength — see EventCard rationale above.
 
   return (
     <div className="flex items-center gap-3 py-1.5">
       <span
         className="min-w-0 flex-1 line-clamp-2 text-sm font-medium leading-snug underline-offset-2 decoration-1 group-hover/card:underline"
         style={{
-          color: longTail ? 'var(--color-text-muted)' : 'var(--color-text-primary)',
+          color: 'var(--color-text-primary)',
           ...(isHebrew && { direction: 'ltr' as const, textAlign: 'right' as const }),
         }}
       >
@@ -317,7 +315,7 @@ function EventMarketRow({ market, mode, onOutcomeClick }: EventMarketRowProps) {
       {yesPct && (
         <span
           className="shrink-0 text-sm font-semibold tabular-nums"
-          style={{ color: longTail ? 'var(--color-text-muted)' : 'var(--color-text-primary)' }}
+          style={{ color: 'var(--color-text-primary)' }}
         >
           {yesPct}
         </span>
@@ -330,7 +328,7 @@ function EventMarketRow({ market, mode, onOutcomeClick }: EventMarketRowProps) {
           disabled={!isInteractive}
           showPercentage={false}
           hoverShowsPercentage
-          longTail={longTail}
+          longTail={false}
           onClick={
             isInteractive && onOutcomeClick
               ? (outcomeId) => {
