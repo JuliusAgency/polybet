@@ -240,6 +240,7 @@
     "outcomeUntradable": "This outcome is no longer tradable — odds are at the floor. Try a different market.",
     "lowLiquidity": "Not enough liquidity at the current order book to fill this stake. Lower the amount or try another market.",
     "quoteUpdating": "Calculating payout from the live order book…",
+    "quoteEstimate": "Live order book is temporarily unavailable — payout shown is an estimate based on the mid price.",
     "betPlaced": "Bet placed successfully!",
     "filterAll": "All",
     "filterOpen": "Open",

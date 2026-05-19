@@ -324,6 +324,15 @@ export const BetSlip = ({
           </div>
         )}
 
+        {/* Estimate badge: CLOB book unavailable, we're showing the indicative
+            (mid-price) payout. Bet placement still works, but the lock-in
+            number may differ from Polymarket by the slippage delta. */}
+        {isUsingFallback && potentialPayout !== null && (
+          <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+            {t('markets.quoteEstimate')}
+          </p>
+        )}
+
         {/* Quote is loading and we don't have a payout to render yet */}
         {isQuoteLoading && potentialPayout === null && (
           <div
