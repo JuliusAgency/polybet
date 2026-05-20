@@ -85,7 +85,7 @@ export const BetSlip = ({
       : null;
   const displayOdds = effectiveOddsForBet ?? outcome.effective_odds;
 
-  const potentialPayout = effectiveShares !== null ? effectiveShares - stake! : null;
+  const potentialPayout = effectiveShares;
   const balanceIfWin =
     effectiveShares !== null ? availableBalance - stake! + effectiveShares : null;
   const balanceIfLose = isValidStake && !isInsufficient ? availableBalance - stake! : null;
@@ -304,7 +304,7 @@ export const BetSlip = ({
           </div>
         )}
 
-        {/* Potential payout (profit only — book quote shares minus stake) */}
+        {/* Potential payout (gross — book quote shares, matches Polymarket "To win") */}
         {potentialPayout !== null && (
           <div
             className="flex items-center justify-between rounded-lg p-3"
