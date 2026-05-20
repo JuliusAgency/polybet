@@ -5,7 +5,6 @@ import {
   getYesProbability,
   isBinaryMarket,
   isLongTailMarket,
-  isOutcomeTradable,
 } from '@/entities/market';
 import type { MyBet } from '@/entities/bet';
 import { Badge } from '@/shared/ui/Badge';
@@ -42,14 +41,16 @@ export const EventMarketRow = ({
     : null;
 
   const orderedOutcomes = getOrderedOutcomes(market);
-  // Hard-block floor/ceiling-priced sides — symmetric with EventCard feed gate.
+  // Polymarket parity: every outcome with a CLOB token stays clickable. The
+  // book quote in BetSlip + place_bet's partial-fill guard are the real
+  // liquidity gates — there is no UI price floor.
   const outcomeButtons: OutcomeButton[] = orderedOutcomes.map((o) => ({
     id: o.id,
     name: o.name,
     price: o.price,
     effectiveOdds: o.effective_odds,
     isWinner: winnerOutcome?.id === o.id,
-    untradable: !isOutcomeTradable(o.price),
+    untradable: !o.polymarket_token_id,
   }));
 
   const label = market.group_label ?? market.question;
@@ -144,7 +145,7 @@ export const EventMarketRow = ({
             isInteractive && onOutcomeClick
               ? (outcomeId) => {
                   const outcome = market.market_outcomes.find((o) => o.id === outcomeId);
-                  if (outcome && isOutcomeTradable(outcome.price)) {
+                  if (outcome && outcome.polymarket_token_id) {
                     onOutcomeClick(market, outcome);
                   }
                 }

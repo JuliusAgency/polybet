@@ -6,7 +6,6 @@ import {
   getOrderedOutcomes,
   getYesProbability,
   isBinaryMarket,
-  isOutcomeTradable,
 } from '@/entities/market';
 import type { MyBet } from '@/entities/bet';
 import { useMarketRefresh } from '@/features/bet';
@@ -85,7 +84,7 @@ export const MarketCard = ({
     price: o.price,
     effectiveOdds: o.effective_odds,
     isWinner: winnerOutcome?.id === o.id,
-    untradable: !isOutcomeTradable(o.price),
+    untradable: !o.polymarket_token_id,
   }));
 
   // Gauge: only meaningful for binary markets where Yes is well-defined.
@@ -155,7 +154,7 @@ export const MarketCard = ({
               isInteractive && onOutcomeClick
                 ? (outcomeId) => {
                     const outcome = market.market_outcomes.find((o) => o.id === outcomeId);
-                    if (outcome && isOutcomeTradable(outcome.price)) {
+                    if (outcome && outcome.polymarket_token_id) {
                       onOutcomeClick(market, outcome);
                     }
                   }

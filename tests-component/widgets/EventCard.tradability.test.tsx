@@ -6,12 +6,12 @@ import type { MarketEvent } from '@/entities/event';
 import { EventCard } from '@/widgets/EventCard';
 import { renderWithProviders } from '../helpers/render';
 
-// Regression coverage for the floor-price tradability bug:
-// on the trending feed the EventCard rendered Yes/No buttons for long-tail
-// candidates (e.g. Yes at 0.3¢) as fully active. Clicking opened BetSlip,
-// which then surfaced "no longer tradable" — UI/state mismatch.
-// MarketCard already filtered these via isOutcomeTradable; EventCard did
-// not. Tests below pin the contract for both render branches.
+// Polymarket parity contract:
+// every outcome with a Polymarket CLOB token stays clickable, across the full
+// (0, 1) price band. The old isOutcomeTradable price floor (0.001) and
+// ceiling (< 1) used to dim Yes/No pills for long-tail candidates — that
+// broke parity with Polymarket which keeps both sides live. After the QA
+// fix the only thing that disables a side is the absence of a CLOB token.
 
 const event: MarketEvent = {
   id: 'evt-1',
@@ -27,7 +27,12 @@ const event: MarketEvent = {
   tag_slugs: ['politics'],
 };
 
-function outcome(name: string, price: number, id = name.toLowerCase()): MarketOutcome {
+function outcome(
+  name: string,
+  price: number,
+  id = name.toLowerCase(),
+  tokenId: string | null = `tok-${id}`
+): MarketOutcome {
   return {
     id,
     name,
@@ -35,12 +40,18 @@ function outcome(name: string, price: number, id = name.toLowerCase()): MarketOu
     odds: 1 / price,
     effective_odds: 1 / price,
     updated_at: new Date().toISOString(),
-    polymarket_token_id: `tok-${id}`,
+    polymarket_token_id: tokenId,
   };
 }
 
-function market(id: string, question: string, yesPrice: number, groupLabel: string): Market {
-  const yes = outcome('Yes', yesPrice, `${id}-yes`);
+function market(
+  id: string,
+  question: string,
+  yesPrice: number,
+  groupLabel: string,
+  yesTokenId: string | null = `tok-${id}-yes`
+): Market {
+  const yes = outcome('Yes', yesPrice, `${id}-yes`, yesTokenId);
   const no = outcome('No', 1 - yesPrice, `${id}-no`);
   return {
     id,
@@ -70,30 +81,59 @@ function findRow(label: string): HTMLElement {
   return row as HTMLElement;
 }
 
-describe('EventCard — tradability gating on multi-row body', () => {
-  // Mid-market candidate: both Yes and No prices are inside the tradable
-  // band, so the buttons render as real <button> elements that fire onClick.
+describe('EventCard — Polymarket parity (no price floor)', () => {
+  // Mid-market candidate: both Yes and No prices are well inside (0, 1).
+  // Buttons render as real <button> elements that fire onClick.
   const tradable = market('tradable', 'Tradable Candidate', 0.45, 'Tradable Candidate');
-  // Sub-cent candidate: Yes at 0.5¢ stays tradable (Polymarket parity).
-  // No at 99.5¢ lands at the ceiling and is non-interactive.
+  // Sub-cent candidate: Yes at 0.5¢. Pre-fix this was already inside the
+  // (0.001, 1) band; post-fix the band has no floor at all but the
+  // expectation is unchanged.
   const subCent = market('subcent', 'Sub-cent Candidate', 0.005, 'Sub-cent Candidate');
-  // True-floor candidate: Yes at 0.05¢ is below MIN_TRADABLE_PRICE (0.001)
-  // and No at 99.95¢ is above the ceiling — both sides non-interactive.
-  const floor = market('floor', 'Floor Candidate', 0.0005, 'Floor Candidate');
+  // Deep-floor candidate: Yes at 0.05¢ (below the legacy 0.001 floor).
+  // This used to render as aria-disabled. Polymarket parity: it must
+  // remain a clickable button.
+  const deepFloor = market('floor', 'Floor Candidate', 0.0005, 'Floor Candidate');
+  // No-token candidate: Yes has polymarket_token_id = null. This IS the
+  // only case that still renders as non-interactive (new contract).
+  const noToken = market('notoken', 'Untracked Candidate', 0.45, 'Untracked Candidate', null);
 
-  it('renders Yes side as aria-disabled (not a button) when price is below the floor', () => {
-    renderWithProviders(<EventCard event={event} markets={[tradable, floor]} />);
-
-    const row = findRow('Floor Candidate');
-    expect(within(row).queryByRole('button', { name: /yes/i })).toBeNull();
-    expect(within(row).getByText(/yes/i).closest('[aria-disabled="true"]')).not.toBeNull();
-  });
-
-  it('fires onOutcomeClick when clicking the tradable Yes side', async () => {
+  it('renders sub-tenth-cent Yes side as a clickable <button> (regression: 2026-05-20 QA)', async () => {
+    // The bug: Yes at 0.05¢ displayed as "Buy Yes 0.1¢" (formatPrice rounds)
+    // but the button was a dead aria-disabled div because price < 0.001
+    // tripped the old isOutcomeTradable floor.
     const onOutcomeClick = vi.fn();
     const user = userEvent.setup();
     renderWithProviders(
-      <EventCard event={event} markets={[tradable, floor]} onOutcomeClick={onOutcomeClick} />
+      <EventCard event={event} markets={[tradable, deepFloor]} onOutcomeClick={onOutcomeClick} />
+    );
+
+    const row = findRow('Floor Candidate');
+    const yesBtn = within(row).getByRole('button', { name: /yes/i });
+    await user.click(yesBtn);
+
+    expect(onOutcomeClick).toHaveBeenCalledTimes(1);
+    const [clickedMarket, clickedOutcome] = onOutcomeClick.mock.calls[0];
+    expect(clickedMarket.id).toBe('floor');
+    expect(clickedOutcome.name).toBe('Yes');
+  });
+
+  it('keeps the No side clickable when its price is at the ceiling (≥ 99.9¢)', () => {
+    // No price = 1 - 0.0005 = 0.9995. Old ceiling (< 1) blocked this;
+    // Polymarket parity keeps it live.
+    const onOutcomeClick = vi.fn();
+    renderWithProviders(
+      <EventCard event={event} markets={[tradable, deepFloor]} onOutcomeClick={onOutcomeClick} />
+    );
+
+    const row = findRow('Floor Candidate');
+    expect(within(row).getByRole('button', { name: /no/i })).toBeInTheDocument();
+  });
+
+  it('fires onOutcomeClick when clicking the mid-band Yes side', async () => {
+    const onOutcomeClick = vi.fn();
+    const user = userEvent.setup();
+    renderWithProviders(
+      <EventCard event={event} markets={[tradable, deepFloor]} onOutcomeClick={onOutcomeClick} />
     );
 
     const row = findRow('Tradable Candidate');
@@ -107,9 +147,6 @@ describe('EventCard — tradability gating on multi-row body', () => {
   });
 
   it('keeps sub-cent Yes side clickable (Polymarket parity)', async () => {
-    // Regression for QA bug: Yes at 0.5% on a long-tail market must remain
-    // a clickable button — Polymarket itself keeps both sides live there.
-    // Both Yes (0.5¢) and No (99.5¢) are inside the tradable band [0.001, 1).
     const onOutcomeClick = vi.fn();
     const user = userEvent.setup();
     renderWithProviders(
@@ -123,16 +160,16 @@ describe('EventCard — tradability gating on multi-row body', () => {
     expect(onOutcomeClick).toHaveBeenCalledTimes(1);
     const [, clickedOutcome] = onOutcomeClick.mock.calls[0];
     expect(clickedOutcome.name).toBe('Yes');
-    // No side is also tradable (Polymarket allows betting on near-certain
-    // outcomes — low EV but legitimate). Must remain a button.
     expect(within(row).getByRole('button', { name: /no/i })).toBeInTheDocument();
   });
 
-  it('disables BOTH sides when Yes is below floor and No is above ceiling', () => {
-    renderWithProviders(<EventCard event={event} markets={[tradable, floor]} />);
+  it('renders Yes side as aria-disabled (not a button) when polymarket_token_id is null', () => {
+    // The ONLY case that still disables a side in the new contract: the
+    // outcome has no CLOB token at all — there is no way to fill any stake.
+    renderWithProviders(<EventCard event={event} markets={[tradable, noToken]} />);
 
-    const row = findRow('Floor Candidate');
+    const row = findRow('Untracked Candidate');
     expect(within(row).queryByRole('button', { name: /yes/i })).toBeNull();
-    expect(within(row).queryByRole('button', { name: /no/i })).toBeNull();
+    expect(within(row).getByText(/yes/i).closest('[aria-disabled="true"]')).not.toBeNull();
   });
 });

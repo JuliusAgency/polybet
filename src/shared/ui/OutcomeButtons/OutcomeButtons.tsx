@@ -18,7 +18,7 @@ export interface OutcomeButton {
   effectiveOdds: number;
   /** True if this outcome is the resolved winner. */
   isWinner?: boolean;
-  /** True if this side has no realistic liquidity (price near 0 or 1). */
+  /** True if this side cannot be bet on at all (e.g. no Polymarket token id). */
   untradable?: boolean;
 }
 

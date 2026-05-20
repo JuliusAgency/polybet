@@ -1,24 +1,20 @@
-import type { Market, MarketOutcome } from './types';
+import type { Market } from './types';
 
-// Polymarket parity: a sub-cent side (e.g. 0.5¢) stays clickable — the order
-// book on Polymarket itself keeps both sides active down to 0.1¢. We only
-// guard against the true-zero floor where there is literally nothing to buy.
-// Antifraud guarantees (drift tolerance, 3-min outcome staleness, 30s frontend
-// polling) live in the place_bet RPC, not in this UI gate.
-export const MIN_TRADABLE_PRICE = 0.001;
-
+// Polymarket parity: every non-resolved, non-closed outcome stays clickable
+// across the full (0, 1) price band. Fillability is decided by the live order
+// book quote (useBetQuote / quote_bet_payout RPC) and the place_bet RPC's
+// partial-fill guard — not by an arbitrary price floor in the UI. Antifraud
+// guarantees (3-min outcome staleness, 2% drift tolerance, 5s book staleness)
+// live in the place_bet RPC, not in this UI gate.
 export function isOutcomeTradable(price: number | null | undefined): boolean {
-  if (price == null || !Number.isFinite(price)) return true;
-  // Block only the priced-into-the-floor side. Allow everything up to (but
-  // not including) 1.0 — at exactly 1.0 there is nothing to gain.
-  return price >= MIN_TRADABLE_PRICE && price < 1;
+  return price == null || Number.isFinite(price);
 }
 
-// A binary market is "fully illiquid" only when BOTH sides are at the floor
-// (effectively impossible — happens only on broken syncs). For long-tail
-// markets the dominant side stays tradable; we never disable the whole market.
+// A market with at least one outcome is tradable from the UI's point of view.
+// Per-outcome non-interactivity is driven by polymarket_token_id at the call
+// site; the whole-market gate stays here only as a defensive empty-outcome
+// short-circuit.
 export function isMarketTradable(market: Pick<Market, 'market_outcomes'>): boolean {
   const outs = market.market_outcomes ?? [];
-  if (outs.length === 0) return true;
-  return outs.some((o: MarketOutcome) => isOutcomeTradable(o.price));
+  return outs.length > 0;
 }

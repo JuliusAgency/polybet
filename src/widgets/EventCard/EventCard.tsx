@@ -5,7 +5,6 @@ import {
   getMarketEffectiveStatus,
   getOrderedOutcomes,
   getYesProbability,
-  isOutcomeTradable,
   sortMarketsByYesDesc,
 } from '@/entities/market';
 import type { MarketEvent } from '@/entities/event';
@@ -123,7 +122,7 @@ export const EventCard = ({
     price: o.price,
     effectiveOdds: o.effective_odds,
     isWinner: singleWinner?.id === o.id,
-    untradable: !isOutcomeTradable(o.price),
+    untradable: !o.polymarket_token_id,
   }));
   const singleYesProbability = singleMarket ? getYesProbability(singleMarket) : null;
   // Feed cards never dim outcomes — long-tail fading is reserved for the event
@@ -196,7 +195,7 @@ export const EventCard = ({
                 singleIsInteractive && onOutcomeClick
                   ? (outcomeId) => {
                       const outcome = singleMarket.market_outcomes.find((o) => o.id === outcomeId);
-                      if (outcome && isOutcomeTradable(outcome.price)) {
+                      if (outcome && outcome.polymarket_token_id) {
                         onOutcomeClick(singleMarket, outcome);
                       }
                     }
@@ -292,7 +291,7 @@ function EventMarketRow({ market, mode, onOutcomeClick }: EventMarketRowProps) {
     price: o.price,
     effectiveOdds: o.effective_odds,
     isWinner: winnerOutcome?.id === o.id,
-    untradable: !isOutcomeTradable(o.price),
+    untradable: !o.polymarket_token_id,
   }));
 
   const label = market.group_label ?? market.question;
@@ -333,7 +332,7 @@ function EventMarketRow({ market, mode, onOutcomeClick }: EventMarketRowProps) {
             isInteractive && onOutcomeClick
               ? (outcomeId) => {
                   const outcome = market.market_outcomes.find((o) => o.id === outcomeId);
-                  if (outcome && isOutcomeTradable(outcome.price)) {
+                  if (outcome && outcome.polymarket_token_id) {
                     onOutcomeClick(market, outcome);
                   }
                 }

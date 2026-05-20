@@ -93,11 +93,14 @@ describe('BetSlip — guards against stale/untradable odds', () => {
     rpcMock.mockReset();
   });
 
-  it('disables Confirm when the outcome price is at the floor', async () => {
-    // Floor is 0.001 (Polymarket parity). 0.0005 is below it and must trigger
-    // the untradable warning + disabled Confirm. A 0.005 price is now legal
-    // and would let the test pass through to the happy path.
-    const outcome = makeOutcome({ price: 0.0005, effective_odds: 2000 });
+  it('disables Confirm when the outcome has no Polymarket token id', async () => {
+    // Post-2026-05-20 (QA Polymarket-parity fix): there is no UI price floor.
+    // The only thing that flips an outcome to untradable is the absence of a
+    // CLOB token id — the book quote / place_bet RPC handle every other case
+    // (partial fill, stale book, drift) at submit time. Sub-cent prices are
+    // legal across the board now and would let the test pass through to the
+    // happy path.
+    const outcome = makeOutcome({ price: 0.5, effective_odds: 2, polymarket_token_id: null });
     const market = makeMarket(outcome);
 
     renderWithProviders(
