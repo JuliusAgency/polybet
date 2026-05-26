@@ -8,8 +8,14 @@ import { Badge } from '@/shared/ui/Badge';
 import { Modal } from '@/shared/ui/Modal';
 import { Input } from '@/shared/ui/Input';
 import { Spinner } from '@/shared/ui/Spinner';
+import { MIN_ADJUST_AMOUNT, MAX_NOTE_LENGTH } from '@/shared/config/validation';
+import { EditUserModal, type EditUserValues } from '@/shared/ui/EditUserModal';
 import { useAdjustBalance, useAdjustManagerBalance } from '@/features/admin/adjust-balance';
-import { useToggleUserBlock, useResetPassword } from '@/features/admin/manage-user';
+import {
+  useToggleUserBlock,
+  useResetPassword,
+  useAdminUpdateUser,
+} from '@/features/admin/manage-user';
 import { useManagerUsers, useManagerActionLogs } from '@/features/admin/manager-users';
 import { useBetLimitSettings } from '@/features/admin/bet-limits';
 import { EffectiveLimitBadge } from '@/pages/super-admin/BetLimitsPage/components/EffectiveLimitBadge';
@@ -29,7 +35,7 @@ const fetchManagerBalance = async (managerId: string): Promise<number> => {
 };
 
 const FINANCIAL_ACTIONS = new Set(['adjustment', 'transfer']);
-const ACCOUNT_ACTIONS = new Set(['block', 'unblock', 'reset_password']);
+const ACCOUNT_ACTIONS = new Set(['block', 'unblock', 'reset_password', 'update_profile']);
 
 const fetchManagerProfile = async (managerId: string): Promise<DbProfile | null> => {
   const { data, error } = await supabase
@@ -80,19 +86,28 @@ const AdjustBalanceModal = ({ isOpen, onClose, type, targetUser, onSuccess }: Ad
       setErrorMsg(t('managerProfile.amountError'));
       return;
     }
+    if (parsed < MIN_ADJUST_AMOUNT) {
+      setErrorMsg(t('managerProfile.minAmountError', { amount: MIN_ADJUST_AMOUNT }));
+      return;
+    }
+    if (note.trim().length > MAX_NOTE_LENGTH) {
+      setErrorMsg(t('managerProfile.noteTooLong', { max: MAX_NOTE_LENGTH }));
+      return;
+    }
+    const roundedAmount = Math.round(parsed * 100) / 100;
 
     try {
       if (isManager) {
         await adjustManagerBalance.mutateAsync({
           managerId: targetUser.id,
-          amount: parsed,
+          amount: roundedAmount,
           type,
           note,
         });
       } else {
         await adjustBalance.mutateAsync({
           targetUserId: targetUser.id,
-          amount: parsed,
+          amount: roundedAmount,
           type,
           note,
         });
@@ -126,6 +141,7 @@ const AdjustBalanceModal = ({ isOpen, onClose, type, targetUser, onSuccess }: Ad
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder={t('managerProfile.notePlaceholder')}
+          maxLength={MAX_NOTE_LENGTH}
         />
         {errorMsg && (
           <p className="text-sm" style={{ color: 'var(--color-loss)' }}>
@@ -220,6 +236,7 @@ type ModalState =
   | { kind: 'deposit'; user: DbProfile }
   | { kind: 'withdrawal'; user: DbProfile }
   | { kind: 'resetPassword'; user: DbProfile }
+  | { kind: 'editUser'; user: DbProfile }
   | null;
 
 type LogFilter = 'all' | 'financial' | 'account';
@@ -288,6 +305,26 @@ export const ManagerProfilePage = () => {
   };
 
   const toggleBlock = useToggleUserBlock();
+  const updateUser = useAdminUpdateUser();
+  const [editError, setEditError] = useState('');
+
+  const handleEditSubmit = async (values: EditUserValues) => {
+    if (modal?.kind !== 'editUser') return;
+    setEditError('');
+    try {
+      await updateUser.mutateAsync({
+        targetUserId: modal.user.id,
+        firstName: values.firstName,
+        lastName: values.lastName,
+        phone: values.phone || null,
+      });
+      invalidateManagerPageData();
+      showTransientFeedback(setActionFeedback, t('editUser.updated'));
+      setModal(null);
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : t('common.unknownError'));
+    }
+  };
 
   const handleToggleBlock = async (user: DbProfile) => {
     const confirmMsg = user.is_active
@@ -696,6 +733,16 @@ export const ManagerProfilePage = () => {
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-2">
                         <Button
+                          variant="secondary"
+                          className="text-xs px-2 py-1"
+                          onClick={() => {
+                            setEditError('');
+                            setModal({ kind: 'editUser', user: profile });
+                          }}
+                        >
+                          {t('editUser.edit')}
+                        </Button>
+                        <Button
                           variant="primary"
                           className="text-xs px-2 py-1"
                           onClick={() => setModal({ kind: 'deposit', user: profile })}
@@ -760,6 +807,21 @@ export const ManagerProfilePage = () => {
           onClose={() => setModal(null)}
           targetUser={modal.user}
           onSuccess={invalidateActionLog}
+        />
+      )}
+      {modal?.kind === 'editUser' && (
+        <EditUserModal
+          isOpen
+          onClose={() => setModal(null)}
+          title={`${t('editUser.title')} - ${modal.user.username}`}
+          initialValues={{
+            firstName: modal.user.first_name,
+            lastName: modal.user.last_name,
+            phone: modal.user.phone ?? '',
+          }}
+          isPending={updateUser.isPending}
+          errorMsg={editError}
+          onSubmit={handleEditSubmit}
         />
       )}
 

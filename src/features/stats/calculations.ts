@@ -19,8 +19,8 @@ export function calculateTurnover(bets: BetLikeForStats[]): number {
 
 export function calculateRealizedPnl(bets: BetLikeForStats[]): number {
   return bets.reduce((sum, bet) => {
-    if (bet.status === 'won') return sum + (bet.stake - bet.potential_payout);
-    if (bet.status === 'lost') return sum + bet.stake;
+    if (bet.status === 'won') return sum + (bet.potential_payout - bet.stake);
+    if (bet.status === 'lost') return sum - bet.stake;
     return sum;
   }, 0);
 }

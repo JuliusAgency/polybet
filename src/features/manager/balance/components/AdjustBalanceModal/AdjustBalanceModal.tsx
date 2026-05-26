@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
 import { Modal } from '@/shared/ui/Modal';
+import { MIN_ADJUST_AMOUNT, MAX_NOTE_LENGTH } from '@/shared/config/validation';
 import { useManagerAdjustBalance } from '../../useManagerAdjustBalance';
 
 interface AdjustBalanceModalProps {
@@ -24,6 +25,7 @@ export const AdjustBalanceModal = ({
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
   const [amountError, setAmountError] = useState('');
+  const [noteError, setNoteError] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
   const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mutation = useManagerAdjustBalance();
@@ -43,6 +45,7 @@ export const AdjustBalanceModal = ({
       setAmount('');
       setNote('');
       setAmountError('');
+      setNoteError('');
       setShowSuccess(false);
       mutation.reset();
       if (successTimerRef.current !== null) {
@@ -59,8 +62,17 @@ export const AdjustBalanceModal = ({
       setAmountError(t('treasury.amountError'));
       return false;
     }
+    if (parsed < MIN_ADJUST_AMOUNT) {
+      setAmountError(t('treasury.minAmountError', { amount: MIN_ADJUST_AMOUNT }));
+      return false;
+    }
+    if (note.trim().length > MAX_NOTE_LENGTH) {
+      setNoteError(t('treasury.noteTooLong', { max: MAX_NOTE_LENGTH }));
+      return false;
+    }
 
     setAmountError('');
+    setNoteError('');
     return true;
   };
 
@@ -71,7 +83,7 @@ export const AdjustBalanceModal = ({
     mutation.mutate(
       {
         targetUserId: userId,
-        amount: Number.parseFloat(amount),
+        amount: Math.round(Number.parseFloat(amount) * 100) / 100,
         type,
         note: note.trim(),
       },
@@ -124,8 +136,13 @@ export const AdjustBalanceModal = ({
             <Input
               label={t('treasury.note')}
               value={note}
-              onChange={(event) => setNote(event.target.value)}
+              onChange={(event) => {
+                setNote(event.target.value);
+                if (noteError) setNoteError('');
+              }}
               disabled={isSubmitting}
+              maxLength={MAX_NOTE_LENGTH}
+              error={noteError}
             />
 
             {genericError && (

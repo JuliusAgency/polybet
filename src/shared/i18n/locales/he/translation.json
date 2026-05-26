@@ -20,7 +20,8 @@
     "profile": "פרופיל",
     "all": "הכל",
     "noData": "אין נתונים",
-    "superAdminAlias": "מנהל על"
+    "superAdminAlias": "מנהל על",
+    "save": "שמור"
   },
   "theme": {
     "label": "ערכת נושא",
@@ -111,6 +112,8 @@
     "noteLabelOpt": "הערה (אופציונלי)",
     "notePlaceholder": "סיבה…",
     "amountError": "הסכום חייב להיות מספר חיובי",
+    "minAmountError": "הסכום המינימלי הוא {{amount}}",
+    "noteTooLong": "הערה לא יכולה להיות ארוכה מ-{{max}} תווים",
     "limitAmountError": "תקרת ההימור חייבת להיות מספר חיובי",
     "newPassword": "סיסמה חדשה",
     "passwordPh": "מינימום 6 תווים",
@@ -134,7 +137,8 @@
     "actionCol": "פעולה",
     "targetCol": "יעד",
     "noteCol": "הערה",
-    "byCol": "על ידי"
+    "byCol": "על ידי",
+    "passwordResetSuccess": "הסיסמה אופסה בהצלחה"
   },
   "actionLabels": {
     "adjustment": "הפקדה",
@@ -143,7 +147,8 @@
     "unblock": "ביטול חסימה",
     "reset_password": "איפוס סיסמה",
     "set_user_max_bet_limit": "קביעת מגבלת הימור למשתמש",
-    "set_manager_max_bet_limit": "קביעת מגבלת הימור למנהל"
+    "set_manager_max_bet_limit": "קביעת מגבלת הימור למנהל",
+    "update_profile": "עדכון פרופיל"
   },
   "globalLog": {
     "title": "יומן כללי",
@@ -157,6 +162,9 @@
     "year": "שנה",
     "allYears": "כל השנים",
     "clearFilters": "נקה פילטרים",
+    "from": "מתאריך",
+    "to": "עד תאריך",
+    "rangeReversed": "תאריך ההתחלה חייב להיות לפני תאריך הסיום",
     "months": [
       "ינואר",
       "פברואר",
@@ -219,6 +227,8 @@
     "amount": "סכום",
     "note": "הערה (אופציונלי)",
     "amountError": "הסכום חייב להיות מספר חיובי",
+    "minAmountError": "הסכום המינימלי הוא {{amount}}",
+    "noteTooLong": "הערה לא יכולה להיות ארוכה מ-{{max}} תווים",
     "depositTitle": "הפקדה ל-{{username}}",
     "withdrawalTitle": "משיכה מ-{{username}}",
     "deposit": "הפקדה",
@@ -233,6 +243,10 @@
     "stakeLabel": "סכום הימור",
     "balance": "יתרה: {{amount}}",
     "insufficientBalance": "יתרה לא מספיקה",
+    "maxBet": "הימור מקסימלי: {{amount}}",
+    "exceedsMaxBet": "הסכום המקסימלי המותר להימור הוא {{amount}}",
+    "maxAvailableStake": "הסכום המקסימלי הזמין להימור: {{amount}}",
+    "priceStaleRetry": "נתוני השוק אינם עדכניים. יש לרענן את ההימור ולנסות שוב.",
     "allIn": "אול אין",
     "potentialPayout": "תשואה פוטנציאלית",
     "confirmBet": "אשר הימור",
@@ -241,6 +255,7 @@
     "lowLiquidity": "אין מספיק נזילות בספר ההזמנות הנוכחי למילוי ההימור הזה. הקטן את הסכום או נסה שוק אחר.",
     "quoteUpdating": "מחשב תשלום מספר ההזמנות החי…",
     "quoteEstimate": "ספר ההזמנות החי אינו זמין כעת — סכום הזכייה המוצג הוא הערכה לפי מחיר אמצע.",
+    "quoteUnavailable": "ספר ההזמנות החי אינו זמין — נסה שוב בעוד רגע. דרוש ציטוט חי מספר ההזמנות כדי להתאים לסכום הזכייה ב-Polymarket.",
     "betPlaced": "ההימור הונח בהצלחה!",
     "filterAll": "הכל",
     "filterOpen": "פתוח",
@@ -315,7 +330,7 @@
     "priceDown": "מחיר ירד",
     "refreshing": "מרענן…",
     "refreshOdds": "רענן קואפיציינטים",
-      "refreshFailed": "עדכון נכשל (שוק לא נמצא ב-Polymarket)",
+    "refreshFailed": "עדכון נכשל (שוק לא נמצא ב-Polymarket)",
     "archive": "ארכיון",
     "archiveConfirm": "להעביר שוק זה לארכיון?",
     "archiveSuccess": "השוק הועבר לארכיון",
@@ -583,5 +598,17 @@
     "pickMarket": "בחר שוק…",
     "pickOutcome": "בחר תוצאה…",
     "marketCreated": "שוק דמו נוצר"
+  },
+  "editUser": {
+    "title": "עריכת משתמש",
+    "edit": "עריכה",
+    "firstName": "שם פרטי",
+    "firstNamePh": "הזן שם פרטי",
+    "lastName": "שם משפחה",
+    "lastNamePh": "הזן שם משפחה",
+    "phone": "טלפון",
+    "phonePh": "הזן מספר טלפון",
+    "firstNameRequired": "שם פרטי הוא שדה חובה",
+    "updated": "פרטי המשתמש עודכנו בהצלחה"
   }
 }

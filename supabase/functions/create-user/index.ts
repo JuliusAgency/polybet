@@ -42,7 +42,7 @@ Deno.serve(async (req: Request) => {
 
   // ── 2. Validate required fields ───────────────────────────────────────────
   const missingFields: string[] = [];
-  if (!body.role)     missingFields.push('role');
+  if (!body.role) missingFields.push('role');
   if (!body.fullName) missingFields.push('fullName');
   if (!body.username) missingFields.push('username');
   if (!body.password) missingFields.push('password');
@@ -99,7 +99,7 @@ Deno.serve(async (req: Request) => {
 
   // ── 9. Create auth user ───────────────────────────────────────────────────
   const { data: newAuthUser, error: createAuthErr } = await adminClient.auth.admin.createUser({
-    email:         `${username}@polybet.internal`,
+    email: `${username}@polybet.internal`,
     password,
     email_confirm: true,
   });
@@ -107,21 +107,31 @@ Deno.serve(async (req: Request) => {
   if (createAuthErr || !newAuthUser?.user) {
     return jsonWithCors(
       { error: 'internal_error', details: createAuthErr?.message ?? 'Failed to create auth user' },
-      500,
+      500
     );
   }
 
   const newUserId = newAuthUser.user.id;
 
+  // Split the single full-name field into first/last (first whitespace-delimited
+  // token -> first_name, remainder -> last_name). Mirrors the backfill in
+  // migration 20260524100940 so profiles stay editable via the split-name UI.
+  const trimmedFullName = (fullName ?? '').trim();
+  const firstSpace = trimmedFullName.indexOf(' ');
+  const firstName = firstSpace === -1 ? trimmedFullName : trimmedFullName.slice(0, firstSpace);
+  const lastName = firstSpace === -1 ? '' : trimmedFullName.slice(firstSpace + 1).trim();
+
   // ── 10. Insert into profiles ──────────────────────────────────────────────
   const { error: profileInsertErr } = await adminClient.from('profiles').insert({
-    id:         newUserId,
+    id: newUserId,
     username,
-    full_name:  fullName,
+    full_name: trimmedFullName,
+    first_name: firstName,
+    last_name: lastName,
     role,
-    phone:      phone ?? null,
-    notes:      notes ?? null,
-    is_active:  true,
+    phone: phone ?? null,
+    notes: notes ?? null,
+    is_active: true,
     created_by: callerId,
   });
 
@@ -134,9 +144,9 @@ Deno.serve(async (req: Request) => {
   // ── 11. Role-specific inserts ─────────────────────────────────────────────
   if (role === 'manager') {
     const { error: managerInsertErr } = await adminClient.from('managers').insert({
-      id:            newUserId,
-      balance:       0,
-      margin:        margin ?? 0,
+      id: newUserId,
+      balance: 0,
+      margin: margin ?? 0,
       max_bet_limit: 0,
       max_win_limit: 0,
     });
@@ -152,7 +162,7 @@ Deno.serve(async (req: Request) => {
     if (callerRole === 'manager') {
       const { error: linkInsertErr } = await adminClient.from('manager_user_links').insert({
         manager_id: callerId,
-        user_id:    newUserId,
+        user_id: newUserId,
       });
 
       if (linkInsertErr) {
@@ -165,9 +175,9 @@ Deno.serve(async (req: Request) => {
     // If super_admin creates a user, skip manager_user_links (not applicable in this sprint)
 
     const { error: balanceInsertErr } = await adminClient.from('balances').insert({
-      user_id:  newUserId,
+      user_id: newUserId,
       available: 0,
-      in_play:  0,
+      in_play: 0,
     });
 
     if (balanceInsertErr) {
@@ -183,8 +193,8 @@ Deno.serve(async (req: Request) => {
 
   // ── 12. Return success ────────────────────────────────────────────────────
   return jsonWithCors({
-    success:           true,
-    id:                newUserId,
+    success: true,
+    id: newUserId,
     username,
     generatedPassword: password,
   });

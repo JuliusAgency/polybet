@@ -13,6 +13,8 @@ export interface DbProfile {
   id: string;
   username: string;
   full_name: string;
+  first_name: string;
+  last_name: string;
   role: 'super_admin' | 'manager' | 'user';
   phone: string | null;
   notes: string | null;

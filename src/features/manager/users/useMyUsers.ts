@@ -3,7 +3,15 @@ import { supabase } from '@/shared/api/supabase';
 
 export interface UserRow {
   user_id: string;
-  profiles: { id: string; full_name: string; username: string; is_active: boolean } | null;
+  profiles: {
+    id: string;
+    full_name: string;
+    first_name: string;
+    last_name: string;
+    phone: string | null;
+    username: string;
+    is_active: boolean;
+  } | null;
   balances: { available: number; in_play: number } | null;
 }
 
@@ -14,7 +22,9 @@ export function useMyUsers() {
       // Step 1: fetch linked users with profiles (direct FK exists)
       const { data: links, error } = await supabase
         .from('manager_user_links')
-        .select('user_id, profiles!manager_user_links_user_id_fkey(id, full_name, username, is_active)');
+        .select(
+          'user_id, profiles!manager_user_links_user_id_fkey(id, full_name, first_name, last_name, phone, username, is_active)'
+        );
 
       if (error) throw new Error(error.message);
       if (!links || links.length === 0) return [];

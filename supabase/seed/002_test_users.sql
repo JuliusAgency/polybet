@@ -46,13 +46,13 @@ BEGIN
   ON CONFLICT (id) DO NOTHING;
 
   -- Profiles
-  INSERT INTO profiles (id, username, full_name, role, is_active, created_at)
+  INSERT INTO profiles (id, username, full_name, first_name, last_name, role, is_active, created_at)
   VALUES
-    (admin_id,   'admin',   'System Administrator', 'super_admin', true, now()),
-    (manager_id, 'manager', 'Test Manager',         'manager',     true, now()),
-    (user1_id,   'user1',   'Test User 1',          'user',        true, now()),
-    (user2_id,   'user2',   'Test User 2',          'user',        true, now()),
-    (user3_id,   'user3',   'Test User 3',          'user',        true, now())
+    (admin_id,   'admin',   'System Administrator', 'System', 'Administrator', 'super_admin', true, now()),
+    (manager_id, 'manager', 'Test Manager',         'Test',   'Manager',       'manager',     true, now()),
+    (user1_id,   'user1',   'Test User 1',          'Test',   'User 1',        'user',        true, now()),
+    (user2_id,   'user2',   'Test User 2',          'Test',   'User 2',        'user',        true, now()),
+    (user3_id,   'user3',   'Test User 3',          'Test',   'User 3',        'user',        true, now())
   ON CONFLICT (id) DO NOTHING;
 
   -- Managers table (super_admin + manager)

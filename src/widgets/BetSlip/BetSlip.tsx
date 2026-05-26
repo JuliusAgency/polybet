@@ -7,7 +7,7 @@ import { Input } from '@/shared/ui/Input';
 import { Button } from '@/shared/ui/Button';
 import { Badge } from '@/shared/ui/Badge';
 import { Spinner } from '@/shared/ui/Spinner';
-import { usePlaceBet, OddsDriftError, useBetQuote } from '@/features/bet';
+import { usePlaceBet, OddsDriftError, useBetQuote, useMyBetLimit } from '@/features/bet';
 import type { BetQuote } from '@/features/bet';
 import type { Market, MarketOutcome } from '@/entities/market';
 
@@ -49,6 +49,11 @@ export const BetSlip = ({
   const isValidStake = stake !== null;
   const isInsufficient = isValidStake && stake! > availableBalance;
 
+  // Effective max bet limit (user > manager > global). null/0 means no limit.
+  const { data: maxBetLimit } = useMyBetLimit();
+  const hasBetLimit = maxBetLimit != null && maxBetLimit > 0;
+  const isOverLimit = isValidStake && hasBetLimit && stake! > maxBetLimit!;
+
   // Live quote from the cached order book. The same RPC backs place_bet so
   // what the user sees is what gets locked in. Disabled until the user has
   // typed a valid affordable stake — otherwise we'd burn polling on noise.
@@ -59,30 +64,25 @@ export const BetSlip = ({
     enabled: quoteEnabled,
   });
 
-  // Book-derived quote vs indicative fallback. The server applies the same
-  // logic in place_bet: if the book row is missing (rollout window or an
-  // outcome the tracker isn't subscribed to yet), use market_outcomes.
-  // effective_odds. Don't block the user in that case — the legacy formula
-  // is the safe default, and we'd otherwise lock out every bet until
-  // market-tracker is fully populated.
+  // Polymarket parity (QA 2026-05-20 #2): payout must equal the number
+  // Polymarket shows for the same stake. That means we ALWAYS use the live
+  // order-book quote — the indicative mid-price formula (stake *
+  // effective_odds) systematically overstates the payout because the real
+  // ask sits above the mid by the bid-ask spread (~4% at sub-cent prices,
+  // observable in QA: 85,123 vs 81,722 on a $100 stake).
+  //
+  // When the book is unavailable (CLOB unreachable or temporarily empty),
+  // we surface "quote unavailable" and disable Confirm rather than show a
+  // fabricated number. The server-side place_bet RPC still keeps its
+  // indicative-odds fallback as a defence-in-depth for legacy clients.
   const bookAvailable = Boolean(quote && quote.book_updated_at !== null);
   const isQuoteReadyFromBook = Boolean(
     quote && bookAvailable && !quote.partial && quote.shares > 0
   );
-  const isUsingFallback = Boolean(quote && !bookAvailable);
+  const isQuoteUnavailable = Boolean(quote && !bookAvailable);
   const effectiveShares =
-    isValidStake && !isInsufficient
-      ? isQuoteReadyFromBook
-        ? quote!.shares
-        : isUsingFallback
-          ? stake! * outcome.effective_odds
-          : null
-      : null;
-  const effectiveOddsForBet = isQuoteReadyFromBook
-    ? quote!.effective_odds
-    : isUsingFallback
-      ? outcome.effective_odds
-      : null;
+    isValidStake && !isInsufficient && isQuoteReadyFromBook ? quote!.shares : null;
+  const effectiveOddsForBet = isQuoteReadyFromBook ? quote!.effective_odds : null;
   const displayOdds = effectiveOddsForBet ?? outcome.effective_odds;
 
   const potentialPayout = effectiveShares;
@@ -104,14 +104,20 @@ export const BetSlip = ({
 
   const handleConfirm = async () => {
     if (isPending) return;
-    if (!isValidStake || isInsufficient) return;
+    if (!isValidStake || isInsufficient || isOverLimit) return;
     if (isUntradable) {
       setSubmitError(t('markets.outcomeUntradable'));
       return;
     }
-    // Allow the bet when the book is genuinely missing (fallback path). Only
-    // block on partial when the book actually exists and is fresh.
-    if (quote && quote.book_updated_at !== null && (quote.partial || quote.shares <= 0)) {
+    // Polymarket parity: do not submit unless the live book quote is in hand.
+    // Without it we'd lock odds against the optimistic mid-price formula and
+    // overpay relative to what Polymarket would actually fill (~4% gap at
+    // sub-cent prices).
+    if (!quote || quote.book_updated_at === null) {
+      setSubmitError(t('markets.quoteUnavailable'));
+      return;
+    }
+    if (quote.partial || quote.shares <= 0) {
       setSubmitError(t('markets.lowLiquidity'));
       return;
     }
@@ -131,18 +137,20 @@ export const BetSlip = ({
     const fresh: BetQuote | null =
       queryClient.getQueryData<BetQuote | null>(quoteKey) ?? quote ?? null;
 
-    // Determine the odds to lock — book-derived when book is present and
-    // fillable, indicative fallback otherwise. Mirror the server's logic in
-    // place_bet so the drift-guard sees consistent numbers.
+    // Polymarket parity: lock odds against the fresh book quote ONLY. If the
+    // refresh dropped the quote (CLOB transient failure between debounce and
+    // Confirm), abort and ask the user to retry — never lock at the
+    // indicative-mid odds because that's exactly the gap QA flagged.
     const freshBookAvailable = Boolean(fresh && fresh.book_updated_at !== null);
-    if (fresh && freshBookAvailable && (fresh.partial || fresh.shares <= 0)) {
+    if (!fresh || !freshBookAvailable) {
+      setSubmitError(t('markets.quoteUnavailable'));
+      return;
+    }
+    if (fresh.partial || fresh.shares <= 0) {
       setSubmitError(t('markets.lowLiquidity'));
       return;
     }
-    const lockOdds =
-      fresh && freshBookAvailable && !fresh.partial && fresh.shares > 0
-        ? fresh.effective_odds
-        : outcome.effective_odds;
+    const lockOdds = fresh.effective_odds;
 
     if (lockOdds > 0 && displayOdds > 0) {
       const drift = Math.abs(lockOdds - displayOdds) / displayOdds;
@@ -174,17 +182,42 @@ export const BetSlip = ({
         );
         return;
       }
-      setSubmitError(err instanceof Error ? err.message : t('common.unknownError'));
+      // Map raw server guard strings to friendly, actionable messages instead of
+      // leaking the English Postgres exception. The staleness gates are an
+      // antifraud bound (kept as-is server-side); here we just recover the UX by
+      // refreshing the odds + book quote and telling the user to retry.
+      const raw = err instanceof Error ? err.message : '';
+      const isStale =
+        raw.includes('Market price feed is stale') ||
+        raw.includes('Market book is stale') ||
+        raw.includes('Outcome price feed is stale');
+      if (isStale) {
+        setSubmitError(t('markets.priceStaleRetry'));
+        void queryClient.refetchQueries({ queryKey: ['event'] });
+        void queryClient.refetchQueries({ queryKey: quoteKey });
+        return;
+      }
+      if (raw.includes('Insufficient liquidity')) {
+        setSubmitError(t('markets.lowLiquidity'));
+        return;
+      }
+      if (raw.includes('Stake exceeds effective maximum bet limit')) {
+        setSubmitError(hasBetLimit ? t('markets.exceedsMaxBet', { amount: maxBetLimit }) : raw);
+        return;
+      }
+      setSubmitError(raw || t('common.unknownError'));
     }
   };
 
   const isConfirmDisabled =
     !isValidStake ||
     isInsufficient ||
+    isOverLimit ||
     isPending ||
     isUntradable ||
     isLowLiquidity ||
     isQuoteLoading ||
+    isQuoteUnavailable ||
     effectiveShares === null;
 
   return (
@@ -228,14 +261,26 @@ export const BetSlip = ({
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             hint={
-              !isInsufficient
+              !isInsufficient && !isOverLimit
                 ? t('markets.balance', { amount: availableBalance.toFixed(2) })
                 : undefined
             }
-            error={isInsufficient ? t('markets.insufficientBalance') : undefined}
+            error={
+              isInsufficient
+                ? t('markets.insufficientBalance')
+                : isOverLimit
+                  ? t('markets.exceedsMaxBet', { amount: maxBetLimit })
+                  : undefined
+            }
             placeholder="0.00"
             disabled={isUntradable}
           />
+
+          {hasBetLimit && (
+            <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+              {t('markets.maxBet', { amount: maxBetLimit })}
+            </p>
+          )}
 
           <Button
             variant="secondary"
@@ -248,7 +293,8 @@ export const BetSlip = ({
           </Button>
         </div>
 
-        {/* Low-liquidity warning: book depth ran out before stake was filled. */}
+        {/* Low-liquidity warning: book depth ran out before stake was filled.
+            Surface the max fillable stake so the user knows what they CAN bet. */}
         {isLowLiquidity && (
           <div
             className="rounded-lg border p-3 text-sm"
@@ -259,6 +305,11 @@ export const BetSlip = ({
             }}
           >
             {t('markets.lowLiquidity')}
+            {quote && quote.available_stake != null && quote.available_stake > 0 && (
+              <span className="mt-1 block font-medium">
+                {t('markets.maxAvailableStake', { amount: quote.available_stake.toFixed(2) })}
+              </span>
+            )}
           </div>
         )}
 
@@ -324,13 +375,20 @@ export const BetSlip = ({
           </div>
         )}
 
-        {/* Estimate badge: CLOB book unavailable, we're showing the indicative
-            (mid-price) payout. Bet placement still works, but the lock-in
-            number may differ from Polymarket by the slippage delta. */}
-        {isUsingFallback && potentialPayout !== null && (
-          <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-            {t('markets.quoteEstimate')}
-          </p>
+        {/* Book unavailable: surface an explicit warning so the user knows
+            why Confirm is disabled. Polymarket parity demands we never lock
+            against the optimistic indicative payout. */}
+        {isQuoteUnavailable && !isQuoteLoading && (
+          <div
+            className="rounded-lg border p-3 text-sm"
+            style={{
+              borderColor: 'var(--color-error)',
+              color: 'var(--color-error)',
+              backgroundColor: 'color-mix(in oklch, var(--color-error) 8%, var(--color-bg-base))',
+            }}
+          >
+            {t('markets.quoteUnavailable')}
+          </div>
         )}
 
         {/* Quote is loading and we don't have a payout to render yet */}

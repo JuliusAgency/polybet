@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useMarkets, useMarketCategories } from '@/features/bet';
+import { useMarkets, useAllowedCategoryTags } from '@/features/bet';
 import type { Market } from '@/entities/market';
 import type { MarketStatusFilter } from '@/entities/market';
 import { useArchiveMarket } from '@/features/admin/markets/useArchiveMarket';
@@ -16,13 +16,13 @@ const MarketsPage = () => {
   const { t } = useTranslation();
   const [statusFilter, setStatusFilter] = useState<MarketStatusFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [tagSlug, setTagSlug] = useState<string | null>(null);
   const debouncedSearch = useDebounce(searchQuery, 300);
 
-  const { data: categories = [] } = useMarketCategories();
+  const { data: categories = [] } = useAllowedCategoryTags();
 
   const { markets, isLoading, isError, error, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useMarkets(statusFilter, debouncedSearch, categoryFilter);
+    useMarkets(statusFilter, debouncedSearch, null, tagSlug);
 
   const archiveMarket = useArchiveMarket();
 
@@ -85,11 +85,7 @@ const MarketsPage = () => {
           </div>
         </div>
         {/* Category filter — below status row */}
-        <CategoryFilter
-          value={categoryFilter}
-          onChange={setCategoryFilter}
-          categories={categories}
-        />
+        <CategoryFilter value={tagSlug} onChange={setTagSlug} categories={categories} />
       </div>
 
       {isLoading && <CardGridSkeleton count={4} />}
@@ -107,7 +103,7 @@ const MarketsPage = () => {
       )}
 
       {!isLoading && !isError && markets.length > 0 && (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {markets.map((market) => (
             <MarketCard
               key={market.id}

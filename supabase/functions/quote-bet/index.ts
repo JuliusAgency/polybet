@@ -49,6 +49,7 @@ interface QuoteBetResponse {
   effective_odds: number;
   partial: boolean;
   book_updated_at: string | null;
+  available_stake: number | null;
 }
 
 async function fetchClobBook(tokenId: string): Promise<ClobBookResponse | null> {
@@ -83,6 +84,7 @@ function softFallback(): QuoteBetResponse {
     effective_odds: 0,
     partial: true,
     book_updated_at: null,
+    available_stake: null,
   };
 }
 
@@ -183,6 +185,7 @@ Deno.serve(async (req: Request) => {
     effective_odds: walk.effectiveOdds,
     partial: walk.partial,
     book_updated_at: asksFlat.length > 0 ? nowIso : null,
+    available_stake: walk.availableStake,
   };
 
   return jsonWithCors(response);

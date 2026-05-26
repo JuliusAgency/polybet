@@ -29,6 +29,8 @@ const GlobalBetLogPage = () => {
   const [managerId, setManagerId] = useState<string>('');
   const [month, setMonth] = useState<string>('');
   const [year, setYear] = useState<string>('');
+  const [fromDate, setFromDate] = useState<string>('');
+  const [toDate, setToDate] = useState<string>('');
 
   // Filters for bet-log tab
   const [betManagerId, setBetManagerId] = useState<string>('');
@@ -43,12 +45,18 @@ const GlobalBetLogPage = () => {
     setManagerId('');
     setMonth('');
     setYear('');
+    setFromDate('');
+    setToDate('');
   };
+
+  const isRangeReversed = Boolean(fromDate && toDate && fromDate > toDate);
 
   const filterProps = {
     managerId: managerId || undefined,
     month: month ? Number(month) : undefined,
     year: year ? Number(year) : undefined,
+    from: !isRangeReversed && fromDate ? fromDate : undefined,
+    to: !isRangeReversed && toDate ? toDate : undefined,
   };
 
   const { rows: betRows, isLoading: betLoading } = useBetLog({
@@ -395,10 +403,50 @@ const GlobalBetLogPage = () => {
               </select>
             </div>
 
+            {/* From date */}
+            <div className="flex flex-col gap-1">
+              <label
+                className="text-xs font-medium"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                {t('globalLog.from')}
+              </label>
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                className="rounded-lg border px-3 py-2 text-sm outline-none"
+                style={selectStyle}
+              />
+            </div>
+
+            {/* To date */}
+            <div className="flex flex-col gap-1">
+              <label
+                className="text-xs font-medium"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                {t('globalLog.to')}
+              </label>
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                className="rounded-lg border px-3 py-2 text-sm outline-none"
+                style={selectStyle}
+              />
+            </div>
+
             {/* Clear filters */}
             <Button variant="secondary" onClick={handleClearFilters}>
               {t('globalLog.clearFilters')}
             </Button>
+
+            {isRangeReversed && (
+              <p className="w-full text-xs" style={{ color: 'var(--color-loss)' }}>
+                {t('globalLog.rangeReversed')}
+              </p>
+            )}
           </div>
 
           {/* Table */}
@@ -406,6 +454,8 @@ const GlobalBetLogPage = () => {
             managerId={filterProps.managerId}
             month={filterProps.month}
             year={filterProps.year}
+            from={filterProps.from}
+            to={filterProps.to}
           />
         </div>
       )}

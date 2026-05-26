@@ -5,8 +5,15 @@ import { toast } from 'sonner';
 import { Button } from '@/shared/ui/Button';
 import { Badge } from '@/shared/ui/Badge';
 import { TableSkeleton } from '@/shared/ui/TableSkeleton';
+import { EditUserModal, type EditUserValues } from '@/shared/ui/EditUserModal';
+import { SetPasswordModal } from '@/shared/ui/SetPasswordModal';
 import { AdjustBalanceModal } from '@/features/manager/balance';
-import { useManagerToggleUserBlock, useMyUsers } from '@/features/manager/users';
+import {
+  useManagerToggleUserBlock,
+  useManagerUpdateUser,
+  useManagerResetPassword,
+  useMyUsers,
+} from '@/features/manager/users';
 import { CreateUserModal } from './components/CreateUserModal';
 
 interface ModalState {
@@ -15,14 +22,67 @@ interface ModalState {
   type: 'deposit' | 'withdrawal';
 }
 
+interface EditTarget {
+  userId: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+}
+
+interface ResetTarget {
+  userId: string;
+  username: string;
+}
+
 const UsersManagementPage = () => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [modalState, setModalState] = useState<ModalState | null>(null);
+  const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
+  const [editError, setEditError] = useState('');
+  const [resetTarget, setResetTarget] = useState<ResetTarget | null>(null);
+  const [resetError, setResetError] = useState('');
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
   const { data, isLoading, error } = useMyUsers();
   const toggleUserBlock = useManagerToggleUserBlock();
+  const updateUser = useManagerUpdateUser();
+  const resetPassword = useManagerResetPassword();
+
+  const handleEditSubmit = async (values: EditUserValues) => {
+    if (!editTarget) return;
+    setEditError('');
+    try {
+      await updateUser.mutateAsync({
+        targetUserId: editTarget.userId,
+        firstName: values.firstName,
+        lastName: values.lastName,
+        phone: values.phone || null,
+      });
+      await queryClient.invalidateQueries({ queryKey: ['manager', 'users'] });
+      toast.success(t('editUser.updated'));
+      setEditTarget(null);
+    } catch (mutationError) {
+      setEditError(
+        mutationError instanceof Error ? mutationError.message : t('common.unknownError')
+      );
+    }
+  };
+
+  const handleResetSubmit = async (newPassword: string) => {
+    if (!resetTarget) return;
+    setResetError('');
+    try {
+      await resetPassword.mutateAsync({ targetUserId: resetTarget.userId, newPassword });
+      toast.success(t('managerProfile.passwordResetSuccess'));
+      setResetTarget(null);
+    } catch (mutationError) {
+      setResetError(
+        mutationError instanceof Error ? mutationError.message : t('common.unknownError')
+      );
+    }
+  };
 
   const handleToggleBlock = async (userId: string, username: string, isActive: boolean) => {
     const confirmMessage = isActive
@@ -145,6 +205,28 @@ const UsersManagementPage = () => {
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-2">
                         <Button
+                          variant="secondary"
+                          className="px-3 py-1 text-xs"
+                          onClick={() =>
+                            setEditTarget({
+                              userId: row.user_id,
+                              username,
+                              firstName: row.profiles?.first_name ?? '',
+                              lastName: row.profiles?.last_name ?? '',
+                              phone: row.profiles?.phone ?? '',
+                            })
+                          }
+                        >
+                          {t('editUser.edit')}
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          className="px-3 py-1 text-xs"
+                          onClick={() => setResetTarget({ userId: row.user_id, username })}
+                        >
+                          {t('managerProfile.resetPwd')}
+                        </Button>
+                        <Button
                           variant="primary"
                           className="px-3 py-1 text-xs"
                           disabled={isInactive}
@@ -188,6 +270,31 @@ const UsersManagementPage = () => {
         onClose={() => setModalState(null)}
         {...(modalState ?? { userId: '', username: '', type: 'deposit' })}
       />
+      {editTarget && (
+        <EditUserModal
+          isOpen
+          onClose={() => setEditTarget(null)}
+          title={`${t('editUser.title')} - ${editTarget.username}`}
+          initialValues={{
+            firstName: editTarget.firstName,
+            lastName: editTarget.lastName,
+            phone: editTarget.phone,
+          }}
+          isPending={updateUser.isPending}
+          errorMsg={editError}
+          onSubmit={handleEditSubmit}
+        />
+      )}
+      {resetTarget && (
+        <SetPasswordModal
+          isOpen
+          onClose={() => setResetTarget(null)}
+          title={`${t('managerProfile.resetPwd')} - ${resetTarget.username}`}
+          isPending={resetPassword.isPending}
+          errorMsg={resetError}
+          onSubmit={handleResetSubmit}
+        />
+      )}
     </div>
   );
 };

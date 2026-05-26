@@ -16,6 +16,8 @@ export interface BetQuote {
   effective_odds: number;
   partial: boolean;
   book_updated_at: string | null;
+  // Total USD depth across all ask levels. null when the book is unavailable.
+  available_stake: number | null;
 }
 
 interface QuoteBetResponse {
@@ -25,6 +27,7 @@ interface QuoteBetResponse {
   effective_odds: number;
   partial: boolean;
   book_updated_at: string | null;
+  available_stake?: number | null;
 }
 
 interface UseBetQuoteOptions {
@@ -78,6 +81,10 @@ export function useBetQuote({ tokenId, stake, enabled = true }: UseBetQuoteOptio
         effective_odds: Number(data.effective_odds),
         partial: Boolean(data.partial),
         book_updated_at: data.book_updated_at ?? null,
+        available_stake:
+          data.available_stake === null || data.available_stake === undefined
+            ? null
+            : Number(data.available_stake),
       };
     },
   });

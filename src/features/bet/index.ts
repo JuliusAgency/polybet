@@ -8,8 +8,6 @@ export { useEventMarketCounts } from './useEventMarketCounts';
 export { groupMarketsByEvent } from './groupMarketsByEvent';
 export type { FeedItem } from './groupMarketsByEvent';
 
-export { useMarketCategories } from './useMarketCategories';
-
 export { useAllowedCategoryTags } from './useAllowedCategoryTags';
 export type { AllowedCategoryTag } from './useAllowedCategoryTags';
 
@@ -21,6 +19,8 @@ export type { PlaceBetInput } from './usePlaceBet';
 
 export { useBetQuote } from './useBetQuote';
 export type { BetQuote } from './useBetQuote';
+
+export { useMyBetLimit } from './useMyBetLimit';
 
 export { useMyBets } from './useMyBets';
 

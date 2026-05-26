@@ -5,6 +5,8 @@ export interface TransactionFilters {
   managerId?: string;
   month?: number; // 1-12
   year?: number; // e.g. 2026
+  from?: string; // ISO date 'YYYY-MM-DD' — inclusive range start (takes precedence over month/year)
+  to?: string; // ISO date 'YYYY-MM-DD' — inclusive range end
 }
 
 export interface FinancialTransactionRow {
@@ -49,7 +51,18 @@ const fetchFinancialTransactions = async (
     query = query.eq('initiated_by', filters.managerId);
   }
 
-  if (filters.year !== undefined && filters.month !== undefined) {
+  if (filters.from || filters.to) {
+    // Explicit date range takes precedence over month/year selectors.
+    if (filters.from) {
+      query = query.gte('created_at', new Date(`${filters.from}T00:00:00`).toISOString());
+    }
+    if (filters.to) {
+      // Inclusive end: everything strictly before the day after `to`.
+      const end = new Date(`${filters.to}T00:00:00`);
+      end.setDate(end.getDate() + 1);
+      query = query.lt('created_at', end.toISOString());
+    }
+  } else if (filters.year !== undefined && filters.month !== undefined) {
     const month = filters.month;
     const year = filters.year;
     const startDate = new Date(year, month - 1, 1).toISOString();
@@ -106,7 +119,15 @@ export function useFinancialTransactions(
   filters: TransactionFilters = {}
 ): UseFinancialTransactionsResult {
   const { data, isLoading, error } = useQuery({
-    queryKey: ['admin', 'financial-transactions', filters.managerId, filters.month, filters.year],
+    queryKey: [
+      'admin',
+      'financial-transactions',
+      filters.managerId,
+      filters.month,
+      filters.year,
+      filters.from,
+      filters.to,
+    ],
     queryFn: () => fetchFinancialTransactions(filters),
     refetchInterval: 30_000,
   });

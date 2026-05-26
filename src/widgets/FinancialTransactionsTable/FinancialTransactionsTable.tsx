@@ -9,6 +9,8 @@ interface FinancialTransactionsTableProps {
   managerId?: string;
   month?: number;
   year?: number;
+  from?: string;
+  to?: string;
 }
 
 const formatDate = (iso: string, locale: string): { date: string; time: string } => {
@@ -38,9 +40,11 @@ export const FinancialTransactionsTable = ({
   managerId,
   month,
   year,
+  from,
+  to,
 }: FinancialTransactionsTableProps) => {
   const { t, i18n } = useTranslation();
-  const filters: TransactionFilters = { managerId, month, year };
+  const filters: TransactionFilters = { managerId, month, year, from, to };
   const { transactions, totals, isLoading, error } = useFinancialTransactions(filters);
 
   if (isLoading) {

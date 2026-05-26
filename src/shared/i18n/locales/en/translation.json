@@ -20,7 +20,8 @@
     "profile": "Profile",
     "all": "All",
     "noData": "No data",
-    "superAdminAlias": "Super Admin"
+    "superAdminAlias": "Super Admin",
+    "save": "Save"
   },
   "theme": {
     "label": "Theme",
@@ -111,6 +112,8 @@
     "noteLabelOpt": "Note (optional)",
     "notePlaceholder": "Reason…",
     "amountError": "Amount must be a positive number",
+    "minAmountError": "Minimum amount is {{amount}}",
+    "noteTooLong": "Note cannot be longer than {{max}} characters",
     "limitAmountError": "Bet limit must be a positive number",
     "newPassword": "New Password",
     "passwordPh": "Min. 6 characters",
@@ -134,7 +137,8 @@
     "actionCol": "Action",
     "targetCol": "Target",
     "noteCol": "Note",
-    "byCol": "By"
+    "byCol": "By",
+    "passwordResetSuccess": "Password reset successfully"
   },
   "actionLabels": {
     "adjustment": "Deposit",
@@ -143,7 +147,8 @@
     "unblock": "Unblock",
     "reset_password": "Reset Password",
     "set_user_max_bet_limit": "Set User Bet Limit",
-    "set_manager_max_bet_limit": "Set Manager Bet Limit"
+    "set_manager_max_bet_limit": "Set Manager Bet Limit",
+    "update_profile": "Profile Updated"
   },
   "globalLog": {
     "title": "Global Log",
@@ -157,6 +162,9 @@
     "year": "Year",
     "allYears": "All years",
     "clearFilters": "Clear Filters",
+    "from": "From",
+    "to": "To",
+    "rangeReversed": "Start date must be before end date",
     "months": [
       "January",
       "February",
@@ -219,6 +227,8 @@
     "amount": "Amount",
     "note": "Note (optional)",
     "amountError": "Amount must be a positive number",
+    "minAmountError": "Minimum amount is {{amount}}",
+    "noteTooLong": "Note cannot be longer than {{max}} characters",
     "depositTitle": "Deposit to {{username}}",
     "withdrawalTitle": "Withdraw from {{username}}",
     "deposit": "Deposit",
@@ -233,6 +243,10 @@
     "stakeLabel": "Stake",
     "balance": "Balance: {{amount}}",
     "insufficientBalance": "Insufficient balance",
+    "maxBet": "Maximum bet: {{amount}}",
+    "exceedsMaxBet": "Maximum allowed bet is {{amount}}",
+    "maxAvailableStake": "Maximum available stake: {{amount}}",
+    "priceStaleRetry": "Market data is not up to date. Refresh the bet and try again.",
     "allIn": "All In",
     "potentialPayout": "Potential Payout",
     "confirmBet": "Confirm Bet",
@@ -241,6 +255,7 @@
     "lowLiquidity": "Not enough liquidity at the current order book to fill this stake. Lower the amount or try another market.",
     "quoteUpdating": "Calculating payout from the live order book…",
     "quoteEstimate": "Live order book is temporarily unavailable — payout shown is an estimate based on the mid price.",
+    "quoteUnavailable": "Live order book is unavailable — try again in a moment. A live book quote is required to match the Polymarket payout.",
     "betPlaced": "Bet placed successfully!",
     "filterAll": "All",
     "filterOpen": "Open",
@@ -315,7 +330,7 @@
     "priceDown": "Price down",
     "refreshing": "Refreshing…",
     "refreshOdds": "Refresh odds",
-      "refreshFailed": "Refresh failed (not in Polymarket)",
+    "refreshFailed": "Refresh failed (not in Polymarket)",
     "archive": "Archive",
     "archiveConfirm": "Archive this market?",
     "archiveSuccess": "Market archived",
@@ -583,5 +598,17 @@
     "pickMarket": "Pick a market…",
     "pickOutcome": "Pick an outcome…",
     "marketCreated": "Demo market created"
+  },
+  "editUser": {
+    "title": "Edit User",
+    "edit": "Edit",
+    "firstName": "First Name",
+    "firstNamePh": "Enter first name",
+    "lastName": "Last Name",
+    "lastNamePh": "Enter last name",
+    "phone": "Phone",
+    "phonePh": "Enter phone number",
+    "firstNameRequired": "First name is required",
+    "updated": "User details updated successfully"
   }
 }

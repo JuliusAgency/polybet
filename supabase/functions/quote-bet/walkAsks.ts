@@ -20,6 +20,8 @@ export interface WalkResult {
   avgPrice: number;
   effectiveOdds: number;
   partial: boolean;
+  // Total USD depth across all ask levels (Σ price*size).
+  availableStake: number;
 }
 
 // Polymarket itself keeps sub-cent prices live and tradable; preserving them
@@ -43,6 +45,7 @@ export function walkAsks(asks: BookLevel[], stake: number): WalkResult {
       avgPrice: 0,
       effectiveOdds: 0,
       partial: true,
+      availableStake: 0,
     };
   }
 
@@ -59,9 +62,11 @@ export function walkAsks(asks: BookLevel[], stake: number): WalkResult {
   let remaining = stake;
   let shares = 0;
   let filled = 0;
+  let available = 0;
 
   for (const level of parsed) {
-    if (remaining <= 0) break;
+    available += level.price * level.size;
+    if (remaining <= 0) continue;
     const levelUsd = level.price * level.size;
     const takeUsd = Math.min(remaining, levelUsd);
     const takeUnits = takeUsd / level.price;
@@ -77,6 +82,7 @@ export function walkAsks(asks: BookLevel[], stake: number): WalkResult {
     avgPrice: shares > 0 ? filled / shares : 0,
     effectiveOdds: stake > 0 ? shares / stake : 0,
     partial,
+    availableStake: available,
   };
 }
 
