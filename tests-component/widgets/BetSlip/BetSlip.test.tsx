@@ -1,20 +1,52 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { QueryClient } from '@tanstack/react-query';
 import type { Market, MarketOutcome } from '@/entities/market';
 import type { MarketEvent } from '@/entities/event';
-import type { EventWithMarkets } from '@/features/bet';
+import type { BetQuote } from '@/features/bet';
 import { BetSlip } from '@/widgets/BetSlip';
 import { renderWithProviders } from '../../helpers/render';
 
-// Module-scoped RPC mock so each test can re-program its response.
+// Module-scoped RPC mock so each test can re-program place_bet's response.
 const rpcMock = vi.fn();
 vi.mock('@/shared/api/supabase', () => ({
   supabase: {
     rpc: (...args: unknown[]) => rpcMock(...args),
   },
 }));
+
+// Mock the bet hooks. useBetQuote drives the order-book quote — mocking it
+// sidesteps the edge-function/auth HTTP chain so we can drive the slip's
+// shares-model UI deterministically. usePlaceBet / OddsDriftError stay real so
+// the P0002 drift mapping is exercised end-to-end.
+const quoteMock = vi.fn();
+vi.mock('@/features/bet', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/features/bet')>();
+  return {
+    ...actual,
+    useBetQuote: (...args: unknown[]) => quoteMock(...args),
+    useMyBetLimit: () => ({ data: null }),
+  };
+});
+
+const FRESH_BOOK_AT = '2026-06-01T00:00:00.000Z';
+
+/** A fully-fillable book quote: stake/price shares at avg price, no drift. */
+function bookQuote(overrides: Partial<BetQuote> = {}): { data: BetQuote; isFetching: boolean } {
+  return {
+    data: {
+      shares: 50,
+      filled_stake: 25,
+      avg_price: 0.5,
+      effective_odds: 2,
+      partial: false,
+      book_updated_at: FRESH_BOOK_AT,
+      available_stake: 1000,
+      ...overrides,
+    },
+    isFetching: false,
+  };
+}
 
 function makeEvent(): MarketEvent {
   return {
@@ -68,39 +100,21 @@ function makeMarket(outcome: MarketOutcome): Market {
   };
 }
 
-async function seedEventCache(
-  queryClient: QueryClient,
-  market: Market,
-  liveOutcome: MarketOutcome
-): Promise<void> {
-  // useEventById uses ['event', eventId] as the cache key. BetSlip's
-  // handleConfirm calls refetchQueries on this key before submit, so we
-  // prefetch with a stable queryFn — refetch then re-invokes the same fn
-  // and the cache survives intact.
-  const data: EventWithMarkets = {
-    event: makeEvent(),
-    markets: [{ ...market, market_outcomes: [liveOutcome] }],
-  };
-  await queryClient.prefetchQuery({
-    queryKey: ['event', market.event_id],
-    queryFn: async () => data,
-    staleTime: Infinity,
-  });
-}
-
-describe('BetSlip — guards against stale/untradable odds', () => {
+describe('BetSlip — shares model', () => {
   beforeEach(() => {
     rpcMock.mockReset();
+    quoteMock.mockReset();
+    quoteMock.mockReturnValue(bookQuote());
   });
 
   it('disables Confirm when the outcome has no Polymarket token id', async () => {
-    // Post-2026-05-20 (QA Polymarket-parity fix): there is no UI price floor.
-    // The only thing that flips an outcome to untradable is the absence of a
-    // CLOB token id — the book quote / place_bet RPC handle every other case
-    // (partial fill, stale book, drift) at submit time. Sub-cent prices are
-    // legal across the board now and would let the test pass through to the
-    // happy path.
-    const outcome = makeOutcome({ price: 0.5, effective_odds: 2, polymarket_token_id: null });
+    quoteMock.mockReturnValue({ data: undefined, isFetching: false });
+    // makeOutcome's `?? 'tok-yes'` default would swallow a null token, so set it
+    // explicitly after construction to model a genuinely untradable outcome.
+    const outcome: MarketOutcome = {
+      ...makeOutcome({ price: 0.5, effective_odds: 2 }),
+      polymarket_token_id: null,
+    };
     const market = makeMarket(outcome);
 
     renderWithProviders(
@@ -113,25 +127,40 @@ describe('BetSlip — guards against stale/untradable odds', () => {
       />
     );
 
-    // Untradable warning shown.
     expect(screen.getAllByText(/no longer tradable|untradable|לא זמין/i).length).toBeGreaterThan(0);
 
-    // Enter a valid stake — Confirm must STILL be disabled (untradable guard).
-    const stakeInput = screen.getByLabelText(/stake/i);
-    await userEvent.type(stakeInput, '10');
+    await userEvent.type(screen.getByLabelText(/stake/i), '10');
 
     const confirm = screen.getByRole('button', { name: /confirm/i });
     expect(confirm).toBeDisabled();
     expect(rpcMock).not.toHaveBeenCalled();
   });
 
-  it('sends expectedOdds and stake to place_bet on the happy path', async () => {
+  it('shows the share price in cents and the shares to win', async () => {
     const outcome = makeOutcome({ price: 0.5, effective_odds: 2 });
     const market = makeMarket(outcome);
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false, gcTime: Infinity } },
-    });
-    await seedEventCache(queryClient, market, outcome);
+
+    renderWithProviders(
+      <BetSlip
+        market={market}
+        outcome={outcome}
+        availableBalance={500}
+        onClose={() => {}}
+        onSuccess={() => {}}
+      />
+    );
+
+    await userEvent.type(screen.getByLabelText(/stake/i), '25');
+
+    // Cents price on the outcome chip + the Avg. Price line.
+    expect(screen.getAllByText('50¢').length).toBeGreaterThan(0);
+    // "To win" = shares ($50.00 for 50 shares at $1 each).
+    expect(screen.getByText(/\$50\.00/)).toBeInTheDocument();
+  });
+
+  it('sends expectedOdds (book effective_odds) and stake to place_bet', async () => {
+    const outcome = makeOutcome({ price: 0.5, effective_odds: 2 });
+    const market = makeMarket(outcome);
 
     rpcMock.mockResolvedValueOnce({ data: 'bet-uuid-1', error: null });
 
@@ -142,14 +171,12 @@ describe('BetSlip — guards against stale/untradable odds', () => {
         availableBalance={500}
         onClose={() => {}}
         onSuccess={() => {}}
-      />,
-      { queryClient }
+      />
     );
 
     await userEvent.type(screen.getByLabelText(/stake/i), '25');
     await userEvent.click(screen.getByRole('button', { name: /confirm/i }));
 
-    // Wait for the async confirm path to flush.
     await vi.waitFor(() => {
       expect(rpcMock).toHaveBeenCalled();
     });
@@ -161,77 +188,35 @@ describe('BetSlip — guards against stale/untradable odds', () => {
     });
   });
 
-  it('does not submit when live drift > 2 %; surfaces updated odds for re-confirmation', async () => {
-    // Slip opened at effective_odds=2; live cache has 2.5 (25 % drift).
-    const opened = makeOutcome({ id: 'out-yes', price: 0.5, effective_odds: 2 });
-    const market = makeMarket(opened);
-    const drifted = makeOutcome({ id: 'out-yes', price: 0.4, effective_odds: 2.5 });
-
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false, gcTime: Infinity } },
-    });
-    await seedEventCache(queryClient, market, drifted);
-    // BetSlip pre-fetches the event before submit. Force the refetch to a
-    // no-op so we test the post-cache lookup independent of TanStack
-    // refetch semantics (which in some versions can drop data when a
-    // re-fetch resolves with a different identity).
-    vi.spyOn(queryClient, 'refetchQueries').mockResolvedValue(undefined);
-    // Guard: if the pre-submit refresh has somehow lost the cache and the
-    // RPC ends up being called, surface that as a clear failure rather than
-    // a destructure crash inside usePlaceBet.
-    rpcMock.mockResolvedValue({ data: 'should-not-be-called', error: null });
+  it('disables Confirm and warns when the order book is unavailable', async () => {
+    quoteMock.mockReturnValue(bookQuote({ book_updated_at: null, available_stake: null }));
+    const outcome = makeOutcome({ price: 0.5, effective_odds: 2 });
+    const market = makeMarket(outcome);
 
     renderWithProviders(
       <BetSlip
         market={market}
-        outcome={opened}
+        outcome={outcome}
         availableBalance={500}
         onClose={() => {}}
         onSuccess={() => {}}
-      />,
-      { queryClient }
+      />
     );
 
-    // Sanity-check the cache holds the drifted outcome before we click.
-    const cached = queryClient.getQueryData(['event', market.event_id]) as EventWithMarkets;
-    expect(cached?.markets?.[0]?.market_outcomes?.[0]?.effective_odds).toBe(2.5);
+    await userEvent.type(screen.getByLabelText(/stake/i), '25');
 
-    await userEvent.type(screen.getByLabelText(/stake/i), '10');
-    await userEvent.click(screen.getByRole('button', { name: /confirm/i }));
-    // Allow microtasks (await refetch, await placeBet) to flush.
-    await new Promise((r) => setTimeout(r, 50));
-
-    // Cache snapshot AFTER click — drifted outcome must still be present.
-    const afterClick = queryClient.getQueryData(['event', market.event_id]) as
-      | EventWithMarkets
-      | undefined;
-    expect(afterClick?.markets?.[0]?.market_outcomes?.[0]?.effective_odds).toBe(2.5);
-
-    // Drift branch fired → RPC must not have been called.
+    expect(screen.getByText(/order book is unavailable|לא זמין/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /confirm/i })).toBeDisabled();
     expect(rpcMock).not.toHaveBeenCalled();
-
-    await vi.waitFor(
-      () => {
-        expect(screen.getByText(/odds have been updated|המקדמים עודכנו/i)).toBeInTheDocument();
-      },
-      { timeout: 3000 }
-    );
   });
 
   it('surfaces the drift error when the RPC rejects with P0002', async () => {
     const outcome = makeOutcome({ price: 0.5, effective_odds: 2 });
     const market = makeMarket(outcome);
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false, gcTime: Infinity } },
-    });
-    await seedEventCache(queryClient, market, outcome);
 
     rpcMock.mockResolvedValueOnce({
       data: null,
-      error: {
-        code: 'P0002',
-        message: 'Odds changed (expected 2.00, actual 2.50)',
-      },
+      error: { code: 'P0002', message: 'Odds changed (expected 2.00, actual 2.50)' },
     });
 
     renderWithProviders(
@@ -241,11 +226,10 @@ describe('BetSlip — guards against stale/untradable odds', () => {
         availableBalance={500}
         onClose={() => {}}
         onSuccess={() => {}}
-      />,
-      { queryClient }
+      />
     );
 
-    await userEvent.type(screen.getByLabelText(/stake/i), '10');
+    await userEvent.type(screen.getByLabelText(/stake/i), '25');
     await userEvent.click(screen.getByRole('button', { name: /confirm/i }));
 
     await vi.waitFor(() => {

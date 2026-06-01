@@ -8,7 +8,13 @@ export interface BetLogRow {
   placed_at: string;
   settled_at: string | null;
   stake: number;
+  /** Number of $1 shares acquired (gross payout on win). */
+  shares: number;
+  /** Volume-weighted average fill price in (0,1). */
+  avg_price: number;
+  /** @deprecated legacy odds multiplier (= shares/stake). */
   locked_odds: number;
+  /** @deprecated mirrors `shares`. */
   potential_payout: number;
   status: BetStatus;
   user_id: string;
@@ -33,10 +39,7 @@ interface UseBetLogResult {
 }
 
 const fetchBetLog = async (filters: BetLogFilters): Promise<BetLogRow[]> => {
-  let query = supabase
-    .from('admin_bet_log')
-    .select('*')
-    .order('placed_at', { ascending: false });
+  let query = supabase.from('admin_bet_log').select('*').order('placed_at', { ascending: false });
 
   if (filters.managerId) {
     query = query.eq('manager_id', filters.managerId);

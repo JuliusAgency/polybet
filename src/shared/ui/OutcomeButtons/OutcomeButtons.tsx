@@ -1,5 +1,5 @@
 import { useState, type CSSProperties, type ReactNode } from 'react';
-import { formatProbability } from '@/shared/utils';
+import { formatProbability, formatSharePrice } from '@/shared/utils';
 
 /**
  * Side-by-side outcome buttons for binary markets (Polymarket-style).
@@ -127,9 +127,7 @@ function hoverTintFor(index: number): CSSProperties {
 function formatPrice(price: number | null, format: 'percent' | 'cents' = 'percent'): string | null {
   if (price == null) return null;
   if (format === 'cents') {
-    const cents = price * 100;
-    const formatted = cents >= 10 ? cents.toFixed(1) : cents.toFixed(1);
-    return `${formatted}¢`;
+    return formatSharePrice(price);
   }
   return formatProbability(price);
 }

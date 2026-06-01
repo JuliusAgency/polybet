@@ -10,6 +10,11 @@ import { Spinner } from '@/shared/ui/Spinner';
 import { usePlaceBet, OddsDriftError, useBetQuote, useMyBetLimit } from '@/features/bet';
 import type { BetQuote } from '@/features/bet';
 import type { Market, MarketOutcome } from '@/entities/market';
+import { formatSharePrice } from '@/shared/utils';
+
+// Polymarket-style quick-add chips for the stake input (matches the reference
+// BetSlip). Buying is always denominated in dollars; shares are derived.
+const QUICK_ADD_AMOUNTS = [1, 5, 10, 100] as const;
 
 export interface BetSlipProps {
   market: Market;
@@ -64,17 +69,12 @@ export const BetSlip = ({
     enabled: quoteEnabled,
   });
 
-  // Polymarket parity (QA 2026-05-20 #2): payout must equal the number
-  // Polymarket shows for the same stake. That means we ALWAYS use the live
-  // order-book quote — the indicative mid-price formula (stake *
-  // effective_odds) systematically overstates the payout because the real
-  // ask sits above the mid by the bid-ask spread (~4% at sub-cent prices,
-  // observable in QA: 85,123 vs 81,722 on a $100 stake).
-  //
-  // When the book is unavailable (CLOB unreachable or temporarily empty),
-  // we surface "quote unavailable" and disable Confirm rather than show a
-  // fabricated number. The server-side place_bet RPC still keeps its
-  // indicative-odds fallback as a defence-in-depth for legacy clients.
+  // Shares model: the user buys shares at the order-book fill price; each
+  // winning share pays $1, so "to win" == shares. We ALWAYS use the live
+  // order-book quote — the server's place_bet now REQUIRES a fresh book and
+  // has no mid-price fallback, so if the book is unavailable we surface
+  // "quote unavailable" and disable Confirm rather than show a fabricated
+  // number the server would reject anyway.
   const bookAvailable = Boolean(quote && quote.book_updated_at !== null);
   const isQuoteReadyFromBook = Boolean(
     quote && bookAvailable && !quote.partial && quote.shares > 0
@@ -84,15 +84,21 @@ export const BetSlip = ({
     isValidStake && !isInsufficient && isQuoteReadyFromBook ? quote!.shares : null;
   const effectiveOddsForBet = isQuoteReadyFromBook ? quote!.effective_odds : null;
   const displayOdds = effectiveOddsForBet ?? outcome.effective_odds;
+  // Share price shown on the outcome chip and the "Avg. Price" line, in cents.
+  // Prefer the book-derived average fill price; fall back to the indicative
+  // outcome price purely for display before the first quote lands.
+  const displayPrice =
+    isQuoteReadyFromBook && quote!.avg_price > 0 ? quote!.avg_price : outcome.price;
 
-  const potentialPayout = effectiveShares;
+  // "To win": gross shares (each pays $1). Profit = shares - stake.
+  const toWin = effectiveShares;
+  const profitIfWin = effectiveShares !== null ? effectiveShares - stake! : null;
   const balanceIfWin =
     effectiveShares !== null ? availableBalance - stake! + effectiveShares : null;
   const balanceIfLose = isValidStake && !isInsufficient ? availableBalance - stake! : null;
 
   const isUntradable = !outcome.polymarket_token_id;
   // Only treat as "low liquidity" when the book row exists and reports partial.
-  // Missing-row case is handled by the indicative-odds fallback above.
   const isLowLiquidity = Boolean(
     quote && bookAvailable && quote.partial && stake !== null && stake > 0
   );
@@ -109,10 +115,9 @@ export const BetSlip = ({
       setSubmitError(t('markets.outcomeUntradable'));
       return;
     }
-    // Polymarket parity: do not submit unless the live book quote is in hand.
-    // Without it we'd lock odds against the optimistic mid-price formula and
-    // overpay relative to what Polymarket would actually fill (~4% gap at
-    // sub-cent prices).
+    // Shares model: do not submit unless the live book quote is in hand. The
+    // server rejects with "Market book unavailable" when there is no fresh
+    // book, so a client-side guard here avoids a pointless round-trip.
     if (!quote || quote.book_updated_at === null) {
       setSubmitError(t('markets.quoteUnavailable'));
       return;
@@ -137,10 +142,10 @@ export const BetSlip = ({
     const fresh: BetQuote | null =
       queryClient.getQueryData<BetQuote | null>(quoteKey) ?? quote ?? null;
 
-    // Polymarket parity: lock odds against the fresh book quote ONLY. If the
-    // refresh dropped the quote (CLOB transient failure between debounce and
-    // Confirm), abort and ask the user to retry — never lock at the
-    // indicative-mid odds because that's exactly the gap QA flagged.
+    // Lock the price against the fresh book quote ONLY. If the refresh dropped
+    // the quote (CLOB transient failure between debounce and Confirm), abort
+    // and ask the user to retry — the server has no mid-price fallback and
+    // would reject the bet anyway.
     const freshBookAvailable = Boolean(fresh && fresh.book_updated_at !== null);
     if (!fresh || !freshBookAvailable) {
       setSubmitError(t('markets.quoteUnavailable'));
@@ -235,7 +240,7 @@ export const BetSlip = ({
           <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
             {outcome.name}
           </span>
-          <Badge variant="open">{displayOdds.toFixed(2)}</Badge>
+          <Badge variant="open">{formatSharePrice(displayPrice)}</Badge>
         </div>
 
         {isUntradable && (
@@ -282,15 +287,33 @@ export const BetSlip = ({
             </p>
           )}
 
-          <Button
-            variant="secondary"
-            onClick={handleAllIn}
-            type="button"
-            className="self-start text-sm"
-            disabled={isUntradable}
-          >
-            {t('markets.allIn')}
-          </Button>
+          {/* Quick-add chips (+$1 / +$5 / +$10 / +$100) — Polymarket-style. */}
+          <div className="flex flex-wrap items-center gap-2">
+            {QUICK_ADD_AMOUNTS.map((inc) => (
+              <Button
+                key={inc}
+                variant="secondary"
+                type="button"
+                className="text-sm"
+                disabled={isUntradable}
+                onClick={() => {
+                  const next = (stake ?? 0) + inc;
+                  setAmount(next.toFixed(2));
+                }}
+              >
+                +${inc}
+              </Button>
+            ))}
+            <Button
+              variant="secondary"
+              onClick={handleAllIn}
+              type="button"
+              className="text-sm"
+              disabled={isUntradable}
+            >
+              {t('markets.allIn')}
+            </Button>
+          </div>
         </div>
 
         {/* Low-liquidity warning: book depth ran out before stake was filled.
@@ -355,23 +378,40 @@ export const BetSlip = ({
           </div>
         )}
 
-        {/* Potential payout (gross — book quote shares, matches Polymarket "To win") */}
-        {potentialPayout !== null && (
+        {/* To win (gross shares — each pays $1, matches Polymarket "To win")
+            plus the average share price the stake fills at. */}
+        {toWin !== null && (
           <div
-            className="flex items-center justify-between rounded-lg p-3"
+            className="flex flex-col gap-2 rounded-lg p-3"
             style={{ backgroundColor: 'var(--color-bg-base)' }}
           >
-            <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-              {t('markets.potentialPayout')}
-            </span>
-            <span className="text-sm font-semibold" style={{ color: 'var(--color-win)' }}>
-              {potentialPayout.toFixed(2)}
-              {quoteFetching && (
-                <span className="ms-2 inline-block align-middle">
-                  <Spinner size="sm" />
+            <div className="flex items-center justify-between">
+              <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                {t('markets.toWin')}
+              </span>
+              <span className="text-base font-bold" style={{ color: 'var(--color-win)' }}>
+                ${toWin.toFixed(2)}
+                {quoteFetching && (
+                  <span className="ms-2 inline-block align-middle">
+                    <Spinner size="sm" />
+                  </span>
+                )}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span style={{ color: 'var(--color-text-muted)' }}>{t('markets.avgPrice')}</span>
+              <span className="font-mono" style={{ color: 'var(--color-text-secondary)' }}>
+                {formatSharePrice(displayPrice)}
+              </span>
+            </div>
+            {profitIfWin !== null && (
+              <div className="flex items-center justify-between text-xs">
+                <span style={{ color: 'var(--color-text-muted)' }}>{t('markets.profitIfWin')}</span>
+                <span className="font-mono" style={{ color: 'var(--color-win)' }}>
+                  +${profitIfWin.toFixed(2)}
                 </span>
-              )}
-            </span>
+              </div>
+            )}
           </div>
         )}
 
@@ -392,7 +432,7 @@ export const BetSlip = ({
         )}
 
         {/* Quote is loading and we don't have a payout to render yet */}
-        {isQuoteLoading && potentialPayout === null && (
+        {isQuoteLoading && toWin === null && (
           <div
             className="flex items-center gap-2 rounded-lg p-3 text-sm"
             style={{

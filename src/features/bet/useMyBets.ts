@@ -39,7 +39,7 @@ export function useMyBets() {
       const { data, error } = await supabase
         .from('bets')
         .select(
-          'id, market_id, outcome_id, stake, locked_odds, potential_payout, status, placed_at, settled_at, seen_at, markets(question, status, winning_outcome_id, last_synced_at, event_id), market_outcomes(name)'
+          'id, market_id, outcome_id, stake, shares, avg_price, locked_odds, potential_payout, status, placed_at, settled_at, seen_at, markets(question, status, winning_outcome_id, last_synced_at, event_id), market_outcomes(name)'
         )
         // Defense-in-depth: RLS enforces this, but explicit filter documents intent
         .eq('user_id', session!.user.id)

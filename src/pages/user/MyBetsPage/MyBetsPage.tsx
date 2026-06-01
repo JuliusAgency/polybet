@@ -10,6 +10,7 @@ import { supabase } from '@/shared/api/supabase';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { Spinner } from '@/shared/ui/Spinner';
 import { UnseenBadge } from '@/shared/ui/UnseenBadge';
+import { formatSharePrice } from '@/shared/utils';
 
 const CopyIdCell = ({ id }: { id: string }) => {
   const [copied, setCopied] = useState(false);
@@ -105,7 +106,8 @@ const BET_TABLE_HEADERS_OPEN = [
   'myBets.market',
   'myBets.selection',
   'myBets.wager',
-  'myBets.potentialPayout',
+  'myBets.price',
+  'myBets.toWin',
   'myBets.status',
 ];
 const BET_TABLE_HEADERS_HISTORY = [...BET_TABLE_HEADERS_OPEN, 'myBets.settled'];
@@ -152,7 +154,7 @@ const MyBetsPage = () => {
   const totalWagered = historyBets.reduce((sum, b) => sum + b.stake, 0);
   const totalWon = historyBets
     .filter((b) => b.status === 'won')
-    .reduce((sum, b) => sum + b.potential_payout, 0);
+    .reduce((sum, b) => sum + b.shares, 0);
   const pnl = totalWon - totalWagered;
 
   return (
@@ -259,9 +261,12 @@ const MyBetsPage = () => {
                       </td>
                       <td
                         className="px-4 py-3 font-mono"
-                        style={{ color: 'var(--color-text-primary)' }}
+                        style={{ color: 'var(--color-text-secondary)' }}
                       >
-                        {bet.potential_payout.toFixed(2)}
+                        {formatSharePrice(bet.avg_price)}
+                      </td>
+                      <td className="px-4 py-3 font-mono" style={{ color: 'var(--color-win)' }}>
+                        {bet.shares.toFixed(2)}
                       </td>
                       <td className="px-4 py-3">
                         <Badge variant="open">{t('bet.open')}</Badge>
@@ -365,9 +370,12 @@ const MyBetsPage = () => {
                       </td>
                       <td
                         className="px-4 py-3 font-mono"
-                        style={{ color: 'var(--color-text-primary)' }}
+                        style={{ color: 'var(--color-text-secondary)' }}
                       >
-                        {bet.potential_payout.toFixed(2)}
+                        {formatSharePrice(bet.avg_price)}
+                      </td>
+                      <td className="px-4 py-3 font-mono" style={{ color: 'var(--color-win)' }}>
+                        {bet.shares.toFixed(2)}
                       </td>
                       <td className="px-4 py-3">
                         <Badge variant={historyBadgeVariant(bet.status)}>
@@ -465,9 +473,12 @@ const MyBetsPage = () => {
                         </td>
                         <td
                           className="px-4 py-3 font-mono"
-                          style={{ color: 'var(--color-text-primary)' }}
+                          style={{ color: 'var(--color-text-secondary)' }}
                         >
-                          {bet.potential_payout.toFixed(2)}
+                          {formatSharePrice(bet.avg_price)}
+                        </td>
+                        <td className="px-4 py-3 font-mono" style={{ color: 'var(--color-win)' }}>
+                          {bet.shares.toFixed(2)}
                         </td>
                         <td className="px-4 py-3">
                           <Badge variant={historyBadgeVariant(bet.status)}>

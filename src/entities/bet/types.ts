@@ -3,7 +3,13 @@ export interface MyBet {
   market_id: string;
   outcome_id: string;
   stake: number;
+  /** Number of $1 shares acquired (gross payout on win). */
+  shares: number;
+  /** Volume-weighted average fill price in (0,1). Cents = round(avg_price*100). */
+  avg_price: number;
+  /** @deprecated legacy odds multiplier (= shares/stake). Prefer shares/avg_price. */
   locked_odds: number;
+  /** @deprecated mirrors `shares` (each share pays $1). Prefer shares. */
   potential_payout: number;
   status: 'open' | 'won' | 'lost' | 'cancelled';
   placed_at: string;

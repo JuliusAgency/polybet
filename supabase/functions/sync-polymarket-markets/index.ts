@@ -1022,7 +1022,11 @@ async function upsertMarket(
     last_synced_at: changedAt,
     source_updated_at: gm.updatedAt ?? null,
     finalized_at: gm.resolved ? (gm.resolutionDate ?? changedAt) : null,
-    ...(existing === null ? { is_visible: autoShowAll } : {}),
+    // Promote hidden markets to visible when auto-show is on; never downgrade an
+    // already-visible row. Parity with bulk_upsert_markets (migration
+    // 20260527093751_fix_stranded_hidden_event_visibility): is_visible OR autoShowAll.
+    // On insert (existing === null) this is just autoShowAll.
+    is_visible: existing === null ? autoShowAll : Boolean(existing.is_visible) || autoShowAll,
   };
 
   const { error: upsertErr } = await supabase

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMyBets } from '@/features/bet';
 import { Spinner } from '@/shared/ui/Spinner';
+import { formatSharePrice } from '@/shared/utils';
 
 export interface ActiveBetsDrawerProps {
   isOpen: boolean;
@@ -114,7 +115,7 @@ export const ActiveBetsDrawer = ({ isOpen, onClose }: ActiveBetsDrawerProps) => 
                       {bet.market_outcomes?.name ?? '—'}
                     </p>
 
-                    {/* Stake / Odds / Payout row */}
+                    {/* Stake / Price / Shares row */}
                     <div className="flex flex-wrap gap-x-4 gap-y-1">
                       <div className="flex items-center gap-1.5">
                         <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
@@ -129,24 +130,24 @@ export const ActiveBetsDrawer = ({ isOpen, onClose }: ActiveBetsDrawerProps) => 
                       </div>
                       <div className="flex items-center gap-1.5">
                         <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                          @
+                          {t('myBets.price')}
                         </span>
                         <span
                           className="font-mono text-xs font-semibold"
                           style={{ color: 'var(--color-accent)' }}
                         >
-                          {bet.locked_odds.toFixed(2)}
+                          {formatSharePrice(bet.avg_price)}
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                          {t('myBets.potentialPayout')}
+                          {t('myBets.toWin')}
                         </span>
                         <span
                           className="font-mono text-xs font-semibold"
                           style={{ color: 'var(--color-win)' }}
                         >
-                          {bet.potential_payout.toFixed(2)}
+                          {bet.shares.toFixed(2)}
                         </span>
                       </div>
                     </div>

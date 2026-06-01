@@ -7,6 +7,7 @@ import { useManagers } from '@/features/admin/managers';
 import { useBetLog } from '@/features/admin/bet-log';
 import type { BetStatus } from '@/features/admin/bet-log';
 import { FinancialTransactionsTable } from '@/widgets/FinancialTransactionsTable';
+import { formatSharePrice } from '@/shared/utils';
 import type { DbSyncRun } from '@/shared/types/database';
 import { SyncMarketsModal } from './components/SyncMarketsModal';
 
@@ -76,8 +77,8 @@ const GlobalBetLogPage = () => {
     t('myBets.market'),
     t('globalLog.selection'),
     t('myBets.wager'),
-    t('globalLog.odds'),
-    t('globalLog.payout'),
+    t('globalLog.price'),
+    t('globalLog.shares'),
     t('globalLog.status'),
     t('globalLog.date'),
   ];
@@ -280,19 +281,19 @@ const GlobalBetLogPage = () => {
                         >
                           {row.stake.toFixed(2)}
                         </td>
-                        {/* Odds */}
+                        {/* Price (avg fill price, cents) */}
                         <td
                           className="px-4 py-3 font-mono"
                           style={{ color: 'var(--color-text-secondary)' }}
                         >
-                          {row.locked_odds.toFixed(2)}
+                          {formatSharePrice(row.avg_price)}
                         </td>
-                        {/* Payout */}
+                        {/* Shares to win (each pays $1) */}
                         <td
                           className="px-4 py-3 font-mono"
                           style={{ color: 'var(--color-text-primary)' }}
                         >
-                          {row.potential_payout.toFixed(2)}
+                          {row.shares.toFixed(2)}
                         </td>
                         {/* Status */}
                         <td className="px-4 py-3">
