@@ -65,9 +65,8 @@ export const MarketCard = ({
   const isStale = market.last_synced_at
     ? Date.now() - new Date(market.last_synced_at).getTime() > MARKETS_STALE_THRESHOLD_MS
     : true;
-  const isExpired = market.close_at != null && new Date(market.close_at).getTime() <= Date.now();
   const effectiveStatus = getMarketEffectiveStatus(market);
-  const isInteractive = mode === 'interactive' && effectiveStatus === 'open' && !isExpired;
+  const isInteractive = mode === 'interactive' && effectiveStatus === 'open';
 
   const winnerOutcome = market.winning_outcome_id
     ? (market.market_outcomes.find((o) => o.id === market.winning_outcome_id) ?? null)

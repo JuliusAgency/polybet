@@ -62,7 +62,7 @@ export function useMarkets(
       // For 'all' the IN covers the full status domain, which tricks the planner
       // into a Seq Scan. The shared helper skips the predicate so the planner
       // walks idx_markets_visible_feed.
-      query = applyMarketStatusFilter(query, statusFilter, new Date());
+      query = applyMarketStatusFilter(query, statusFilter);
 
       if (searchQuery.trim()) {
         query = query.ilike('question', `%${searchQuery.trim()}%`);

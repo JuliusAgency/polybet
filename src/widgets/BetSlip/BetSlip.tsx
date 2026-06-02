@@ -389,13 +389,16 @@ export const BetSlip = ({
               <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
                 {t('markets.toWin')}
               </span>
-              <span className="text-base font-bold" style={{ color: 'var(--color-win)' }}>
-                ${toWin.toFixed(2)}
-                {quoteFetching && (
-                  <span className="ms-2 inline-block align-middle">
-                    <Spinner size="sm" />
-                  </span>
-                )}
+              <span
+                className="flex items-center gap-2 text-base font-bold"
+                style={{ color: 'var(--color-win)' }}
+              >
+                {/* Fixed-width spinner slot reserved on the LEFT so the amount's
+                    position never shifts when the quote refetch toggles it. */}
+                <span aria-hidden className="inline-flex w-4 shrink-0 justify-center">
+                  {quoteFetching ? <Spinner size="sm" /> : null}
+                </span>
+                <span>${toWin.toFixed(2)}</span>
               </span>
             </div>
             <div className="flex items-center justify-between text-xs">

@@ -32,9 +32,10 @@ export const EventMarketRow = ({
   const { t, i18n } = useTranslation();
   const isHebrew = i18n.language === 'he';
 
-  const isExpired = market.close_at != null && new Date(market.close_at).getTime() <= Date.now();
-  const effectiveStatus = isExpired && market.status === 'open' ? 'closed' : market.status;
-  const isInteractive = mode === 'interactive' && effectiveStatus === 'open' && !isExpired;
+  // Authority is `status` (synced from Polymarket), not close_at — Polymarket
+  // trades some markets past their stated endDate. See entities/market/effectiveStatus.ts.
+  const effectiveStatus = market.status;
+  const isInteractive = mode === 'interactive' && effectiveStatus === 'open';
 
   const winnerOutcome = market.winning_outcome_id
     ? (market.market_outcomes.find((o) => o.id === market.winning_outcome_id) ?? null)

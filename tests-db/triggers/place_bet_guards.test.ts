@@ -219,20 +219,30 @@ describe('place_bet shares model (require book)', () => {
     });
   });
 
-  it('rejects when close_at IS NULL', async () => {
+  it('accepts when close_at IS NULL (status is the authority)', async () => {
     await withTransaction(async (c) => {
       const { marketId, outcomeId } = await seedFreshMarket(c, { close_at: null });
-      await expect(callPlaceBet(c, { marketId, outcomeId })).rejects.toThrow(
-        /not available for betting/i
-      );
+      const betId = await callPlaceBet(c, { marketId, outcomeId });
+      expect(betId).toMatch(/^[0-9a-f-]{36}$/);
     });
   });
 
-  it('rejects when close_at has already passed', async () => {
+  it('accepts when close_at has passed but status is still open (Polymarket still trades it)', async () => {
+    // The Iran "June 30" case: Polymarket keeps the market tradable (closed=false)
+    // past its stated endDate, so close_at is in the past but status='open'.
+    // Availability is gated by status, not close_at → the bet must be accepted.
     await withTransaction(async (c) => {
       const { marketId, outcomeId } = await seedFreshMarket(c, {
         close_at: "now() - interval '1 minute'",
       });
+      const betId = await callPlaceBet(c, { marketId, outcomeId });
+      expect(betId).toMatch(/^[0-9a-f-]{36}$/);
+    });
+  });
+
+  it('rejects when market status is not open (Polymarket closed it)', async () => {
+    await withTransaction(async (c) => {
+      const { marketId, outcomeId } = await seedFreshMarket(c, { status: 'closed' });
       await expect(callPlaceBet(c, { marketId, outcomeId })).rejects.toThrow(
         /not available for betting/i
       );

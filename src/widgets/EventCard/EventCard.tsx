@@ -103,14 +103,9 @@ export const EventCard = ({
       : 0;
   const singleMarket = isSingle ? visibleMarkets[0] : null;
 
-  const singleIsExpired =
-    singleMarket?.close_at != null && new Date(singleMarket.close_at).getTime() <= Date.now();
   const singleEffectiveStatus = singleMarket ? getMarketEffectiveStatus(singleMarket) : null;
   const singleIsInteractive =
-    !!singleMarket &&
-    mode === 'interactive' &&
-    singleEffectiveStatus === 'open' &&
-    !singleIsExpired;
+    !!singleMarket && mode === 'interactive' && singleEffectiveStatus === 'open';
   const singleWinner = singleMarket?.winning_outcome_id
     ? (singleMarket.market_outcomes.find((o) => o.id === singleMarket.winning_outcome_id) ?? null)
     : null;
@@ -276,9 +271,8 @@ function EventMarketRow({ market, mode, onOutcomeClick }: EventMarketRowProps) {
   const { i18n } = useTranslation();
   const isHebrew = i18n.language === 'he';
 
-  const isExpired = market.close_at != null && new Date(market.close_at).getTime() <= Date.now();
   const effectiveStatus = getMarketEffectiveStatus(market);
-  const isInteractive = mode === 'interactive' && effectiveStatus === 'open' && !isExpired;
+  const isInteractive = mode === 'interactive' && effectiveStatus === 'open';
 
   const winnerOutcome = market.winning_outcome_id
     ? (market.market_outcomes.find((o) => o.id === market.winning_outcome_id) ?? null)

@@ -25,7 +25,7 @@ export function useMarketsByIds(ids: string[], statusFilter: MarketStatusFilter,
         .order('position', { referencedTable: 'market_outcomes', ascending: true });
 
       // Mirror useMarkets status rules so open/closed tabs stay consistent.
-      query = applyMarketStatusFilter(query, statusFilter, new Date());
+      query = applyMarketStatusFilter(query, statusFilter);
 
       query = query
         .order('sort_volume', { ascending: false })

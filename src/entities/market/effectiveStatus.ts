@@ -6,35 +6,29 @@ interface StatusAndCloseAt {
 }
 
 /**
- * Returns true iff the market's own status is open AND close_at has not passed
- * AND — when a parent event is provided — the event is also effectively open.
- * Used by the feed page to exclude markets whose parent event has already closed
- * from the 'open' tab count and visible list.
+ * Returns true iff the market's own status is open AND — when a parent event is
+ * provided — the event is also open.
+ *
+ * Authority is `status` (synced from Polymarket's closed/resolved flags), NOT
+ * `close_at`. Polymarket keeps some markets tradable (closed=false) past their
+ * stated endDate, and occasionally ships an endDate that contradicts the market
+ * title (e.g. a "June 30" market with endDate=May 31). Gating on a past
+ * close_at therefore mis-closed markets Polymarket still trades. close_at is now
+ * purely informational (display only).
  */
 export function isMarketEffectivelyOpen(
   market: StatusAndCloseAt,
   event?: StatusAndCloseAt | null
 ): boolean {
   if (market.status !== 'open') return false;
-  if (market.close_at != null && new Date(market.close_at).getTime() <= Date.now()) return false;
-  if (event) {
-    if (event.status !== 'open') return false;
-    if (event.close_at != null && new Date(event.close_at).getTime() <= Date.now()) return false;
-  }
+  if (event && event.status !== 'open') return false;
   return true;
 }
 
 /**
- * Returns 'closed' when a market's status is 'open' but close_at has passed,
- * otherwise returns the row's own status. Used by cards for status pill rendering.
+ * Returns the market's own status. Kept as the single rendering entrypoint so
+ * status-pill logic stays centralized; close_at no longer overrides status.
  */
 export function getMarketEffectiveStatus(market: StatusAndCloseAt): MarketStatus {
-  if (
-    market.status === 'open' &&
-    market.close_at != null &&
-    new Date(market.close_at).getTime() <= Date.now()
-  ) {
-    return 'closed';
-  }
   return market.status;
 }

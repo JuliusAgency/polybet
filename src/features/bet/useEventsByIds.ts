@@ -28,7 +28,7 @@ export function useEventsByIds(
         .order('position', { referencedTable: 'market_outcomes', ascending: true });
 
       // Mirror useMarkets status rules for consistency between feed and saved.
-      query = applyMarketStatusFilter(query, statusFilter, new Date());
+      query = applyMarketStatusFilter(query, statusFilter);
 
       query = query
         .order('sort_volume', { ascending: false })
