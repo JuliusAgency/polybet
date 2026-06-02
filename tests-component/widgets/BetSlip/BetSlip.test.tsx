@@ -31,7 +31,7 @@ vi.mock('@/features/bet', async (importOriginal) => {
 
 const FRESH_BOOK_AT = '2026-06-01T00:00:00.000Z';
 
-/** A fully-fillable book quote: stake/price shares at avg price, no drift. */
+/** A fully-fillable book quote: 50 shares for a $25 stake at avg 0.5, no drift. */
 function bookQuote(overrides: Partial<BetQuote> = {}): { data: BetQuote; isFetching: boolean } {
   return {
     data: {
@@ -78,7 +78,7 @@ function makeOutcome(opts: Partial<MarketOutcome> & { price: number | null }): M
   };
 }
 
-function makeMarket(outcome: MarketOutcome): Market {
+function makeMarket(outcomes: MarketOutcome[]): Market {
   return {
     id: 'mk-1',
     polymarket_id: 'pm-1',
@@ -96,9 +96,12 @@ function makeMarket(outcome: MarketOutcome): Market {
     group_label: null,
     tag_slugs: ['politics'],
     event: makeEvent(),
-    market_outcomes: [outcome],
+    market_outcomes: outcomes,
   };
 }
+
+const YES = makeOutcome({ id: 'out-yes', name: 'Yes', price: 0.71, polymarket_token_id: 'tok-yes' });
+const NO = makeOutcome({ id: 'out-no', name: 'No', price: 0.3, polymarket_token_id: 'tok-no' });
 
 describe('BetSlip — shares model', () => {
   beforeEach(() => {
@@ -107,20 +110,17 @@ describe('BetSlip — shares model', () => {
     quoteMock.mockReturnValue(bookQuote());
   });
 
-  it('disables Confirm when the outcome has no Polymarket token id', async () => {
+  it('disables Confirm when the selected outcome has no Polymarket token id', async () => {
     quoteMock.mockReturnValue({ data: undefined, isFetching: false });
     // makeOutcome's `?? 'tok-yes'` default would swallow a null token, so set it
-    // explicitly after construction to model a genuinely untradable outcome.
-    const outcome: MarketOutcome = {
-      ...makeOutcome({ price: 0.5, effective_odds: 2 }),
-      polymarket_token_id: null,
-    };
-    const market = makeMarket(outcome);
+    // explicitly to model a genuinely untradable selected outcome.
+    const untradableYes: MarketOutcome = { ...YES, polymarket_token_id: null };
+    const market = makeMarket([untradableYes, NO]);
 
     renderWithProviders(
       <BetSlip
         market={market}
-        outcome={outcome}
+        outcome={untradableYes}
         availableBalance={500}
         onClose={() => {}}
         onSuccess={() => {}}
@@ -131,19 +131,17 @@ describe('BetSlip — shares model', () => {
 
     await userEvent.type(screen.getByLabelText(/stake/i), '10');
 
-    const confirm = screen.getByRole('button', { name: /confirm/i });
-    expect(confirm).toBeDisabled();
+    expect(screen.getByRole('button', { name: /confirm/i })).toBeDisabled();
     expect(rpcMock).not.toHaveBeenCalled();
   });
 
   it('shows the share price in cents and the shares to win', async () => {
-    const outcome = makeOutcome({ price: 0.5, effective_odds: 2 });
-    const market = makeMarket(outcome);
+    const market = makeMarket([YES, NO]);
 
     renderWithProviders(
       <BetSlip
         market={market}
-        outcome={outcome}
+        outcome={YES}
         availableBalance={500}
         onClose={() => {}}
         onSuccess={() => {}}
@@ -152,22 +150,21 @@ describe('BetSlip — shares model', () => {
 
     await userEvent.type(screen.getByLabelText(/stake/i), '25');
 
-    // Cents price on the outcome chip + the Avg. Price line.
-    expect(screen.getAllByText('50¢').length).toBeGreaterThan(0);
+    // Outcome selector shows both sides in cents.
+    expect(screen.getByText('71¢')).toBeInTheDocument();
+    expect(screen.getByText('30¢')).toBeInTheDocument();
     // "To win" = shares ($50.00 for 50 shares at $1 each).
     expect(screen.getByText(/\$50\.00/)).toBeInTheDocument();
   });
 
-  it('sends expectedOdds (book effective_odds) and stake to place_bet', async () => {
-    const outcome = makeOutcome({ price: 0.5, effective_odds: 2 });
-    const market = makeMarket(outcome);
-
+  it('sends expectedOdds and the SELECTED outcome id to place_bet', async () => {
+    const market = makeMarket([YES, NO]);
     rpcMock.mockResolvedValueOnce({ data: 'bet-uuid-1', error: null });
 
     renderWithProviders(
       <BetSlip
         market={market}
-        outcome={outcome}
+        outcome={YES}
         availableBalance={500}
         onClose={() => {}}
         onSuccess={() => {}}
@@ -182,21 +179,48 @@ describe('BetSlip — shares model', () => {
     });
     expect(rpcMock).toHaveBeenCalledWith('place_bet', {
       p_market_id: market.id,
-      p_outcome_id: outcome.id,
+      p_outcome_id: YES.id,
       p_stake: 25,
       p_expected_odds: 2,
     });
   });
 
-  it('disables Confirm and warns when the order book is unavailable', async () => {
-    quoteMock.mockReturnValue(bookQuote({ book_updated_at: null, available_stake: null }));
-    const outcome = makeOutcome({ price: 0.5, effective_odds: 2 });
-    const market = makeMarket(outcome);
+  it('switching side sends the OTHER outcome id (no stale selection)', async () => {
+    const market = makeMarket([YES, NO]);
+    rpcMock.mockResolvedValueOnce({ data: 'bet-uuid-2', error: null });
 
     renderWithProviders(
       <BetSlip
         market={market}
-        outcome={outcome}
+        outcome={YES}
+        availableBalance={500}
+        onClose={() => {}}
+        onSuccess={() => {}}
+      />
+    );
+
+    await userEvent.type(screen.getByLabelText(/stake/i), '25');
+    // Switch from the initially-selected Yes to No.
+    await userEvent.click(screen.getByRole('button', { name: /no/i }));
+    await userEvent.click(screen.getByRole('button', { name: /confirm/i }));
+
+    await vi.waitFor(() => {
+      expect(rpcMock).toHaveBeenCalled();
+    });
+    expect(rpcMock).toHaveBeenCalledWith(
+      'place_bet',
+      expect.objectContaining({ p_outcome_id: NO.id, p_stake: 25 })
+    );
+  });
+
+  it('disables Confirm and warns when the order book is unavailable', async () => {
+    quoteMock.mockReturnValue(bookQuote({ book_updated_at: null, available_stake: null }));
+    const market = makeMarket([YES, NO]);
+
+    renderWithProviders(
+      <BetSlip
+        market={market}
+        outcome={YES}
         availableBalance={500}
         onClose={() => {}}
         onSuccess={() => {}}
@@ -211,9 +235,7 @@ describe('BetSlip — shares model', () => {
   });
 
   it('surfaces the drift error when the RPC rejects with P0002', async () => {
-    const outcome = makeOutcome({ price: 0.5, effective_odds: 2 });
-    const market = makeMarket(outcome);
-
+    const market = makeMarket([YES, NO]);
     rpcMock.mockResolvedValueOnce({
       data: null,
       error: { code: 'P0002', message: 'Odds changed (expected 2.00, actual 2.50)' },
@@ -222,7 +244,7 @@ describe('BetSlip — shares model', () => {
     renderWithProviders(
       <BetSlip
         market={market}
-        outcome={outcome}
+        outcome={YES}
         availableBalance={500}
         onClose={() => {}}
         onSuccess={() => {}}

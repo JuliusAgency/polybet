@@ -38,6 +38,12 @@ interface OutcomeButtonsProps {
   /** Price display format. Default 'percent' (e.g. 8%). Use 'cents' for Polymarket-style (e.g. 8.3¢). */
   priceFormat?: 'percent' | 'cents';
   /**
+   * When set, marks the matching outcome as selected (intensified, aria-pressed)
+   * and dims the others. Use for in-slip Yes/No selection (BetSlip). When unset
+   * the component behaves as a plain action group (feed/event-row).
+   */
+  selectedId?: string;
+  /**
    * When true, applies Polymarket-style "long-tail" treatment:
    *  - the leading (Yes) outcome is dimmed (de-facto eliminated)
    *  - the trailing (No) outcome is intensified (the dominant action)
@@ -141,6 +147,7 @@ export function OutcomeButtons({
   showPercentage = true,
   hoverShowsPercentage = false,
   priceFormat = 'percent',
+  selectedId,
   longTail = false,
 }: OutcomeButtonsProps) {
   const styles = SIZE_STYLES[size];
@@ -171,9 +178,14 @@ export function OutcomeButtons({
     <div className="grid grid-cols-2 gap-2">
       {outcomes.map((o, index) => {
         const isUntradable = !!o.untradable && !o.isWinner;
+        const isSelected = selectedId != null && o.id === selectedId;
+        // In selection mode, dim the outcomes that are not chosen.
+        const isDimmed = selectedId != null && !isSelected && !o.isWinner;
         const isHovered = hoveredId === o.id && !disabled && !isUntradable;
-        const baseStyle = tintFor(index, !!o.isWinner, disabled || isUntradable, longTail);
-        const style: CSSProperties = isHovered ? hoverTintFor(index) : baseStyle;
+        const baseStyle = tintFor(index, !!o.isWinner || isSelected, disabled || isUntradable, longTail);
+        const style: CSSProperties = isHovered
+          ? hoverTintFor(index)
+          : { ...baseStyle, ...(isDimmed ? { opacity: 0.5 } : null) };
         const pct = showPercentage ? formatPrice(o.price, priceFormat) : null;
         const hoverPct = hoverShowsPercentage ? formatPrice(o.price, priceFormat) : null;
 
@@ -216,6 +228,7 @@ export function OutcomeButtons({
           <button
             key={o.id}
             type="button"
+            aria-pressed={selectedId != null ? isSelected : undefined}
             onClick={() => onClick(o.id)}
             onMouseEnter={() => setHoveredId(o.id)}
             onMouseLeave={() => setHoveredId(null)}

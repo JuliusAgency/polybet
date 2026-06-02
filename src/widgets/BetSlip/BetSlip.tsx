@@ -1,15 +1,14 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { Modal } from '@/shared/ui/Modal';
-import { Input } from '@/shared/ui/Input';
 import { Button } from '@/shared/ui/Button';
-import { Badge } from '@/shared/ui/Badge';
 import { Spinner } from '@/shared/ui/Spinner';
+import { OutcomeButtons, type OutcomeButton } from '@/shared/ui/OutcomeButtons';
 import { usePlaceBet, OddsDriftError, useBetQuote, useMyBetLimit } from '@/features/bet';
 import type { BetQuote } from '@/features/bet';
-import type { Market, MarketOutcome } from '@/entities/market';
+import { getOrderedOutcomes, type Market, type MarketOutcome } from '@/entities/market';
 import { formatSharePrice } from '@/shared/utils';
 
 // Polymarket-style quick-add chips for the stake input (matches the reference
@@ -18,6 +17,8 @@ const QUICK_ADD_AMOUNTS = [1, 5, 10, 100] as const;
 
 export interface BetSlipProps {
   market: Market;
+  /** Initially-selected outcome. The slip lets the user switch sides among
+   *  `market.market_outcomes` without reopening. */
   outcome: MarketOutcome;
   availableBalance: number;
   onClose: () => void;
@@ -48,6 +49,29 @@ export const BetSlip = ({
   const [amount, setAmount] = useState('');
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  // Single source of truth for which side we're buying. Everything downstream
+  // (quote token, price, shares, drift, place_bet payload) derives from
+  // `selected` — never from the original `outcome` prop — so switching sides
+  // can never leave a stale token/outcome that would buy the wrong side.
+  const [selectedOutcomeId, setSelectedOutcomeId] = useState(outcome.id);
+  const selected = useMemo(
+    () => market.market_outcomes.find((o) => o.id === selectedOutcomeId) ?? outcome,
+    [market.market_outcomes, selectedOutcomeId, outcome]
+  );
+
+  // Canonical [Yes, No] order for the in-slip side selector.
+  const outcomeButtons: OutcomeButton[] = useMemo(
+    () =>
+      getOrderedOutcomes(market).map((o) => ({
+        id: o.id,
+        name: o.name,
+        price: o.price,
+        effectiveOdds: o.effective_odds,
+        untradable: !o.polymarket_token_id,
+      })),
+    [market]
+  );
+
   const { mutateAsync: placeBet, isPending } = usePlaceBet();
 
   const stake = parseStake(amount);
@@ -59,36 +83,33 @@ export const BetSlip = ({
   const hasBetLimit = maxBetLimit != null && maxBetLimit > 0;
   const isOverLimit = isValidStake && hasBetLimit && stake! > maxBetLimit!;
 
-  // Live quote from the cached order book. The same RPC backs place_bet so
-  // what the user sees is what gets locked in. Disabled until the user has
-  // typed a valid affordable stake — otherwise we'd burn polling on noise.
-  const quoteEnabled = isValidStake && !isInsufficient && Boolean(outcome.polymarket_token_id);
+  // Live quote from the cached order book. Keyed on the SELECTED outcome's
+  // token, so switching sides automatically refetches the right book. The same
+  // RPC backs place_bet so what the user sees is what gets locked in.
+  const quoteEnabled = isValidStake && !isInsufficient && Boolean(selected.polymarket_token_id);
   const { data: quote, isFetching: quoteFetching } = useBetQuote({
-    tokenId: outcome.polymarket_token_id,
+    tokenId: selected.polymarket_token_id,
     stake: isValidStake ? stake! : null,
     enabled: quoteEnabled,
   });
 
   // Shares model: the user buys shares at the order-book fill price; each
   // winning share pays $1, so "to win" == shares. We ALWAYS use the live
-  // order-book quote — the server's place_bet now REQUIRES a fresh book and
-  // has no mid-price fallback, so if the book is unavailable we surface
-  // "quote unavailable" and disable Confirm rather than show a fabricated
-  // number the server would reject anyway.
+  // order-book quote — the server's place_bet REQUIRES a fresh book and has no
+  // mid-price fallback, so if the book is unavailable we surface "quote
+  // unavailable" and disable the CTA rather than show a fabricated number.
   const bookAvailable = Boolean(quote && quote.book_updated_at !== null);
-  const isQuoteReadyFromBook = Boolean(
-    quote && bookAvailable && !quote.partial && quote.shares > 0
-  );
+  const isQuoteReadyFromBook = Boolean(quote && bookAvailable && !quote.partial && quote.shares > 0);
   const isQuoteUnavailable = Boolean(quote && !bookAvailable);
   const effectiveShares =
     isValidStake && !isInsufficient && isQuoteReadyFromBook ? quote!.shares : null;
   const effectiveOddsForBet = isQuoteReadyFromBook ? quote!.effective_odds : null;
-  const displayOdds = effectiveOddsForBet ?? outcome.effective_odds;
-  // Share price shown on the outcome chip and the "Avg. Price" line, in cents.
-  // Prefer the book-derived average fill price; fall back to the indicative
-  // outcome price purely for display before the first quote lands.
+  const displayOdds = effectiveOddsForBet ?? selected.effective_odds;
+  // Share price for the chip / "Avg. Price" line, in cents. Prefer the
+  // book-derived average fill price; fall back to the indicative outcome price
+  // purely for display before the first quote lands.
   const displayPrice =
-    isQuoteReadyFromBook && quote!.avg_price > 0 ? quote!.avg_price : outcome.price;
+    isQuoteReadyFromBook && quote!.avg_price > 0 ? quote!.avg_price : selected.price;
 
   // "To win": gross shares (each pays $1). Profit = shares - stake.
   const toWin = effectiveShares;
@@ -97,15 +118,25 @@ export const BetSlip = ({
     effectiveShares !== null ? availableBalance - stake! + effectiveShares : null;
   const balanceIfLose = isValidStake && !isInsufficient ? availableBalance - stake! : null;
 
-  const isUntradable = !outcome.polymarket_token_id;
+  const isUntradable = !selected.polymarket_token_id;
   // Only treat as "low liquidity" when the book row exists and reports partial.
   const isLowLiquidity = Boolean(
     quote && bookAvailable && quote.partial && stake !== null && stake > 0
   );
   const isQuoteLoading = quoteEnabled && !quote && !isUntradable;
 
+  const handleSelectOutcome = (id: string) => {
+    setSelectedOutcomeId(id);
+    setSubmitError(null);
+  };
+
+  const handleAmountChange = (value: string) => {
+    setAmount(value);
+    setSubmitError(null);
+  };
+
   const handleAllIn = () => {
-    setAmount(availableBalance.toFixed(2));
+    handleAmountChange(availableBalance.toFixed(2));
   };
 
   const handleConfirm = async () => {
@@ -132,7 +163,7 @@ export const BetSlip = ({
     // between BetSlip's last poll and Confirm click.
     setSubmitError(null);
     const roundedStake = Math.round(stake! * 100) / 100;
-    const quoteKey = ['bet-quote', outcome.polymarket_token_id, roundedStake] as const;
+    const quoteKey = ['bet-quote', selected.polymarket_token_id, roundedStake] as const;
     try {
       await queryClient.refetchQueries({ queryKey: quoteKey });
     } catch {
@@ -168,12 +199,12 @@ export const BetSlip = ({
     try {
       await placeBet({
         marketId: market.id,
-        outcomeId: outcome.id,
+        outcomeId: selected.id,
         stake: stake!,
         expectedOdds: lockOdds,
       });
       toast.success(
-        t('bet.notification.placed', { outcome: outcome.name, stake: stake!.toFixed(2) }),
+        t('bet.notification.placed', { outcome: selected.name, stake: stake!.toFixed(2) }),
         { duration: 5000 }
       );
       onSuccess();
@@ -188,9 +219,7 @@ export const BetSlip = ({
         return;
       }
       // Map raw server guard strings to friendly, actionable messages instead of
-      // leaking the English Postgres exception. The staleness gates are an
-      // antifraud bound (kept as-is server-side); here we just recover the UX by
-      // refreshing the odds + book quote and telling the user to retry.
+      // leaking the English Postgres exception.
       const raw = err instanceof Error ? err.message : '';
       const isStale =
         raw.includes('Market price feed is stale') ||
@@ -225,70 +254,88 @@ export const BetSlip = ({
     isQuoteUnavailable ||
     effectiveShares === null;
 
+  const warningBoxStyle = {
+    borderColor: 'var(--color-error)',
+    color: 'var(--color-error)',
+    backgroundColor: 'color-mix(in oklch, var(--color-error) 8%, var(--color-bg-base))',
+  } as const;
+
   return (
     <Modal isOpen onClose={onClose} title={t('markets.betSlipTitle')}>
       <div className="flex flex-col gap-4">
-        {/* Market question */}
-        <div className="rounded-lg p-3" style={{ backgroundColor: 'var(--color-bg-base)' }}>
-          <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
-            {market.question}
-          </p>
-        </div>
+        {/* Market question — light, informational */}
+        <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+          {market.question}
+        </p>
 
-        {/* Selected outcome */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-            {outcome.name}
-          </span>
-          <Badge variant="open">{formatSharePrice(displayPrice)}</Badge>
-        </div>
+        {/* Outcome side selector (Yes / No), price shown in cents */}
+        <OutcomeButtons
+          outcomes={outcomeButtons}
+          size="xl"
+          priceFormat="cents"
+          selectedId={selectedOutcomeId}
+          onClick={handleSelectOutcome}
+        />
 
         {isUntradable && (
-          <div
-            className="rounded-lg border p-3 text-sm"
-            style={{
-              borderColor: 'var(--color-error)',
-              color: 'var(--color-error)',
-              backgroundColor: 'color-mix(in oklch, var(--color-error) 8%, var(--color-bg-base))',
-            }}
-          >
+          <div className="rounded-lg border p-3 text-sm" style={warningBoxStyle}>
             {t('markets.outcomeUntradable')}
           </div>
         )}
 
-        {/* Stake input */}
-        <div className="flex flex-col gap-2">
-          <Input
-            label={t('markets.stakeLabel')}
-            type="number"
-            min="0.01"
-            step="0.01"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            hint={
-              !isInsufficient && !isOverLimit
-                ? t('markets.balance', { amount: availableBalance.toFixed(2) })
-                : undefined
-            }
-            error={
-              isInsufficient
-                ? t('markets.insufficientBalance')
-                : isOverLimit
-                  ? t('markets.exceedsMaxBet', { amount: maxBetLimit })
-                  : undefined
-            }
-            placeholder="0.00"
-            disabled={isUntradable}
-          />
+        {/* Amount — large Polymarket-style display */}
+        <div className="rounded-lg p-3" style={{ backgroundColor: 'var(--color-bg-base)' }}>
+          <div className="flex items-center justify-between gap-3">
+            <label
+              htmlFor="betslip-amount"
+              className="text-sm font-medium"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
+              {t('markets.stakeLabel')}
+            </label>
+            <div className="flex flex-1 items-baseline justify-end gap-1">
+              <span
+                className="text-2xl font-bold"
+                style={{ color: amount ? 'var(--color-text-primary)' : 'var(--color-text-muted)' }}
+              >
+                $
+              </span>
+              <input
+                id="betslip-amount"
+                type="text"
+                inputMode="decimal"
+                value={amount}
+                onChange={(e) => handleAmountChange(e.target.value)}
+                placeholder="0"
+                disabled={isUntradable}
+                aria-label={t('markets.stakeLabel')}
+                className="min-w-0 flex-1 bg-transparent text-end text-3xl font-bold outline-none"
+                style={{ color: 'var(--color-text-primary)' }}
+              />
+            </div>
+          </div>
 
-          {hasBetLimit && (
-            <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-              {t('markets.maxBet', { amount: maxBetLimit })}
+          <div className="mt-1 flex items-center justify-between text-xs">
+            <span style={{ color: 'var(--color-text-muted)' }}>
+              {t('markets.balance', { amount: availableBalance.toFixed(2) })}
+            </span>
+            {hasBetLimit && (
+              <span style={{ color: 'var(--color-text-muted)' }}>
+                {t('markets.maxBet', { amount: maxBetLimit })}
+              </span>
+            )}
+          </div>
+
+          {(isInsufficient || isOverLimit) && (
+            <p className="mt-1 text-xs" style={{ color: 'var(--color-error)' }}>
+              {isInsufficient
+                ? t('markets.insufficientBalance')
+                : t('markets.exceedsMaxBet', { amount: maxBetLimit })}
             </p>
           )}
 
-          {/* Quick-add chips (+$1 / +$5 / +$10 / +$100) — Polymarket-style. */}
-          <div className="flex flex-wrap items-center gap-2">
+          {/* Quick-add chips (+$1 / +$5 / +$10 / +$100) + All In */}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             {QUICK_ADD_AMOUNTS.map((inc) => (
               <Button
                 key={inc}
@@ -296,10 +343,7 @@ export const BetSlip = ({
                 type="button"
                 className="text-sm"
                 disabled={isUntradable}
-                onClick={() => {
-                  const next = (stake ?? 0) + inc;
-                  setAmount(next.toFixed(2));
-                }}
+                onClick={() => handleAmountChange(((stake ?? 0) + inc).toFixed(2))}
               >
                 +${inc}
               </Button>
@@ -316,17 +360,9 @@ export const BetSlip = ({
           </div>
         </div>
 
-        {/* Low-liquidity warning: book depth ran out before stake was filled.
-            Surface the max fillable stake so the user knows what they CAN bet. */}
+        {/* Low-liquidity warning: book depth ran out before stake was filled. */}
         {isLowLiquidity && (
-          <div
-            className="rounded-lg border p-3 text-sm"
-            style={{
-              borderColor: 'var(--color-error)',
-              color: 'var(--color-error)',
-              backgroundColor: 'color-mix(in oklch, var(--color-error) 8%, var(--color-bg-base))',
-            }}
-          >
+          <div className="rounded-lg border p-3 text-sm" style={warningBoxStyle}>
             {t('markets.lowLiquidity')}
             {quote && quote.available_stake != null && quote.available_stake > 0 && (
               <span className="mt-1 block font-medium">
@@ -336,7 +372,7 @@ export const BetSlip = ({
           </div>
         )}
 
-        {/* Balance preview after bet */}
+        {/* Balance preview after bet (kept — our extra over the reference) */}
         {balanceIfWin !== null && balanceIfLose !== null && (
           <div className="rounded-lg p-3" style={{ backgroundColor: 'var(--color-bg-base)' }}>
             <p
@@ -378,8 +414,7 @@ export const BetSlip = ({
           </div>
         )}
 
-        {/* To win (gross shares — each pays $1, matches Polymarket "To win")
-            plus the average share price the stake fills at. */}
+        {/* To win (gross shares — each pays $1) + average fill price + profit */}
         {toWin !== null && (
           <div
             className="flex flex-col gap-2 rounded-lg p-3"
@@ -390,11 +425,11 @@ export const BetSlip = ({
                 {t('markets.toWin')}
               </span>
               <span
-                className="flex items-center gap-2 text-base font-bold"
+                className="flex items-center gap-2 text-xl font-bold"
                 style={{ color: 'var(--color-win)' }}
               >
-                {/* Fixed-width spinner slot reserved on the LEFT so the amount's
-                    position never shifts when the quote refetch toggles it. */}
+                {/* Fixed-width spinner slot on the LEFT so the amount never shifts
+                    when the quote refetch toggles it. */}
                 <span aria-hidden className="inline-flex w-4 shrink-0 justify-center">
                   {quoteFetching ? <Spinner size="sm" /> : null}
                 </span>
@@ -418,18 +453,9 @@ export const BetSlip = ({
           </div>
         )}
 
-        {/* Book unavailable: surface an explicit warning so the user knows
-            why Confirm is disabled. Polymarket parity demands we never lock
-            against the optimistic indicative payout. */}
+        {/* Book unavailable: explain why the CTA is disabled. */}
         {isQuoteUnavailable && !isQuoteLoading && (
-          <div
-            className="rounded-lg border p-3 text-sm"
-            style={{
-              borderColor: 'var(--color-error)',
-              color: 'var(--color-error)',
-              backgroundColor: 'color-mix(in oklch, var(--color-error) 8%, var(--color-bg-base))',
-            }}
-          >
+          <div className="rounded-lg border p-3 text-sm" style={warningBoxStyle}>
             {t('markets.quoteUnavailable')}
           </div>
         )}
@@ -438,10 +464,7 @@ export const BetSlip = ({
         {isQuoteLoading && toWin === null && (
           <div
             className="flex items-center gap-2 rounded-lg p-3 text-sm"
-            style={{
-              backgroundColor: 'var(--color-bg-base)',
-              color: 'var(--color-text-secondary)',
-            }}
+            style={{ backgroundColor: 'var(--color-bg-base)', color: 'var(--color-text-secondary)' }}
           >
             <Spinner size="sm" />
             {t('markets.quoteUpdating')}
@@ -454,16 +477,17 @@ export const BetSlip = ({
           </p>
         )}
 
-        <div className="flex gap-2">
+        {/* Primary CTA full-width, secondary Cancel below (Polymarket-style) */}
+        <div className="flex flex-col gap-2">
           <Button
             variant="primary"
             onClick={handleConfirm}
             disabled={isConfirmDisabled}
-            className="flex-1"
+            className="w-full"
           >
             {isPending ? t('common.saving') : t('markets.confirmBet')}
           </Button>
-          <Button variant="secondary" onClick={onClose} type="button">
+          <Button variant="secondary" onClick={onClose} type="button" className="w-full">
             {t('common.cancel')}
           </Button>
         </div>
