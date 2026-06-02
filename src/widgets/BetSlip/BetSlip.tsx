@@ -99,7 +99,9 @@ export const BetSlip = ({
   // mid-price fallback, so if the book is unavailable we surface "quote
   // unavailable" and disable the CTA rather than show a fabricated number.
   const bookAvailable = Boolean(quote && quote.book_updated_at !== null);
-  const isQuoteReadyFromBook = Boolean(quote && bookAvailable && !quote.partial && quote.shares > 0);
+  const isQuoteReadyFromBook = Boolean(
+    quote && bookAvailable && !quote.partial && quote.shares > 0
+  );
   const isQuoteUnavailable = Boolean(quote && !bookAvailable);
   const effectiveShares =
     isValidStake && !isInsufficient && isQuoteReadyFromBook ? quote!.shares : null;
@@ -283,7 +285,9 @@ export const BetSlip = ({
           </div>
         )}
 
-        {/* Amount — large Polymarket-style display */}
+        {/* Amount — large Polymarket-style display. The number lives on its own
+            full-width row so it never competes with the label and cannot
+            overflow the card (incl. long balances in RTL). */}
         <div className="rounded-lg p-3" style={{ backgroundColor: 'var(--color-bg-base)' }}>
           <div className="flex items-center justify-between gap-3">
             <label
@@ -293,38 +297,37 @@ export const BetSlip = ({
             >
               {t('markets.stakeLabel')}
             </label>
-            <div className="flex flex-1 items-baseline justify-end gap-1">
-              <span
-                className="text-2xl font-bold"
-                style={{ color: amount ? 'var(--color-text-primary)' : 'var(--color-text-muted)' }}
-              >
-                $
-              </span>
-              <input
-                id="betslip-amount"
-                type="text"
-                inputMode="decimal"
-                value={amount}
-                onChange={(e) => handleAmountChange(e.target.value)}
-                placeholder="0"
-                disabled={isUntradable}
-                aria-label={t('markets.stakeLabel')}
-                className="min-w-0 flex-1 bg-transparent text-end text-3xl font-bold outline-none"
-                style={{ color: 'var(--color-text-primary)' }}
-              />
-            </div>
-          </div>
-
-          <div className="mt-1 flex items-center justify-between text-xs">
-            <span style={{ color: 'var(--color-text-muted)' }}>
+            <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
               {t('markets.balance', { amount: availableBalance.toFixed(2) })}
             </span>
-            {hasBetLimit && (
-              <span style={{ color: 'var(--color-text-muted)' }}>
-                {t('markets.maxBet', { amount: maxBetLimit })}
-              </span>
-            )}
           </div>
+
+          <div className="mt-2 flex items-baseline gap-1">
+            <span
+              className="shrink-0 text-2xl font-bold"
+              style={{ color: amount ? 'var(--color-text-primary)' : 'var(--color-text-muted)' }}
+            >
+              $
+            </span>
+            <input
+              id="betslip-amount"
+              type="text"
+              inputMode="decimal"
+              value={amount}
+              onChange={(e) => handleAmountChange(e.target.value)}
+              placeholder="0"
+              disabled={isUntradable}
+              aria-label={t('markets.stakeLabel')}
+              className="w-full min-w-0 flex-1 bg-transparent text-end text-3xl font-bold leading-tight outline-none"
+              style={{ color: 'var(--color-text-primary)' }}
+            />
+          </div>
+
+          {hasBetLimit && (
+            <p className="mt-1 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+              {t('markets.maxBet', { amount: maxBetLimit })}
+            </p>
+          )}
 
           {(isInsufficient || isOverLimit) && (
             <p className="mt-1 text-xs" style={{ color: 'var(--color-error)' }}>
@@ -372,60 +375,17 @@ export const BetSlip = ({
           </div>
         )}
 
-        {/* Balance preview after bet (kept — our extra over the reference) */}
-        {balanceIfWin !== null && balanceIfLose !== null && (
-          <div className="rounded-lg p-3" style={{ backgroundColor: 'var(--color-bg-base)' }}>
-            <p
-              className="mb-2 text-xs font-medium"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
-              {t('markets.afterBet')}
-            </p>
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center justify-between text-xs">
-                <span style={{ color: 'var(--color-text-secondary)' }}>
-                  {t('markets.afterBetIfWin')}
-                </span>
-                <span className="font-mono" style={{ color: 'var(--color-text-muted)' }}>
-                  <span style={{ color: 'var(--color-win)' }}>{balanceIfWin.toFixed(2)}</span>
-                  <span className="mx-1 font-bold" style={{ color: 'var(--color-text-primary)' }}>
-                    ←
-                  </span>
-                  <span style={{ color: 'var(--color-text-primary)' }}>
-                    {availableBalance.toFixed(2)}
-                  </span>
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span style={{ color: 'var(--color-text-secondary)' }}>
-                  {t('markets.afterBetIfLose')}
-                </span>
-                <span className="font-mono" style={{ color: 'var(--color-text-muted)' }}>
-                  <span style={{ color: 'var(--color-error)' }}>{balanceIfLose.toFixed(2)}</span>
-                  <span className="mx-1 font-bold" style={{ color: 'var(--color-text-primary)' }}>
-                    ←
-                  </span>
-                  <span style={{ color: 'var(--color-text-primary)' }}>
-                    {availableBalance.toFixed(2)}
-                  </span>
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* To win (gross shares — each pays $1) + average fill price + profit */}
+        {/* Settlement summary — one block, no nested card. "To win" is the
+            climax; everything else (avg price, profit, post-bet balances) sits
+            quietly beneath it, separated by a hairline. */}
         {toWin !== null && (
-          <div
-            className="flex flex-col gap-2 rounded-lg p-3"
-            style={{ backgroundColor: 'var(--color-bg-base)' }}
-          >
+          <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
                 {t('markets.toWin')}
               </span>
               <span
-                className="flex items-center gap-2 text-xl font-bold"
+                className="flex items-center gap-2 text-2xl font-bold"
                 style={{ color: 'var(--color-win)' }}
               >
                 {/* Fixed-width spinner slot on the LEFT so the amount never shifts
@@ -436,6 +396,7 @@ export const BetSlip = ({
                 <span>${toWin.toFixed(2)}</span>
               </span>
             </div>
+
             <div className="flex items-center justify-between text-xs">
               <span style={{ color: 'var(--color-text-muted)' }}>{t('markets.avgPrice')}</span>
               <span className="font-mono" style={{ color: 'var(--color-text-secondary)' }}>
@@ -449,6 +410,41 @@ export const BetSlip = ({
                   +${profitIfWin.toFixed(2)}
                 </span>
               </div>
+            )}
+
+            {/* Post-bet balance preview (our extra over the reference) */}
+            {balanceIfWin !== null && balanceIfLose !== null && (
+              <>
+                <div className="my-1 h-px" style={{ backgroundColor: 'var(--color-border)' }} />
+                <div className="flex items-center justify-between text-xs">
+                  <span style={{ color: 'var(--color-text-muted)' }}>
+                    {t('markets.afterBetIfWin')}
+                  </span>
+                  <span className="font-mono">
+                    <span style={{ color: 'var(--color-win)' }}>{balanceIfWin.toFixed(2)}</span>
+                    <span className="mx-1" style={{ color: 'var(--color-text-muted)' }}>
+                      ←
+                    </span>
+                    <span style={{ color: 'var(--color-text-secondary)' }}>
+                      {availableBalance.toFixed(2)}
+                    </span>
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span style={{ color: 'var(--color-text-muted)' }}>
+                    {t('markets.afterBetIfLose')}
+                  </span>
+                  <span className="font-mono">
+                    <span style={{ color: 'var(--color-error)' }}>{balanceIfLose.toFixed(2)}</span>
+                    <span className="mx-1" style={{ color: 'var(--color-text-muted)' }}>
+                      ←
+                    </span>
+                    <span style={{ color: 'var(--color-text-secondary)' }}>
+                      {availableBalance.toFixed(2)}
+                    </span>
+                  </span>
+                </div>
+              </>
             )}
           </div>
         )}
@@ -464,7 +460,10 @@ export const BetSlip = ({
         {isQuoteLoading && toWin === null && (
           <div
             className="flex items-center gap-2 rounded-lg p-3 text-sm"
-            style={{ backgroundColor: 'var(--color-bg-base)', color: 'var(--color-text-secondary)' }}
+            style={{
+              backgroundColor: 'var(--color-bg-base)',
+              color: 'var(--color-text-secondary)',
+            }}
           >
             <Spinner size="sm" />
             {t('markets.quoteUpdating')}
