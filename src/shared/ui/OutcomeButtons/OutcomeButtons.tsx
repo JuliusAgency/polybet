@@ -182,7 +182,12 @@ export function OutcomeButtons({
         // In selection mode, dim the outcomes that are not chosen.
         const isDimmed = selectedId != null && !isSelected && !o.isWinner;
         const isHovered = hoveredId === o.id && !disabled && !isUntradable;
-        const baseStyle = tintFor(index, !!o.isWinner || isSelected, disabled || isUntradable, longTail);
+        const baseStyle = tintFor(
+          index,
+          !!o.isWinner || isSelected,
+          disabled || isUntradable,
+          longTail
+        );
         const style: CSSProperties = isHovered
           ? hoverTintFor(index)
           : { ...baseStyle, ...(isDimmed ? { opacity: 0.5 } : null) };

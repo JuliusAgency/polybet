@@ -100,7 +100,12 @@ function makeMarket(outcomes: MarketOutcome[]): Market {
   };
 }
 
-const YES = makeOutcome({ id: 'out-yes', name: 'Yes', price: 0.71, polymarket_token_id: 'tok-yes' });
+const YES = makeOutcome({
+  id: 'out-yes',
+  name: 'Yes',
+  price: 0.71,
+  polymarket_token_id: 'tok-yes',
+});
 const NO = makeOutcome({ id: 'out-no', name: 'No', price: 0.3, polymarket_token_id: 'tok-no' });
 
 describe('BetSlip — shares model', () => {
