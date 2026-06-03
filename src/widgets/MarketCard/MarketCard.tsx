@@ -103,7 +103,7 @@ export const MarketCard = ({
 
   return (
     <article
-      className="relative flex flex-col gap-3 p-3 transition-[transform,box-shadow] motion-reduce:transition-none hover:-translate-y-0.5 hover:[box-shadow:var(--shadow-md)] motion-reduce:hover:translate-y-0"
+      className="relative flex h-full flex-col gap-3 p-3 transition-[transform,box-shadow] motion-reduce:transition-none hover:-translate-y-0.5 hover:[box-shadow:var(--shadow-md)] motion-reduce:hover:translate-y-0"
       style={{
         backgroundColor: 'var(--color-bg-surface)',
         border: '1px solid var(--color-border)',
@@ -140,7 +140,7 @@ export const MarketCard = ({
       </header>
 
       {/* Outcome CTAs — full-width, gauge moved to the header. */}
-      <div className="relative z-10 flex min-h-20 items-center">
+      <div className="relative z-10 flex min-h-20 grow items-center">
         <div className="min-w-0 flex-1">
           <OutcomeButtons
             outcomes={outcomeButtons}

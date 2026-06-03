@@ -1,4 +1,4 @@
-<!-- Generated: 2026-05-04 | Tables scanned: 16 public + 70 migrations | Token estimate: ~700 -->
+<!-- Generated: 2026-06-03 (positions/trades trading model) | Tables scanned: 16 public + 70 migrations | Token estimate: ~700 -->
 
 # Data
 
@@ -14,14 +14,22 @@ profiles (id PK = auth.users.id, role: user|manager|super_admin, blocked, full_n
    │      └─► manager_user_links  (manager_id ↔ user_id)
    │
    ├──► balances          (user_id PK, available, in_play)
+   │                       INVARIANT: in_play == Σ cost_basis of open positions
    │
-   ├──► bets              (id, user_id, market_id, outcome_id, stake, locked_odds,
-   │                       potential_payout, status: open|won|lost|cancelled,
-   │                       placed_at, settled_at, seen_at)
+   ├──► positions         (id, user_id, market_id, outcome_id, shares, avg_price∈(0,1),
+   │                       cost_basis=shares*avg_price, realized_pnl,
+   │                       status: open|closed|won|lost, UNIQUE(user_id,outcome_id))
+   │     │                 — MUTABLE aggregate; trading model (2026-06-02)
+   │     └─► trades        (id, position_id, side: buy|sell, shares, price∈(0,1),
+   │                        usd, realized_pnl, created_at) — IMMUTABLE fill ledger
+   │
+   ├──► bets              FROZEN/historical — never written; backfilled into positions/trades
+   │                       (id, …, stake, locked_odds, potential_payout, shares, avg_price,
+   │                       status: open|won|lost|cancelled)
    │
    └──► balance_transactions  (id, user_id, type: mint|transfer|bet_lock|
-                               bet_payout|adjustment, amount, balance_after,
-                               bet_id?, note, created_at)
+                               bet_payout|adjustment|bet_sell, amount, balance_after,
+                               bet_id? | trade_id? | position_id?, note, created_at)
 
 events  (id, polymarket_id, title, description, category, image_url, close_at,
          status, volume, tag_slug, tag_label, tag_slugs[])
@@ -37,8 +45,10 @@ events  (id, polymarket_id, title, description, category, image_url, close_at,
           │
           └──► user_favorite_markets  (user_id ↔ market_id)
 
-market_settlement_logs  (market_id, winning_outcome_id, settled_at, …)
-bet_settlement_logs     (market_settlement_id, bet_id, user_id, outcome, stake, payout)
+market_settlement_logs      (market_id, winning_outcome_id, settled_count, …)
+position_settlement_logs    (market_settlement_id, position_id, user_id, outcome, cost_basis, shares, payout, realized_pnl)
+bet_settlement_logs         (FROZEN — legacy per-bet settlement; superseded by position_settlement_logs)
+market_outcome_books        (polymarket_token_id PK, outcome_id, asks[], bids[], updated_at) — CLOB cache for quotes
 
 system_settings    (key text PK, value jsonb) — runtime config:
   market_volume_threshold_usd, allowed_category_tags
@@ -63,7 +73,9 @@ Maintained by triggers — do NOT write directly from app code.
 profiles          read: self | linked manager | super_admin
 managers          read: self | super_admin                                writes via RPC
 balances          read: self | linked manager | super_admin               writes via RPC
-bets              read: self | linked manager | super_admin               writes via RPC
+positions, trades read: self | linked manager | super_admin               writes via SECURITY DEFINER RPC only
+position_settlement_logs  read: self | linked manager | super_admin
+bets              read: self | linked manager | super_admin               FROZEN (no writes)
 balance_transactions  read: self | linked manager | super_admin           writes via RPC
 markets, market_outcomes, events  read: anyone (public feed)              writes via service role (sync)
 user_favorite_markets  read/write: self
@@ -76,6 +88,8 @@ system_settings   read: anyone (read-only, e.g. category whitelist)       writes
 Currently published: `bets`, `balances`, `balance_transactions`, `profiles`, `events`.
 
 Removed in migration 069 (quota-driven): `markets`, `market_outcomes`. Re-adding either is a billing/perf decision — see CLAUDE.md "Realtime policy".
+
+`positions`/`trades` are NOT published (high-write). The portfolio learns of a settlement via the `balance_transactions` INSERT (`bet_payout`) realtime signal, which `useBetResultNotifications` uses to toast won/lost AND invalidate the positions queries.
 
 ## Migration timeline (highlights)
 
@@ -104,6 +118,11 @@ Removed in migration 069 (quota-driven): `markets`, `market_outcomes`. Re-adding
 068  cleanup demo bets
 069  markets.tag_slugs denorm + DROP markets/market_outcomes from realtime
 070  backfill markets.tag_slugs (BEGIN/COMMIT + SET LOCAL timeout=0) + GIN index
+20260518  market_outcome_books + quote_bet_payout (CLOB order-book quotes)
+20260601  odds→shares on bets (interim) + book-required place_bet
+20260602  positions+trades tables; place_bet/sell_position/settle_market on positions;
+          bets frozen + backfill; balance_transactions += bet_sell; quote_sell + sell_position
+20260603  admin_place_demo_bet → positions; admin_bet_log shows buy+sell+side
 ```
 
 ## Seeds (`supabase/seed/`)

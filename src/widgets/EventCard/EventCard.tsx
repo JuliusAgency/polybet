@@ -95,8 +95,15 @@ export const EventCard = ({
   // a bug. `totalMarketsCount === undefined` keeps the legacy behavior for
   // consumers that don't pass the count yet.
   const knownTotal = totalMarketsCount;
-  const isSingle =
-    !forceMultiRow && visibleMarkets.length === 1 && (knownTotal === undefined || knownTotal <= 1);
+  // Collapse to the single big-button visual whenever exactly one market is
+  // visible. The decision intentionally does NOT depend on the async
+  // `totalMarketsCount` (count of historical/closed markets): keying the layout
+  // off data that lands a tick later made the card flip from the big-button
+  // visual to the compact multi-row visual the moment the count RPC resolved —
+  // a visible flicker, most noticeable in RTL. One open market → one Yes/No
+  // question → big buttons, always. `totalMarketsCount` is still used below to
+  // surface the "+N closed" hint on genuine multi-row cards (2+ open markets).
+  const isSingle = !forceMultiRow && visibleMarkets.length === 1;
   const hiddenClosedCount =
     knownTotal !== undefined && knownTotal > orderedMarkets.length
       ? knownTotal - orderedMarkets.length
@@ -125,7 +132,7 @@ export const EventCard = ({
 
   return (
     <article
-      className="group/card relative flex flex-col gap-3 p-3 transition-[transform,box-shadow] motion-reduce:transition-none hover:-translate-y-0.5 hover:[box-shadow:var(--shadow-md)] motion-reduce:hover:translate-y-0"
+      className="group/card relative flex h-full flex-col gap-3 p-3 transition-[transform,box-shadow] motion-reduce:transition-none hover:-translate-y-0.5 hover:[box-shadow:var(--shadow-md)] motion-reduce:hover:translate-y-0"
       style={{
         backgroundColor: 'var(--color-bg-surface)',
         border: '1px solid var(--color-border)',
@@ -177,7 +184,7 @@ export const EventCard = ({
 
       {/* Body: single market → full-width buttons (gauge is in header); multi → compact rows */}
       {singleMarket ? (
-        <div className="relative z-10 flex min-h-20 items-center">
+        <div className="relative z-10 flex min-h-20 grow items-center">
           <div className="min-w-0 flex-1">
             <OutcomeButtons
               outcomes={singleOutcomeButtons}
@@ -200,7 +207,7 @@ export const EventCard = ({
           </div>
         </div>
       ) : (
-        <div className="flex flex-col">
+        <div className="flex grow flex-col">
           {visibleMarkets.map((market) => (
             <EventMarketRow
               key={market.id}

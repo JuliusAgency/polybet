@@ -1,4 +1,4 @@
-<!-- Generated: 2026-05-04 | Files scanned: ~150 .tsx/.ts | Token estimate: ~900 -->
+<!-- Generated: 2026-06-03 (positions/trades trading model) | Files scanned: ~150 .tsx/.ts | Token estimate: ~900 -->
 
 # Frontend
 
@@ -37,9 +37,10 @@ src/pages/manager/{ManagerUsersPage, ManagerUserProfilePage, ManagerMarketsPage,
 src/pages/super-admin/{AdminDashboardPage, ManagersPage, ManagerProfilePage,
                        AdminMarketsPage, AdminBetLogPage, AdminReportsPage,
                        TestLabPage, LimitsPage, SettingsPage}
-src/pages/user/{MarketsFeedPage, EventDetailPage, MyBetsPage, SavedMarketsPage,
-                StatsPage, WalletPage}
+src/pages/user/{MarketsFeedPage, EventDetailPage, MyBetsPage (=Portfolio: positions w/ mark-to-market + Sell),
+                SavedMarketsPage, StatsPage, WalletPage}
 ```
+Widgets: `widgets/SellSlip` (Portfolio sell modal → SellForm), `widgets/BetSlip` (Buy/Sell tabs; Sell tab renders SellForm for the held position).
 
 ## State management
 
@@ -66,12 +67,19 @@ bet/                                            (markets, events, bets, balance,
                            Accepts (ids, true|false) OR (ids, { autoRefresh?, eventId? }).
                            When `eventId` is passed, invalidates ['event', eventId] after refresh.
                            eventId tracked via ref (not closure) to stay fresh across navigations.
-  useMyBets                user bets + realtime listener on bets (filter by user_id)
+  TRADING MODEL (positions + trades, 2026-06-02):
+  usePositions             open positions (portfolio); poll 30s
+  usePositionHistory       closed/won/lost positions
+  useTrades                immutable fill ledger (buy + sell)
+  useMyBets                ADAPTER over positions → legacy MyBet shape (feed/event "you hold this")
+  usePlaceBet              mutation → place_bet RPC (BUY)
+  useBetQuote              live ASK quote via quote-bet edge fn (BetSlip Buy)
+  useSellQuote             live BID quote via quote-sell edge fn (Sell)
+  useSellPosition          mutation → sell_position RPC (+PriceDriftError, P0002)
+  SellForm                 (features/bet/SellForm) reusable sell form — used by widgets/SellSlip + BetSlip Sell tab
   useUserBalance           balances row + realtime listener (filter by user_id)
   useUserTransactions      ledger view + realtime on balance_transactions
-  useBetResultNotifications  toast on settle (filter bets UPDATE by user_id)
-  useUnseenBetsCount       badge counter
-  usePlaceBet              mutation → place_bet RPC
+  useBetResultNotifications  toast won/lost via balance_transactions INSERT (bet_payout) → also invalidates positions
   useSimilarEvents, useMarketCategories, useAllowedCategoryTags
   groupMarketsByEvent, priceHistoryBucket, usePriceHistory
 favorites/                                       (toggle saved markets)
@@ -87,11 +95,12 @@ stats/useSystemKpis        polls every 30s (cross-user data — no realtime; see
 
 ```
 balances             useUserBalance              filter user_id=eq.${userId}
-bets                 useMyBets                   filter user_id=eq.${userId}
-bets                 useBetResultNotifications   filter user_id=eq.${userId}
+balance_transactions useBetResultNotifications   filter user_id=eq.${userId} (bet_payout INSERT → toast + invalidate positions)
 balance_transactions useUserTransactions         filter user_id=eq.${userId}
 profiles             AuthProvider                filter id=eq.${userId} (manager-block check)
 ```
+
+`positions`/`trades` are NOT in the realtime publication — usePositions/usePositionHistory poll + are invalidated by buy/sell mutations and the bet_payout signal above. `useMyBets` is now an adapter over those queries (no own realtime).
 
 Cross-user data uses `refetchInterval: 30_000` polling (`useSystemKpis`, `useAgentStats`, `useFinancialTransactions`).
 

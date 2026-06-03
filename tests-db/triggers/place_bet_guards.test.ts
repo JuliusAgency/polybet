@@ -15,7 +15,7 @@ import { withTransaction } from '../helpers/pg';
 //   6. effective_odds <= 1000                             [`Outcome odds out of bounds`]
 //   7. outcome.updated_at within 3 min                    [`Outcome price feed is stale`]
 //   8. book present (book_updated_at NOT NULL)            [`Market book unavailable`]
-//   9. book fresh (<= 5s)                                 [`Market book is stale`]
+//   9. book fresh (<= 30s)                                [`Market book is stale`]
 //  10. book non-partial AND shares > 0                    [`Insufficient liquidity`]
 //  11. optional drift |expected - bookEffOdds|/bookEffOdds <= 2%  [`Odds changed`, P0002]
 //
@@ -27,7 +27,10 @@ const USER1 = '00000000-0000-0000-0000-000000000003';
 const FAR_FUTURE = "now() + interval '30 days'";
 const FRESH = 'now()';
 const STALE = "now() - interval '10 minutes'";
-const STALE_BOOK = "now() - interval '30 seconds'";
+// Comfortably past the 30s book-freshness bound (migration 20260603100437)
+// while staying under the 3-min price-feed bound, so only the book-stale guard
+// trips. now() advances during the txn, so an exact-30s value would be flaky.
+const STALE_BOOK = "now() - interval '2 minutes'";
 
 interface MarketSeed {
   status?: 'open' | 'closed' | 'resolved';
@@ -145,7 +148,7 @@ describe('place_bet shares model (require book)', () => {
     });
   });
 
-  it('rejects when the book is stale (> 5s)', async () => {
+  it('rejects when the book is stale (> 30s)', async () => {
     await withTransaction(async (c) => {
       const { marketId, outcomeId } = await seedFreshMarket(
         c,

@@ -1,4 +1,4 @@
-<!-- Generated: 2026-05-04 | Files scanned: ~70 migrations + 6 edge fns | Token estimate: ~700 -->
+<!-- Generated: 2026-06-03 (positions/trades trading model) | Files scanned: ~70 migrations + 6 edge fns | Token estimate: ~700 -->
 
 # Backend
 
@@ -12,21 +12,32 @@ Supabase Postgres 17 + Edge Functions (Deno). All app-facing edge functions vali
 | `export-admin-report` | CSV export of bets/transactions | user JWT + super_admin role | admin UI button |
 | `market-price-history` | Returns bucketed price points for a market or event | user JWT (any role) | bet/event detail charts |
 | `refresh-markets` | On-demand Polymarket pull for given polymarket_ids; writes outcomes; settles resolved | user JWT (user/manager/super_admin) | `useMarketRefresh` (feed + event page, every 30s) |
+| `quote-bet` | Walks live CLOB **asks** for a stake; upserts order book; returns slippage payout | user JWT | `useBetQuote` (BetSlip Buy) |
+| `quote-sell` | Walks live CLOB **bids** for N shares; upserts order book; returns sell proceeds | user JWT | `useSellQuote` (SellSlip / BetSlip Sell) |
 | `settle-markets` | Bulk settle resolved markets | service-role only | manual admin trigger |
 | `sync-polymarket-markets` | Full sync — events + markets + outcomes (modes: hot_set, backfill, resolved_only, event_first) | service-role only | pg_cron (`sync-hot-set-markets` every 1m, `backfill-open-bets` every hour) |
 | `_shared/` | Common utilities (auth, polymarket client, types) | — | imported by all of the above |
 
 ## Critical RPCs (SECURITY DEFINER)
 
+TRADING MODEL: positions + trades (`bets` FROZEN). See CLAUDE.md "Trading model".
 ```
-place_bet(market_id uuid, outcome_id uuid, stake numeric)
-  → INSERT bets, UPDATE balances (in_play += stake, available -= stake), INSERT balance_transactions
-  → migration 027/041 (effective_odds rule)
+place_bet(market_id, outcome_id, stake, expected_odds)        — BUY
+  → upsert positions (weighted-avg) + INSERT trades(side=buy) + in_play += cost
+    + balance_transactions(bet_lock). Requires fresh (≤5s) book quote. Returns position id.
 
-settle_market(market_id uuid, winning_outcome_id uuid)
-  → UPDATE markets.winning_outcome_id, status='resolved'
-  → for each open bet on this market: UPDATE bets SET status, settled_at; INSERT bet_settlement_logs; INSERT balance_transactions(bet_payout)
-  → migration 027/067
+sell_position(position_id, shares, expected_price)            — SELL (partial/full)
+  → quote_sell_proceeds walks bids → available += proceeds, release cost_basis from in_play,
+    realized_pnl, INSERT trades(side=sell) + balance_transactions(bet_sell). ERRCODE P0002 on drift.
+
+quote_bet_payout(token_id, stake) / quote_sell_proceeds(token_id, shares)
+  → STABLE; walk market_outcome_books.asks / .bids for slippage-adjusted payout / proceeds.
+
+settle_market(market_id, winning_outcome_id)
+  → settle open POSITIONS: winner += shares*$1, loser += 0, both release cost_basis from in_play
+  → INSERT market_settlement_logs + position_settlement_logs. Idempotent on positions.
+
+admin_place_demo_bet(user_id, market_id, outcome_id, stake)   — TestLab: positions/trades (no book).
 
 close_expired_markets()
   → markets with close_at < now() AND status='open' → status='closed'
@@ -86,4 +97,8 @@ auto-close-expired-markets */1 * * * *   SELECT close_expired_markets()    (migr
 067  settle idempotent on bets
 069  markets.tag_slugs denormalization + DROP markets/market_outcomes from realtime publication
 070  backfill (in BEGIN/COMMIT + SET LOCAL statement_timeout=0) + GIN index for markets.tag_slugs
+20260518  market_outcome_books + quote_bet_payout (order-book quotes)
+20260601  odds→shares on bets (interim)
+20260602  positions+trades model: place_bet/sell_position/settle on POSITIONS; bets frozen + backfill
+20260603  admin_place_demo_bet + admin_bet_log on positions/trades (buy+sell+side)
 ```

@@ -176,58 +176,32 @@ export const BetSlip = ({
       return;
     }
 
-    // Pre-submit refetch of the live quote so locked_odds matches the most
-    // recent book the user saw. Closes the race where bookWriter ticked
-    // between BetSlip's last poll and Confirm click.
+    // Refresh the live book, validate, drift-check and place. quote-bet also
+    // re-UPSERTs market_outcome_books on every call, so this refresh is exactly
+    // what keeps place_bet's freshness guard satisfied. The book bound is 30s
+    // (see migration 20260603100437), comfortably above the 2s quote poll, so a
+    // freshly-refreshed quote effectively never trips the server's stale guard.
     setSubmitError(null);
     const roundedStake = Math.round(stake! * 100) / 100;
     const quoteKey = ['bet-quote', selected.polymarket_token_id, roundedStake] as const;
-    try {
-      await queryClient.refetchQueries({ queryKey: quoteKey });
-    } catch {
-      // Fall back to the last known quote — the server-side guard catches
-      // any actual staleness.
-    }
-    const fresh: BetQuote | null =
-      queryClient.getQueryData<BetQuote | null>(quoteKey) ?? quote ?? null;
 
-    // Lock the price against the fresh book quote ONLY. If the refresh dropped
-    // the quote (CLOB transient failure between debounce and Confirm), abort
-    // and ask the user to retry — the server has no mid-price fallback and
-    // would reject the bet anyway.
-    const freshBookAvailable = Boolean(fresh && fresh.book_updated_at !== null);
-    if (!fresh || !freshBookAvailable) {
-      setSubmitError(t('markets.quoteUnavailable'));
-      return;
-    }
-    if (fresh.partial || fresh.shares <= 0) {
-      setSubmitError(t('markets.lowLiquidity'));
-      return;
-    }
-    const lockOdds = fresh.effective_odds;
-
-    if (lockOdds > 0 && displayOdds > 0) {
-      const drift = Math.abs(lockOdds - displayOdds) / displayOdds;
-      if (drift > ODDS_DRIFT_TOLERANCE) {
-        setSubmitError(t('markets.oddsChanged', { odds: lockOdds.toFixed(2) }));
-        return;
+    // Refetch the live quote and return it, or null if the book came back
+    // unavailable (CLOB transient failure between debounce and Confirm) — the
+    // server has no mid-price fallback, so a null book means "cannot place".
+    const refreshQuote = async (): Promise<BetQuote | null> => {
+      try {
+        await queryClient.refetchQueries({ queryKey: quoteKey });
+      } catch {
+        // Fall back to the last known quote below.
       }
-    }
+      const next = queryClient.getQueryData<BetQuote | null>(quoteKey) ?? quote ?? null;
+      return next && next.book_updated_at !== null ? next : null;
+    };
 
-    try {
-      await placeBet({
-        marketId: market.id,
-        outcomeId: selected.id,
-        stake: stake!,
-        expectedOdds: lockOdds,
-      });
-      toast.success(
-        t('bet.notification.placed', { outcome: selected.name, stake: stake!.toFixed(2) }),
-        { duration: 5000 }
-      );
-      onSuccess();
-      onClose();
-    } catch (err) {
+    // Surface a non-stale server/validation error to the user (no retry). Maps
+    // raw server guard strings to friendly messages instead of leaking the
+    // English Postgres exception.
+    const surfaceError = (err: unknown): void => {
       if (err instanceof OddsDriftError) {
         setSubmitError(
           t('markets.oddsChanged', {
@@ -236,19 +210,7 @@ export const BetSlip = ({
         );
         return;
       }
-      // Map raw server guard strings to friendly, actionable messages instead of
-      // leaking the English Postgres exception.
       const raw = err instanceof Error ? err.message : '';
-      const isStale =
-        raw.includes('Market price feed is stale') ||
-        raw.includes('Market book is stale') ||
-        raw.includes('Outcome price feed is stale');
-      if (isStale) {
-        setSubmitError(t('markets.priceStaleRetry'));
-        void queryClient.refetchQueries({ queryKey: ['event'] });
-        void queryClient.refetchQueries({ queryKey: quoteKey });
-        return;
-      }
       if (raw.includes('Insufficient liquidity')) {
         setSubmitError(t('markets.lowLiquidity'));
         return;
@@ -258,6 +220,72 @@ export const BetSlip = ({
         return;
       }
       setSubmitError(raw || t('common.unknownError'));
+    };
+
+    // One placement attempt: re-warm + lock the price against the fresh quote,
+    // drift-check, then call place_bet. Returns 'stale' when the server rejected
+    // on freshness (the caller may retry once), 'ok' on success, or 'handled'
+    // when an error was already surfaced to the user.
+    const attempt = async (): Promise<'ok' | 'stale' | 'handled'> => {
+      const fresh = await refreshQuote();
+      if (!fresh) {
+        setSubmitError(t('markets.quoteUnavailable'));
+        return 'handled';
+      }
+      if (fresh.partial || fresh.shares <= 0) {
+        setSubmitError(t('markets.lowLiquidity'));
+        return 'handled';
+      }
+      const lockOdds = fresh.effective_odds;
+      if (lockOdds > 0 && displayOdds > 0) {
+        const drift = Math.abs(lockOdds - displayOdds) / displayOdds;
+        if (drift > ODDS_DRIFT_TOLERANCE) {
+          setSubmitError(t('markets.oddsChanged', { odds: lockOdds.toFixed(2) }));
+          return 'handled';
+        }
+      }
+      try {
+        await placeBet({
+          marketId: market.id,
+          outcomeId: selected.id,
+          stake: stake!,
+          expectedOdds: lockOdds,
+        });
+        return 'ok';
+      } catch (err) {
+        const raw = err instanceof Error ? err.message : '';
+        const isStale =
+          raw.includes('Market price feed is stale') ||
+          raw.includes('Market book is stale') ||
+          raw.includes('Outcome price feed is stale');
+        if (isStale) return 'stale';
+        surfaceError(err);
+        return 'handled';
+      }
+    };
+
+    // First attempt; on a stale-book rejection, retry exactly once. The retry's
+    // refreshQuote() re-warms the book server-side first, so transient
+    // staleness clears silently — the user only sees the stale message if the
+    // SECOND attempt also fails (e.g. CLOB persistently down).
+    let result = await attempt();
+    if (result === 'stale') {
+      result = await attempt();
+    }
+
+    if (result === 'stale') {
+      setSubmitError(t('markets.priceStaleRetry'));
+      void queryClient.refetchQueries({ queryKey: ['event'] });
+      void queryClient.refetchQueries({ queryKey: quoteKey });
+      return;
+    }
+    if (result === 'ok') {
+      toast.success(
+        t('bet.notification.placed', { outcome: selected.name, stake: stake!.toFixed(2) }),
+        { duration: 5000 }
+      );
+      onSuccess();
+      onClose();
     }
   };
 

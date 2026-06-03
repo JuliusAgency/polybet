@@ -240,15 +240,16 @@ describe('sell_position', () => {
     });
   });
 
-  it('rejects on a stale bid book (> 5s)', async () => {
+  it('rejects on a stale bid book (> 30s)', async () => {
     await withTransaction(async (c) => {
       const { positionId, tokenId } = await seedAndBuy(c, { price: 0.4, stake: 40 });
-      // Age the book past the 5s freshness bound. RESET role first: seedAndBuy
-      // left the connection as 'authenticated', which RLS blocks from writing
-      // market_outcome_books — the UPDATE would silently affect 0 rows.
+      // Age the book past the 30s freshness bound (migration 20260603100437).
+      // RESET role first: seedAndBuy left the connection as 'authenticated',
+      // which RLS blocks from writing market_outcome_books — the UPDATE would
+      // silently affect 0 rows.
       await c.query('RESET role');
       await c.query(
-        `UPDATE market_outcome_books SET updated_at = now() - interval '30 seconds' WHERE polymarket_token_id = $1`,
+        `UPDATE market_outcome_books SET updated_at = now() - interval '2 minutes' WHERE polymarket_token_id = $1`,
         [tokenId]
       );
       await expect(callSell(c, positionId, 100, 0.5)).rejects.toThrow(/book is stale/i);

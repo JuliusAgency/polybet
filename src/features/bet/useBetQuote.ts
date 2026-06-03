@@ -40,8 +40,10 @@ interface UseBetQuoteOptions {
 }
 
 const DEBOUNCE_MS = 250;
-// Match place_bet's c_book_max_staleness (5s). The UI polls at half that so
-// users never see a quote that the server would reject for staleness.
+// place_bet's c_book_max_staleness is 30s (migration 20260603100437). Polling
+// every 2s keeps the server-side book an order of magnitude fresher than that
+// bound, so a quote the user sees is never one the server would reject as
+// stale; it also keeps the displayed fill price snappy.
 const POLL_MS = 2_000;
 
 export function useBetQuote({ tokenId, stake, enabled = true }: UseBetQuoteOptions) {
