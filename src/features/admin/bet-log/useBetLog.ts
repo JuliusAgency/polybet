@@ -2,12 +2,18 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/shared/api/supabase';
 
 export type BetStatus = 'open' | 'won' | 'lost' | 'cancelled';
+export type TradeSide = 'buy' | 'sell';
 
 export interface BetLogRow {
   id: string;
   placed_at: string;
   settled_at: string | null;
+  /** Buy fill: USD cost. Sell fill: USD proceeds. */
   stake: number;
+  /** 'buy' (placement) or 'sell' (early exit). */
+  side: TradeSide;
+  /** Realized P/L crystallized by this fill (0 for buys). */
+  realized_pnl: number;
   /** Number of $1 shares acquired (gross payout on win). */
   shares: number;
   /** Volume-weighted average fill price in (0,1). */

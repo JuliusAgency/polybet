@@ -60,9 +60,13 @@ export function usePlaceBet() {
       return betId as string;
     },
     onSuccess: () => {
-      // Balance update is not covered by realtime, so must be invalidated explicitly.
-      // Bets list is covered by the useMyBets realtime channel (INSERT on bets fires it).
+      // Balance + positions/trades are not covered by realtime (positions is not
+      // in the realtime publication), so invalidate them explicitly. A buy
+      // upserts the user's position and appends a trade.
       queryClient.invalidateQueries({ queryKey: ['user', 'balance'] });
+      queryClient.invalidateQueries({ queryKey: ['user', 'positions'] });
+      queryClient.invalidateQueries({ queryKey: ['user', 'position-history'] });
+      queryClient.invalidateQueries({ queryKey: ['user', 'trades'] });
     },
   });
 }

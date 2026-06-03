@@ -76,6 +76,7 @@ const GlobalBetLogPage = () => {
     t('globalLog.manager'),
     t('myBets.market'),
     t('globalLog.selection'),
+    t('globalLog.side'),
     t('myBets.wager'),
     t('globalLog.price'),
     t('globalLog.shares'),
@@ -273,6 +274,12 @@ const GlobalBetLogPage = () => {
                         {/* Selection */}
                         <td className="px-4 py-3" style={{ color: 'var(--color-text-secondary)' }}>
                           {row.outcome_name}
+                        </td>
+                        {/* Side (buy / sell) */}
+                        <td className="px-4 py-3">
+                          <Badge variant={row.side === 'buy' ? 'win' : 'loss'}>
+                            {t(row.side === 'buy' ? 'markets.buyTab' : 'markets.sellTab')}
+                          </Badge>
                         </td>
                         {/* Wager */}
                         <td

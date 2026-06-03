@@ -6,7 +6,7 @@ import { useAuth } from '@/shared/hooks/useAuth';
 export interface UserTransaction {
   id: string;
   created_at: string;
-  type: 'mint' | 'transfer' | 'bet_lock' | 'bet_payout' | 'adjustment';
+  type: 'mint' | 'transfer' | 'bet_lock' | 'bet_payout' | 'adjustment' | 'bet_sell';
   amount: number;
   balance_after: number;
   bet_id: string | null;
@@ -15,7 +15,7 @@ export interface UserTransaction {
 
 export interface UseUserTransactionsParams {
   startDate?: string; // ISO date string, e.g. "2026-01-01"
-  endDate?: string;   // ISO date string, e.g. "2026-12-31"
+  endDate?: string; // ISO date string, e.g. "2026-12-31"
 }
 
 export function useUserTransactions({ startDate, endDate }: UseUserTransactionsParams = {}) {
@@ -68,7 +68,7 @@ export function useUserTransactions({ startDate, endDate }: UseUserTransactionsP
         },
         () => {
           void queryClient.invalidateQueries({ queryKey: ['user', 'transactions', userId] });
-        },
+        }
       )
       .subscribe();
 

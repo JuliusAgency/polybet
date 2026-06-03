@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest';
 import type { PoolClient } from 'pg';
 import { withTransaction } from '../helpers/pg';
 
-// Coverage for place_bet in the SHARES model (migration
-// 20260601133349_place_bet_require_book_shares). A bet now REQUIRES a fresh,
+// Coverage for place_bet in the POSITIONS/TRADES model (migration
+// 20260602130123_place_bet_positions_model). A buy REQUIRES a fresh,
 // non-partial order-book quote — there is no mid-price fallback.
 //
 // place_bet enforces (in order):
 //   1. stake > 0, effective bet limit
-//   2. market open/visible/close_at NOT NULL AND > now()  [`not available for betting`]
+//   2. market status='open' AND is_visible (close_at is informational)  [`not available for betting`]
 //   3. market.last_synced_at within 3 min                 [`Market price feed is stale`]
 //   4. outcome has polymarket_token_id                    [`not tradable (no Polymarket token)`]
 //   5. price not null, not exact 0/1                      [`out of tradable range`]
@@ -19,8 +19,9 @@ import { withTransaction } from '../helpers/pg';
 //  10. book non-partial AND shares > 0                    [`Insufficient liquidity`]
 //  11. optional drift |expected - bookEffOdds|/bookEffOdds <= 2%  [`Odds changed`, P0002]
 //
-// On success the bet stores shares + avg_price (and DEPRECATED mirrors
-// locked_odds = shares/stake, potential_payout = shares).
+// On success place_bet upserts a position (shares + volume-weighted avg_price +
+// cost_basis) and appends a buy trade; it RETURNS the position id. The legacy
+// bets table is no longer written.
 
 const USER1 = '00000000-0000-0000-0000-000000000003';
 const FAR_FUTURE = "now() + interval '30 days'";
@@ -187,22 +188,34 @@ describe('place_bet shares model (require book)', () => {
         {},
         { price: 0.005, effective_odds: 200 }
       );
-      const betId = await callPlaceBet(c, { marketId, outcomeId, stake: 1, expectedOdds: 200 });
-      expect(betId).toMatch(/^[0-9a-f-]{36}$/);
+      const positionId = await callPlaceBet(c, {
+        marketId,
+        outcomeId,
+        stake: 1,
+        expectedOdds: 200,
+      });
+      expect(positionId).toMatch(/^[0-9a-f-]{36}$/);
 
-      const bet = await c.query<{
-        locked_odds: string;
-        potential_payout: string;
+      // stake 1 @ price 0.005 → shares = 200, cost_basis = stake = 1.
+      const pos = await c.query<{
         shares: string;
         avg_price: string;
-      }>('SELECT locked_odds, potential_payout, shares, avg_price FROM bets WHERE id = $1', [
-        betId,
-      ]);
-      // stake 1 @ price 0.005 → shares = 200, payout = shares, locked_odds = 200.
-      expect(Number(bet.rows[0].shares)).toBeCloseTo(200, 6);
-      expect(Number(bet.rows[0].potential_payout)).toBeCloseTo(200, 6);
-      expect(Number(bet.rows[0].locked_odds)).toBeCloseTo(200, 6);
-      expect(Number(bet.rows[0].avg_price)).toBeCloseTo(0.005, 6);
+        cost_basis: string;
+        status: string;
+      }>('SELECT shares, avg_price, cost_basis, status FROM positions WHERE id = $1', [positionId]);
+      expect(Number(pos.rows[0].shares)).toBeCloseTo(200, 6);
+      expect(Number(pos.rows[0].avg_price)).toBeCloseTo(0.005, 6);
+      expect(Number(pos.rows[0].cost_basis)).toBeCloseTo(1, 6);
+      expect(pos.rows[0].status).toBe('open');
+
+      const trade = await c.query<{ side: string; shares: string; price: string; usd: string }>(
+        'SELECT side, shares, price, usd FROM trades WHERE position_id = $1',
+        [positionId]
+      );
+      expect(trade.rows[0].side).toBe('buy');
+      expect(Number(trade.rows[0].shares)).toBeCloseTo(200, 6);
+      expect(Number(trade.rows[0].price)).toBeCloseTo(0.005, 6);
+      expect(Number(trade.rows[0].usd)).toBeCloseTo(1, 6);
     });
   });
 
@@ -288,43 +301,103 @@ describe('place_bet shares model (require book)', () => {
     });
   });
 
-  it('happy path: stores shares/avg_price and debits the balance', async () => {
+  it('happy path: opens a position, appends a buy trade, locks the balance', async () => {
     await withTransaction(async (c) => {
       const { marketId, outcomeId } = await seedFreshMarket(
         c,
         {},
         { price: 0.4, effective_odds: 2.5 }
       );
-      const before = await c.query<{ available: string }>(
-        'SELECT available FROM balances WHERE user_id = $1',
+      const before = await c.query<{ available: string; in_play: string }>(
+        'SELECT available, in_play FROM balances WHERE user_id = $1',
         [USER1]
       );
       const availableBefore = Number(before.rows[0].available);
+      const inPlayBefore = Number(before.rows[0].in_play);
 
-      // stake 25 @ book price 0.4 → shares = 62.5, eff_odds = 2.5.
-      const betId = await callPlaceBet(c, { marketId, outcomeId, stake: 25, expectedOdds: 2.5 });
+      // stake 25 @ book price 0.4 → shares = 62.5, cost_basis = 25.
+      const positionId = await callPlaceBet(c, {
+        marketId,
+        outcomeId,
+        stake: 25,
+        expectedOdds: 2.5,
+      });
 
       const after = await c.query<{ available: string; in_play: string }>(
         'SELECT available, in_play FROM balances WHERE user_id = $1',
         [USER1]
       );
+      // stake moves available -> in_play.
       expect(Number(after.rows[0].available)).toBe(availableBefore - 25);
+      expect(Number(after.rows[0].in_play)).toBe(inPlayBefore + 25);
 
-      const bet = await c.query<{
-        locked_odds: string;
-        potential_payout: string;
+      const pos = await c.query<{
         shares: string;
         avg_price: string;
-      }>('SELECT locked_odds, potential_payout, shares, avg_price FROM bets WHERE id = $1', [
-        betId,
+        cost_basis: string;
+        status: string;
+      }>('SELECT shares, avg_price, cost_basis, status FROM positions WHERE id = $1', [positionId]);
+      expect(Number(pos.rows[0].shares)).toBeCloseTo(62.5, 6);
+      expect(Number(pos.rows[0].avg_price)).toBeCloseTo(0.4, 6);
+      // Invariant: cost_basis == shares * avg_price == stake.
+      expect(Number(pos.rows[0].cost_basis)).toBeCloseTo(25, 6);
+      expect(pos.rows[0].status).toBe('open');
+
+      const trade = await c.query<{
+        side: string;
+        shares: string;
+        price: string;
+        usd: string;
+        realized_pnl: string;
+      }>('SELECT side, shares, price, usd, realized_pnl FROM trades WHERE position_id = $1', [
+        positionId,
       ]);
-      expect(Number(bet.rows[0].shares)).toBeCloseTo(62.5, 6);
-      expect(Number(bet.rows[0].potential_payout)).toBeCloseTo(62.5, 6);
-      expect(Number(bet.rows[0].locked_odds)).toBeCloseTo(2.5, 6);
-      expect(Number(bet.rows[0].avg_price)).toBeCloseTo(0.4, 6);
-      // Invariant: potential_payout == shares, locked_odds == shares/stake.
-      expect(Number(bet.rows[0].potential_payout)).toBeCloseTo(Number(bet.rows[0].shares), 6);
-      expect(Number(bet.rows[0].locked_odds)).toBeCloseTo(Number(bet.rows[0].shares) / 25, 6);
+      expect(trade.rows).toHaveLength(1);
+      expect(trade.rows[0].side).toBe('buy');
+      expect(Number(trade.rows[0].shares)).toBeCloseTo(62.5, 6);
+      expect(Number(trade.rows[0].price)).toBeCloseTo(0.4, 6);
+      expect(Number(trade.rows[0].usd)).toBeCloseTo(25, 6);
+      expect(Number(trade.rows[0].realized_pnl)).toBe(0);
+
+      // Ledger: one bet_lock for -stake keyed on the trade + position.
+      const tx = await c.query<{ type: string; amount: string }>(
+        'SELECT type, amount FROM balance_transactions WHERE position_id = $1',
+        [positionId]
+      );
+      expect(tx.rows).toHaveLength(1);
+      expect(tx.rows[0].type).toBe('bet_lock');
+      expect(Number(tx.rows[0].amount)).toBe(-25);
+    });
+  });
+
+  it('aggregates a second buy on the same outcome into one position (weighted avg)', async () => {
+    await withTransaction(async (c) => {
+      const { marketId, outcomeId } = await seedFreshMarket(
+        c,
+        {},
+        { price: 0.4, effective_odds: 2.5 }
+      );
+      // Buy 1: $40 @ 0.40 → 100 shares.
+      const pid1 = await callPlaceBet(c, { marketId, outcomeId, stake: 40, expectedOdds: 2.5 });
+      // Buy 2: $30 @ 0.40 → 75 shares. Same outcome → same position row.
+      const pid2 = await callPlaceBet(c, { marketId, outcomeId, stake: 30, expectedOdds: 2.5 });
+      expect(pid2).toBe(pid1);
+
+      const pos = await c.query<{ shares: string; avg_price: string; cost_basis: string }>(
+        'SELECT shares, avg_price, cost_basis FROM positions WHERE id = $1',
+        [pid1]
+      );
+      // 175 shares, cost 70, weighted avg 70/175 = 0.40.
+      expect(Number(pos.rows[0].shares)).toBeCloseTo(175, 6);
+      expect(Number(pos.rows[0].cost_basis)).toBeCloseTo(70, 6);
+      expect(Number(pos.rows[0].avg_price)).toBeCloseTo(0.4, 6);
+
+      // Two buy trades recorded against the one position.
+      const trades = await c.query('SELECT 1 FROM trades WHERE position_id = $1 AND side = $2', [
+        pid1,
+        'buy',
+      ]);
+      expect(trades.rows).toHaveLength(2);
     });
   });
 });

@@ -20,12 +20,24 @@ export type { PlaceBetInput } from './usePlaceBet';
 export { useBetQuote } from './useBetQuote';
 export type { BetQuote } from './useBetQuote';
 
+export { useSellQuote } from './useSellQuote';
+export type { SellQuote } from './useSellQuote';
+
+export { useSellPosition, PriceDriftError } from './useSellPosition';
+export type { SellPositionInput, SellPositionResult } from './useSellPosition';
+
+export { usePositions } from './usePositions';
+export { usePositionHistory } from './usePositionHistory';
+export { useTrades } from './useTrades';
+
+export { SellForm } from './SellForm';
+export type { SellFormProps } from './SellForm';
+
 export { useMyBetLimit } from './useMyBetLimit';
 
 export { useMyBets } from './useMyBets';
 
 export { useBetResultNotifications } from './useBetResultNotifications';
-export { useUnseenBetsCount } from './useUnseenBetsCount';
 export { useMarketRefresh } from './useMarketRefresh';
 
 export { useEventById } from './useEventById';

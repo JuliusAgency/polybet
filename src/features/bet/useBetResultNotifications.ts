@@ -4,105 +4,91 @@ import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/shared/api/supabase';
 import { useAuth } from '@/shared/hooks/useAuth';
-import type { MyBet } from '@/entities/bet';
 
+// Toasts when one of the user's positions settles at resolution, and keeps the
+// portfolio/balance caches fresh in real time.
+//
+// In the positions model settlement writes a `bet_payout` row into the
+// (realtime-published, user-filtered) balance_transactions ledger — one per
+// settled position. We subscribe to INSERTs there: an INSERT only fires for
+// rows created AFTER subscription, so unlike the old bets-UPDATE approach there
+// is no "already settled before mount" race and no seen-id bookkeeping needed.
+// won  → bet_payout amount > 0 (shares paid out); lost → amount == 0.
+//
+// positions is intentionally NOT in the realtime publication (high-write, see
+// CLAUDE.md), so this ledger signal is also how the Portfolio learns of a
+// settlement live — we invalidate the positions queries on each payout.
 export function useBetResultNotifications() {
   const { session } = useAuth();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const userId = session?.user.id;
-  // Tracks bet IDs already settled before this session — no toast for those
-  const seenIds = useRef<Set<string>>(new Set());
-  const initialized = useRef(false);
-  // Guards inner async callbacks against firing after unmount
   const isMounted = useRef(true);
-
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   useEffect(() => {
     isMounted.current = true;
-    // Reset on user change (e.g. sign-out + sign-in without page reload)
-    seenIds.current = new Set();
-    initialized.current = false;
-
     if (!userId) return;
 
-    // Pre-populate seenIds with bets already settled before mount, then subscribe.
-    // Subscribing inside the .then guarantees no UPDATE events are processed until
-    // seenIds is fully populated — otherwise events arriving during the fetch window
-    // would be dropped and legitimate "won/lost" toasts would be missed.
-    void supabase
-      .from('bets')
-      .select('id')
-      .eq('user_id', userId)
-      .in('status', ['won', 'lost'])
-      .then(({ data }) => {
-        if (!isMounted.current) return;
-        (data ?? []).forEach((b) => seenIds.current.add(b.id));
-        initialized.current = true;
+    channelRef.current = supabase
+      .channel(`settlement_notifications_${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'balance_transactions',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          const row = payload.new as {
+            type?: string;
+            amount?: number | string | null;
+            position_id?: string | null;
+          };
+          if (row.type !== 'bet_payout' || !row.position_id) return;
 
-        channelRef.current = supabase
-          .channel(`bet_notifications_${userId}`)
-          .on(
-            'postgres_changes',
-            { event: 'UPDATE', schema: 'public', table: 'bets', filter: `user_id=eq.${userId}` },
-            (payload) => {
-              const newRow = payload.new as Pick<
-                MyBet,
-                'id' | 'status' | 'stake' | 'potential_payout'
-              >;
+          const payoutAmount = Number(row.amount ?? 0);
+          const won = payoutAmount > 0;
 
-              if (
-                (newRow.status !== 'won' && newRow.status !== 'lost') ||
-                seenIds.current.has(newRow.id)
-              ) {
-                return;
-              }
+          // Refresh the portfolio + balance now that this position settled.
+          void queryClient.invalidateQueries({ queryKey: ['user', 'positions', userId] });
+          void queryClient.invalidateQueries({ queryKey: ['user', 'position-history', userId] });
+          void queryClient.invalidateQueries({ queryKey: ['user', 'balance'] });
 
-              seenIds.current.add(newRow.id);
-              // Also invalidate the unseen count so the badge updates immediately
-              void queryClient.invalidateQueries({
-                queryKey: ['user', 'unseen-bets-count', userId],
-              });
+          // Fetch market/outcome context for the toast text.
+          void supabase
+            .from('positions')
+            .select('shares, avg_price, markets(question), market_outcomes(name)')
+            .eq('id', row.position_id)
+            .single()
+            .then(({ data }) => {
+              if (!isMounted.current || !data) return;
+              const market =
+                (data.markets as unknown as { question: string } | null)?.question ?? '';
+              const outcome =
+                (data.market_outcomes as unknown as { name: string } | null)?.name ?? '';
+              const shares = Number((data as { shares?: number }).shares ?? 0);
+              const avgPrice = Number((data as { avg_price?: number }).avg_price ?? 0);
+              const stake = (shares * avgPrice).toFixed(2);
+              const payout = payoutAmount.toFixed(2);
 
-              // stake and potential_payout are already in the payload — only need
-              // the join columns (market question, outcome name) from a second fetch
-              // Defensive null-coalescing: realtime payloads are untyped at runtime
-              const stake = (newRow.stake ?? 0).toFixed(2);
-              const payout = (newRow.potential_payout ?? 0).toFixed(2);
-              const status = newRow.status;
-
-              void supabase
-                .from('bets')
-                .select('markets(question), market_outcomes(name)')
-                .eq('id', newRow.id)
-                .single()
-                .then(({ data: betData }) => {
-                  if (!isMounted.current || !betData) return;
-
-                  const market =
-                    (betData.markets as unknown as { question: string } | null)?.question ?? '';
-                  const outcome =
-                    (betData.market_outcomes as unknown as { name: string } | null)?.name ?? '';
-
-                  if (status === 'won') {
-                    toast.success(t('bet.notification.won', { market, outcome, stake, payout }), {
-                      duration: 8000,
-                    });
-                  } else {
-                    toast.error(t('bet.notification.lost', { market, outcome, stake }), {
-                      duration: 8000,
-                    });
-                  }
+              if (won) {
+                toast.success(t('bet.notification.won', { market, outcome, stake, payout }), {
+                  duration: 8000,
                 });
-            }
-          )
-          .subscribe();
-      });
+              } else {
+                toast.error(t('bet.notification.lost', { market, outcome, stake }), {
+                  duration: 8000,
+                });
+              }
+            });
+        }
+      )
+      .subscribe();
 
     return () => {
       isMounted.current = false;
-      initialized.current = false;
       if (channelRef.current) {
         void supabase.removeChannel(channelRef.current);
         channelRef.current = null;

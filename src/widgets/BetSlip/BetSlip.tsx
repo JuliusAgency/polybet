@@ -6,7 +6,14 @@ import { Modal } from '@/shared/ui/Modal';
 import { Button } from '@/shared/ui/Button';
 import { Spinner } from '@/shared/ui/Spinner';
 import { OutcomeButtons, type OutcomeButton } from '@/shared/ui/OutcomeButtons';
-import { usePlaceBet, OddsDriftError, useBetQuote, useMyBetLimit } from '@/features/bet';
+import {
+  usePlaceBet,
+  OddsDriftError,
+  useBetQuote,
+  useMyBetLimit,
+  usePositions,
+  SellForm,
+} from '@/features/bet';
 import type { BetQuote } from '@/features/bet';
 import { getOrderedOutcomes, type Market, type MarketOutcome } from '@/entities/market';
 import { formatSharePrice } from '@/shared/utils';
@@ -57,6 +64,15 @@ export const BetSlip = ({
   const selected = useMemo(
     () => market.market_outcomes.find((o) => o.id === selectedOutcomeId) ?? outcome,
     [market.market_outcomes, selectedOutcomeId, outcome]
+  );
+
+  // Buy / Sell mode. In Sell mode we look up the user's open position in the
+  // selected outcome to drive the inline SellForm.
+  const [mode, setMode] = useState<'buy' | 'sell'>('buy');
+  const { data: positions } = usePositions();
+  const sellPosition = useMemo(
+    () => (positions ?? []).find((p) => p.outcome_id === selectedOutcomeId) ?? null,
+    [positions, selectedOutcomeId]
   );
 
   // Canonical [Yes, No] order for the in-slip side selector.
@@ -270,6 +286,36 @@ export const BetSlip = ({
           {market.question}
         </p>
 
+        {/* Buy / Sell mode tabs (Polymarket-style: green buy, red sell) */}
+        <div
+          className="flex gap-1 rounded-lg p-1"
+          style={{ backgroundColor: 'var(--color-bg-base)' }}
+        >
+          {(['buy', 'sell'] as const).map((m) => {
+            const active = mode === m;
+            return (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setMode(m)}
+                className="flex-1 rounded-md px-3 py-2 text-sm font-semibold transition-colors"
+                style={{
+                  backgroundColor: active
+                    ? m === 'buy'
+                      ? 'var(--color-win)'
+                      : 'var(--color-loss)'
+                    : 'transparent',
+                  color: active ? '#ffffff' : 'var(--color-text-secondary)',
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                {t(m === 'buy' ? 'markets.buyTab' : 'markets.sellTab')}
+              </button>
+            );
+          })}
+        </div>
+
         {/* Outcome side selector (Yes / No), price shown in cents */}
         <OutcomeButtons
           outcomes={outcomeButtons}
@@ -279,217 +325,247 @@ export const BetSlip = ({
           onClick={handleSelectOutcome}
         />
 
-        {isUntradable && (
-          <div className="rounded-lg border p-3 text-sm" style={warningBoxStyle}>
-            {t('markets.outcomeUntradable')}
-          </div>
-        )}
-
-        {/* Amount — large Polymarket-style display. The number lives on its own
-            full-width row so it never competes with the label and cannot
-            overflow the card (incl. long balances in RTL). */}
-        <div className="rounded-lg p-3" style={{ backgroundColor: 'var(--color-bg-base)' }}>
-          <div className="flex items-center justify-between gap-3">
-            <label
-              htmlFor="betslip-amount"
-              className="text-sm font-medium"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
-              {t('markets.stakeLabel')}
-            </label>
-            <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-              {t('markets.balance', { amount: availableBalance.toFixed(2) })}
-            </span>
-          </div>
-
-          <div className="mt-2 flex items-baseline gap-1">
-            <span
-              className="shrink-0 text-2xl font-bold"
-              style={{ color: amount ? 'var(--color-text-primary)' : 'var(--color-text-muted)' }}
-            >
-              $
-            </span>
-            <input
-              id="betslip-amount"
-              type="text"
-              inputMode="decimal"
-              value={amount}
-              onChange={(e) => handleAmountChange(e.target.value)}
-              placeholder="0"
-              disabled={isUntradable}
-              aria-label={t('markets.stakeLabel')}
-              className="w-full min-w-0 flex-1 bg-transparent text-end text-3xl font-bold leading-tight outline-none"
-              style={{ color: 'var(--color-text-primary)' }}
-            />
-          </div>
-
-          {hasBetLimit && (
-            <p className="mt-1 text-xs" style={{ color: 'var(--color-text-muted)' }}>
-              {t('markets.maxBet', { amount: maxBetLimit })}
-            </p>
-          )}
-
-          {(isInsufficient || isOverLimit) && (
-            <p className="mt-1 text-xs" style={{ color: 'var(--color-error)' }}>
-              {isInsufficient
-                ? t('markets.insufficientBalance')
-                : t('markets.exceedsMaxBet', { amount: maxBetLimit })}
-            </p>
-          )}
-
-          {/* Quick-add chips (+$1 / +$5 / +$10 / +$100) + All In */}
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            {QUICK_ADD_AMOUNTS.map((inc) => (
-              <Button
-                key={inc}
-                variant="secondary"
-                type="button"
-                className="text-sm"
-                disabled={isUntradable}
-                onClick={() => handleAmountChange(((stake ?? 0) + inc).toFixed(2))}
-              >
-                +${inc}
-              </Button>
-            ))}
-            <Button
-              variant="secondary"
-              onClick={handleAllIn}
-              type="button"
-              className="text-sm"
-              disabled={isUntradable}
-            >
-              {t('markets.allIn')}
-            </Button>
-          </div>
-        </div>
-
-        {/* Low-liquidity warning: book depth ran out before stake was filled. */}
-        {isLowLiquidity && (
-          <div className="rounded-lg border p-3 text-sm" style={warningBoxStyle}>
-            {t('markets.lowLiquidity')}
-            {quote && quote.available_stake != null && quote.available_stake > 0 && (
-              <span className="mt-1 block font-medium">
-                {t('markets.maxAvailableStake', { amount: quote.available_stake.toFixed(2) })}
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* Settlement summary — one block, no nested card. "To win" is the
-            climax; everything else (avg price, profit, post-bet balances) sits
-            quietly beneath it, separated by a hairline. */}
-        {toWin !== null && (
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                {t('markets.toWin')}
-              </span>
-              <span
-                className="flex items-center gap-2 text-2xl font-bold"
-                style={{ color: 'var(--color-win)' }}
-              >
-                {/* Fixed-width spinner slot on the LEFT so the amount never shifts
-                    when the quote refetch toggles it. */}
-                <span aria-hidden className="inline-flex w-4 shrink-0 justify-center">
-                  {quoteFetching ? <Spinner size="sm" /> : null}
-                </span>
-                <span>${toWin.toFixed(2)}</span>
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between text-xs">
-              <span style={{ color: 'var(--color-text-muted)' }}>{t('markets.avgPrice')}</span>
-              <span className="font-mono" style={{ color: 'var(--color-text-secondary)' }}>
-                {formatSharePrice(displayPrice)}
-              </span>
-            </div>
-            {profitIfWin !== null && (
-              <div className="flex items-center justify-between text-xs">
-                <span style={{ color: 'var(--color-text-muted)' }}>{t('markets.profitIfWin')}</span>
-                <span className="font-mono" style={{ color: 'var(--color-win)' }}>
-                  +${profitIfWin.toFixed(2)}
-                </span>
+        {mode === 'buy' && (
+          <>
+            {isUntradable && (
+              <div className="rounded-lg border p-3 text-sm" style={warningBoxStyle}>
+                {t('markets.outcomeUntradable')}
               </div>
             )}
 
-            {/* Post-bet balance preview (our extra over the reference) */}
-            {balanceIfWin !== null && balanceIfLose !== null && (
-              <>
-                <div className="my-1 h-px" style={{ backgroundColor: 'var(--color-border)' }} />
-                <div className="flex items-center justify-between text-xs">
-                  <span style={{ color: 'var(--color-text-muted)' }}>
-                    {t('markets.afterBetIfWin')}
+            {/* Amount — large Polymarket-style display. The number lives on its own
+            full-width row so it never competes with the label and cannot
+            overflow the card (incl. long balances in RTL). */}
+            <div className="rounded-lg p-3" style={{ backgroundColor: 'var(--color-bg-base)' }}>
+              <div className="flex items-center justify-between gap-3">
+                <label
+                  htmlFor="betslip-amount"
+                  className="text-sm font-medium"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
+                  {t('markets.stakeLabel')}
+                </label>
+                <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                  {t('markets.balance', { amount: availableBalance.toFixed(2) })}
+                </span>
+              </div>
+
+              <div className="mt-2 flex items-baseline gap-1">
+                <span
+                  className="shrink-0 text-2xl font-bold"
+                  style={{
+                    color: amount ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
+                  }}
+                >
+                  $
+                </span>
+                <input
+                  id="betslip-amount"
+                  type="text"
+                  inputMode="decimal"
+                  value={amount}
+                  onChange={(e) => handleAmountChange(e.target.value)}
+                  placeholder="0"
+                  disabled={isUntradable}
+                  aria-label={t('markets.stakeLabel')}
+                  className="w-full min-w-0 flex-1 bg-transparent text-end text-3xl font-bold leading-tight outline-none"
+                  style={{ color: 'var(--color-text-primary)' }}
+                />
+              </div>
+
+              {hasBetLimit && (
+                <p className="mt-1 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                  {t('markets.maxBet', { amount: maxBetLimit })}
+                </p>
+              )}
+
+              {(isInsufficient || isOverLimit) && (
+                <p className="mt-1 text-xs" style={{ color: 'var(--color-error)' }}>
+                  {isInsufficient
+                    ? t('markets.insufficientBalance')
+                    : t('markets.exceedsMaxBet', { amount: maxBetLimit })}
+                </p>
+              )}
+
+              {/* Quick-add chips (+$1 / +$5 / +$10 / +$100) + All In */}
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {QUICK_ADD_AMOUNTS.map((inc) => (
+                  <Button
+                    key={inc}
+                    variant="secondary"
+                    type="button"
+                    className="text-sm"
+                    disabled={isUntradable}
+                    onClick={() => handleAmountChange(((stake ?? 0) + inc).toFixed(2))}
+                  >
+                    +${inc}
+                  </Button>
+                ))}
+                <Button
+                  variant="secondary"
+                  onClick={handleAllIn}
+                  type="button"
+                  className="text-sm"
+                  disabled={isUntradable}
+                >
+                  {t('markets.allIn')}
+                </Button>
+              </div>
+            </div>
+
+            {/* Low-liquidity warning: book depth ran out before stake was filled. */}
+            {isLowLiquidity && (
+              <div className="rounded-lg border p-3 text-sm" style={warningBoxStyle}>
+                {t('markets.lowLiquidity')}
+                {quote && quote.available_stake != null && quote.available_stake > 0 && (
+                  <span className="mt-1 block font-medium">
+                    {t('markets.maxAvailableStake', { amount: quote.available_stake.toFixed(2) })}
                   </span>
-                  <span className="font-mono">
-                    <span style={{ color: 'var(--color-win)' }}>{balanceIfWin.toFixed(2)}</span>
-                    <span className="mx-1" style={{ color: 'var(--color-text-muted)' }}>
-                      ←
-                    </span>
-                    <span style={{ color: 'var(--color-text-secondary)' }}>
-                      {availableBalance.toFixed(2)}
-                    </span>
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span style={{ color: 'var(--color-text-muted)' }}>
-                    {t('markets.afterBetIfLose')}
-                  </span>
-                  <span className="font-mono">
-                    <span style={{ color: 'var(--color-error)' }}>{balanceIfLose.toFixed(2)}</span>
-                    <span className="mx-1" style={{ color: 'var(--color-text-muted)' }}>
-                      ←
-                    </span>
-                    <span style={{ color: 'var(--color-text-secondary)' }}>
-                      {availableBalance.toFixed(2)}
-                    </span>
-                  </span>
-                </div>
-              </>
+                )}
+              </div>
             )}
-          </div>
+
+            {/* Settlement summary — one block, no nested card. "To win" is the
+            climax; everything else (avg price, profit, post-bet balances) sits
+            quietly beneath it, separated by a hairline. */}
+            {toWin !== null && (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                    {t('markets.toWin')}
+                  </span>
+                  <span
+                    className="flex items-center gap-2 text-2xl font-bold"
+                    style={{ color: 'var(--color-win)' }}
+                  >
+                    {/* Fixed-width spinner slot on the LEFT so the amount never shifts
+                    when the quote refetch toggles it. */}
+                    <span aria-hidden className="inline-flex w-4 shrink-0 justify-center">
+                      {quoteFetching ? <Spinner size="sm" /> : null}
+                    </span>
+                    <span>${toWin.toFixed(2)}</span>
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-xs">
+                  <span style={{ color: 'var(--color-text-muted)' }}>{t('markets.avgPrice')}</span>
+                  <span className="font-mono" style={{ color: 'var(--color-text-secondary)' }}>
+                    {formatSharePrice(displayPrice)}
+                  </span>
+                </div>
+                {profitIfWin !== null && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span style={{ color: 'var(--color-text-muted)' }}>
+                      {t('markets.profitIfWin')}
+                    </span>
+                    <span className="font-mono" style={{ color: 'var(--color-win)' }}>
+                      +${profitIfWin.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+
+                {/* Post-bet balance preview (our extra over the reference) */}
+                {balanceIfWin !== null && balanceIfLose !== null && (
+                  <>
+                    <div className="my-1 h-px" style={{ backgroundColor: 'var(--color-border)' }} />
+                    <div className="flex items-center justify-between text-xs">
+                      <span style={{ color: 'var(--color-text-muted)' }}>
+                        {t('markets.afterBetIfWin')}
+                      </span>
+                      <span className="font-mono">
+                        <span style={{ color: 'var(--color-win)' }}>{balanceIfWin.toFixed(2)}</span>
+                        <span className="mx-1" style={{ color: 'var(--color-text-muted)' }}>
+                          ←
+                        </span>
+                        <span style={{ color: 'var(--color-text-secondary)' }}>
+                          {availableBalance.toFixed(2)}
+                        </span>
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span style={{ color: 'var(--color-text-muted)' }}>
+                        {t('markets.afterBetIfLose')}
+                      </span>
+                      <span className="font-mono">
+                        <span style={{ color: 'var(--color-error)' }}>
+                          {balanceIfLose.toFixed(2)}
+                        </span>
+                        <span className="mx-1" style={{ color: 'var(--color-text-muted)' }}>
+                          ←
+                        </span>
+                        <span style={{ color: 'var(--color-text-secondary)' }}>
+                          {availableBalance.toFixed(2)}
+                        </span>
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Book unavailable: explain why the CTA is disabled. */}
+            {isQuoteUnavailable && !isQuoteLoading && (
+              <div className="rounded-lg border p-3 text-sm" style={warningBoxStyle}>
+                {t('markets.quoteUnavailable')}
+              </div>
+            )}
+
+            {/* Quote is loading and we don't have a payout to render yet */}
+            {isQuoteLoading && toWin === null && (
+              <div
+                className="flex items-center gap-2 rounded-lg p-3 text-sm"
+                style={{
+                  backgroundColor: 'var(--color-bg-base)',
+                  color: 'var(--color-text-secondary)',
+                }}
+              >
+                <Spinner size="sm" />
+                {t('markets.quoteUpdating')}
+              </div>
+            )}
+
+            {submitError && (
+              <p className="text-sm" style={{ color: 'var(--color-error)' }}>
+                {submitError}
+              </p>
+            )}
+
+            {/* Primary CTA full-width, secondary Cancel below (Polymarket-style) */}
+            <div className="flex flex-col gap-2">
+              <Button
+                variant="primary"
+                onClick={handleConfirm}
+                disabled={isConfirmDisabled}
+                className="w-full"
+              >
+                {isPending ? t('common.saving') : t('markets.confirmBet')}
+              </Button>
+              <Button variant="secondary" onClick={onClose} type="button" className="w-full">
+                {t('common.cancel')}
+              </Button>
+            </div>
+          </>
         )}
 
-        {/* Book unavailable: explain why the CTA is disabled. */}
-        {isQuoteUnavailable && !isQuoteLoading && (
-          <div className="rounded-lg border p-3 text-sm" style={warningBoxStyle}>
-            {t('markets.quoteUnavailable')}
-          </div>
-        )}
-
-        {/* Quote is loading and we don't have a payout to render yet */}
-        {isQuoteLoading && toWin === null && (
-          <div
-            className="flex items-center gap-2 rounded-lg p-3 text-sm"
-            style={{
-              backgroundColor: 'var(--color-bg-base)',
-              color: 'var(--color-text-secondary)',
-            }}
-          >
-            <Spinner size="sm" />
-            {t('markets.quoteUpdating')}
-          </div>
-        )}
-
-        {submitError && (
-          <p className="text-sm" style={{ color: 'var(--color-error)' }}>
-            {submitError}
-          </p>
-        )}
-
-        {/* Primary CTA full-width, secondary Cancel below (Polymarket-style) */}
-        <div className="flex flex-col gap-2">
-          <Button
-            variant="primary"
-            onClick={handleConfirm}
-            disabled={isConfirmDisabled}
-            className="w-full"
-          >
-            {isPending ? t('common.saving') : t('markets.confirmBet')}
-          </Button>
-          <Button variant="secondary" onClick={onClose} type="button" className="w-full">
-            {t('common.cancel')}
-          </Button>
-        </div>
+        {mode === 'sell' &&
+          (sellPosition && sellPosition.shares > 0 ? (
+            <SellForm position={sellPosition} onClose={onClose} onSuccess={onSuccess} />
+          ) : (
+            <div className="flex flex-col gap-3">
+              <div
+                className="rounded-lg p-3 text-sm"
+                style={{
+                  backgroundColor: 'var(--color-bg-base)',
+                  color: 'var(--color-text-secondary)',
+                }}
+              >
+                {t('markets.noSharesToSell', { outcome: selected.name })}
+              </div>
+              <Button variant="secondary" onClick={onClose} type="button" className="w-full">
+                {t('common.cancel')}
+              </Button>
+            </div>
+          ))}
       </div>
     </Modal>
   );

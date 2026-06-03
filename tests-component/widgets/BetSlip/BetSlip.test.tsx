@@ -26,6 +26,9 @@ vi.mock('@/features/bet', async (importOriginal) => {
     ...actual,
     useBetQuote: (...args: unknown[]) => quoteMock(...args),
     useMyBetLimit: () => ({ data: null }),
+    // BetSlip's Sell tab reads positions; stub it so the buy-focused tests
+    // don't hit supabase.from (the supabase mock only provides rpc).
+    usePositions: () => ({ data: [] }),
   };
 });
 

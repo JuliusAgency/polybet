@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useMyBets } from '@/features/bet';
+import { usePositions } from '@/features/bet';
 import { Spinner } from '@/shared/ui/Spinner';
 import { formatSharePrice } from '@/shared/utils';
 
@@ -12,10 +12,11 @@ export interface ActiveBetsDrawerProps {
 
 export const ActiveBetsDrawer = ({ isOpen, onClose }: ActiveBetsDrawerProps) => {
   const { t, i18n } = useTranslation();
-  const { data: bets, isLoading } = useMyBets();
+  const { data: positions, isLoading } = usePositions();
 
-  const openBets = (bets ?? []).filter((b) => b.status === 'open');
-  const totalLocked = openBets.reduce((sum, b) => sum + b.stake, 0);
+  // usePositions already returns OPEN positions only.
+  const openBets = positions ?? [];
+  const totalLocked = openBets.reduce((sum, p) => sum + p.cost_basis, 0);
 
   // Close on Escape
   useEffect(() => {
@@ -125,7 +126,7 @@ export const ActiveBetsDrawer = ({ isOpen, onClose }: ActiveBetsDrawerProps) => 
                           className="font-mono text-xs font-semibold"
                           style={{ color: 'var(--color-text-primary)' }}
                         >
-                          {bet.stake.toFixed(2)}
+                          {bet.cost_basis.toFixed(2)}
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5">
@@ -154,7 +155,7 @@ export const ActiveBetsDrawer = ({ isOpen, onClose }: ActiveBetsDrawerProps) => 
 
                     {/* Placed at */}
                     <p className="mt-2 text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                      {new Date(bet.placed_at).toLocaleString(i18n.language, {
+                      {new Date(bet.opened_at).toLocaleString(i18n.language, {
                         dateStyle: 'short',
                         timeStyle: 'short',
                       })}

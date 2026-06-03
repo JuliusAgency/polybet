@@ -4,8 +4,7 @@ import { useAuth } from '@/shared/hooks/useAuth';
 import { ROUTES } from '@/app/router/routes';
 import { LanguageSwitcher } from '@/shared/ui/LanguageSwitcher';
 import { ThemeSwitcher } from '@/shared/ui/ThemeSwitcher';
-import { UnseenBadge } from '@/shared/ui/UnseenBadge';
-import { useUserBalance, useBetResultNotifications, useUnseenBetsCount } from '@/features/bet';
+import { useUserBalance, useBetResultNotifications } from '@/features/bet';
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   `px-3 py-2 rounded-md text-sm font-medium transition-colors ${
@@ -17,9 +16,8 @@ export const UserLayout = () => {
   const { profile, signOut } = useAuth();
   const { data: balance } = useUserBalance();
 
-  // Mount globally so notifications fire on any page
+  // Mount globally so settlement notifications fire on any page
   useBetResultNotifications();
-  const unseenCount = useUnseenBetsCount();
 
   return (
     <div
@@ -48,10 +46,7 @@ export const UserLayout = () => {
       >
         <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <span
-              className="text-lg font-bold"
-              style={{ color: 'var(--color-text-primary)' }}
-            >
+            <span className="text-lg font-bold" style={{ color: 'var(--color-text-primary)' }}>
               PolyBet
             </span>
             <nav className="flex items-center gap-1">
@@ -59,10 +54,7 @@ export const UserLayout = () => {
                 {t('nav.markets')}
               </NavLink>
               <NavLink to={ROUTES.USER.MY_BETS} className={navLinkClass}>
-                <span className="relative inline-block">
-                  {t('nav.myBets')}
-                  <UnseenBadge count={unseenCount} />
-                </span>
+                {t('nav.myBets')}
               </NavLink>
               <NavLink to={ROUTES.USER.WALLET} className={navLinkClass}>
                 {t('nav.wallet')}

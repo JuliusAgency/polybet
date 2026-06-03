@@ -8,7 +8,7 @@ import { Input } from '@/shared/ui/Input';
 import { Spinner } from '@/shared/ui/Spinner';
 
 const formatTransactionType = (
-  txType: 'mint' | 'transfer' | 'bet_lock' | 'bet_payout' | 'adjustment',
+  txType: 'mint' | 'transfer' | 'bet_lock' | 'bet_payout' | 'adjustment' | 'bet_sell',
   t: TFunction
 ): string => {
   switch (txType) {
@@ -20,6 +20,8 @@ const formatTransactionType = (
       return t('wallet.typeBetLock');
     case 'bet_payout':
       return t('wallet.typeBetPayout');
+    case 'bet_sell':
+      return t('wallet.typeBetSell');
     case 'adjustment':
       return t('wallet.typeAdjustment');
     default:

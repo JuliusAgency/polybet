@@ -1,54 +1,55 @@
-import { useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/shared/api/supabase';
-import { useAuth } from '@/shared/hooks/useAuth';
+import { useMemo } from 'react';
 import type { MyBet } from '@/entities/bet';
+import type { Position } from '@/entities/position';
+import { usePositions } from './usePositions';
+import { usePositionHistory } from './usePositionHistory';
 
 export type { MyBet } from '@/entities/bet';
 
+// Adapter: the feed / event-page "you hold this" indicators were written against
+// the legacy MyBet shape. In the positions model the equivalent is the user's
+// position in an outcome, so this maps positions → MyBet so all those consumers
+// (EventDetailPage, MarketsFeedPage, SavedMarketsPage, EventMarketRow, cards)
+// keep working unchanged while reading live position data.
+//
+// We surface open positions plus settled (won/lost) ones — the same set the old
+// hook returned for indicators and result badges. Sold-out ('closed') positions
+// are excluded: the user exited, so there is no holding to mark. Reuses the
+// usePositions / usePositionHistory queries, so existing buy/sell/settlement
+// invalidation and polling keep this fresh with no extra wiring.
+function toMyBet(p: Position): MyBet {
+  return {
+    id: p.id,
+    market_id: p.market_id,
+    outcome_id: p.outcome_id,
+    stake: p.cost_basis,
+    shares: p.shares,
+    avg_price: p.avg_price,
+    // Deprecated mirrors kept for the MyBet shape.
+    locked_odds: p.avg_price > 0 ? 1 / p.avg_price : 0,
+    potential_payout: p.shares,
+    // 'closed' is filtered out before mapping, so this is always open|won|lost.
+    status: p.status as MyBet['status'],
+    placed_at: p.opened_at,
+    settled_at: p.settled_at,
+    seen_at: null,
+    markets: p.markets,
+    market_outcomes: p.market_outcomes ? { name: p.market_outcomes.name } : null,
+  };
+}
+
 export function useMyBets() {
-  const { session } = useAuth();
-  const queryClient = useQueryClient();
-  const userId = session?.user.id;
+  const open = usePositions();
+  const history = usePositionHistory();
 
-  useEffect(() => {
-    if (!userId) return;
+  const data = useMemo<MyBet[]>(() => {
+    const settled = (history.data ?? []).filter((p) => p.status === 'won' || p.status === 'lost');
+    return [...(open.data ?? []), ...settled].map(toMyBet);
+  }, [open.data, history.data]);
 
-    // Listen only to this user's bets — settlement triggers an UPDATE on bets,
-    // which is enough to refresh the joined markets data.
-    const channel = supabase
-      .channel(`user_bets_${userId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'bets', filter: `user_id=eq.${userId}` },
-        () => {
-          void queryClient.invalidateQueries({ queryKey: ['user', 'bets', userId] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [userId, queryClient]);
-
-  return useQuery<MyBet[]>({
-    // Include user id in key to prevent cross-user cache collisions on session switch
-    queryKey: ['user', 'bets', userId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('bets')
-        .select(
-          'id, market_id, outcome_id, stake, shares, avg_price, locked_odds, potential_payout, status, placed_at, settled_at, seen_at, markets(question, status, winning_outcome_id, last_synced_at, event_id), market_outcomes(name)'
-        )
-        // Defense-in-depth: RLS enforces this, but explicit filter documents intent
-        .eq('user_id', session!.user.id)
-        .order('placed_at', { ascending: false });
-
-      if (error) throw new Error(error.message);
-      // Supabase infers joined relations as arrays; cast via unknown matches runtime shape
-      return (data ?? []) as unknown as MyBet[];
-    },
-    enabled: !!session,
-  });
+  return {
+    data,
+    isLoading: open.isLoading || history.isLoading,
+    error: (open.error || history.error) instanceof Error ? open.error || history.error : null,
+  };
 }
