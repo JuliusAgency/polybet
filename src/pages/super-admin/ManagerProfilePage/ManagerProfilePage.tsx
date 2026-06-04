@@ -579,6 +579,16 @@ export const ManagerProfilePage = () => {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Button
+                      variant="secondary"
+                      className="text-xs px-2 py-1"
+                      onClick={() => {
+                        setEditError('');
+                        setModal({ kind: 'editUser', user: manager });
+                      }}
+                    >
+                      {t('editUser.edit')}
+                    </Button>
+                    <Button
                       variant="primary"
                       className="text-xs px-2 py-1"
                       onClick={() => setModal({ kind: 'deposit', user: manager })}

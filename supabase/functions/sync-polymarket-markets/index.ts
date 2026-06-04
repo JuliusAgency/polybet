@@ -996,10 +996,17 @@ async function upsertMarket(
     .eq('polymarket_id', gm.conditionId)
     .maybeSingle();
 
-  // Close if Polymarket flags it OR if close_at has already passed
-  const isExpiredByTime = gm.endDate != null && new Date(gm.endDate).getTime() <= Date.now();
-  const marketStatus: 'open' | 'closed' =
-    (gm.closed && !gm.resolved) || (status === 'open' && isExpiredByTime) ? 'closed' : status;
+  // Status authority is Polymarket's closed/resolved flags, NOT close_at.
+  // Polymarket keeps some markets tradable (closed=false) past their stated
+  // endDate, and occasionally ships an endDate that contradicts the title — so
+  // closing on a past endDate mis-closed markets Polymarket still trades (e.g.
+  // "Russia x Ukraine ceasefire by May 31" stays open into June). This mirrors
+  // deriveMarketStatus in refresh-markets, the place_bet gate (status only, not
+  // close_at — migration 20260601153519), and isMarketEffectivelyOpen in
+  // entities/market. The caller already routes gm.closed/gm.resolved markets to
+  // processResolvedMarket; the flag check here is a defensive belt for the open
+  // path. close_at is purely informational.
+  const marketStatus: 'open' | 'closed' = gm.closed && !gm.resolved ? 'closed' : status;
 
   // Impute a far-future close_at when Polymarket omits endDate. NULL on an
   // open market is treated by place_bet as a sync defect, so we never write
