@@ -24,11 +24,17 @@ export interface WalkResult {
   availableStake: number;
 }
 
-// Polymarket itself keeps sub-cent prices live and tradable; preserving them
-// through the odds computation means a real 0.5¢ outcome reaches the UI as
-// 0.5¢, not clamped up to 1¢. The floor only guards against true-zero /
-// negative inputs (matches MIN_TRADABLE_PRICE on the sync runtimes).
-const TOP_N_LEVELS = 10;
+// Persisted book depth. The DISPLAYED quote (BetSlip) walks the FULL freshly
+// fetched CLOB book via walkAsks(), but only the top-N serialized levels are
+// stored in market_outcome_books — and place_bet/quote_bet_payout walks THOSE
+// persisted levels. With a shallow cap (was 10) a large stake that eats past
+// the cap fills cheaper in the displayed quote than place_bet can honor, so the
+// user sees a payout the executable walk can't match. quote_bet_payout already
+// walks the entire persisted array (WHILE v_i < cardinality), so the only
+// constraint is write-time depth: persist enough levels that executable ==
+// displayed for realistic stakes. Polymarket books rarely exceed ~100 levels;
+// ~150 numbers per token is negligible storage and keeps the RPC walk sub-ms.
+const TOP_N_LEVELS = 100;
 
 /**
  * Walk asks accumulating fills until the stake is exhausted or the book is
