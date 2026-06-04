@@ -31,6 +31,14 @@ export interface MarketCardProps {
   linkToEvent?: boolean;
   showRefreshAction?: boolean;
   showCloseDate?: boolean;
+  /** Override the card click target. When omitted, falls back to the user
+   *  event-detail path (`/events/:id`). The admin/manager Markets surface passes
+   *  a role-scoped read-only detail path so clicking never hits the user route
+   *  (which its RoleGuard would bounce to the Dashboard). */
+  detailHref?: string;
+  /** Visual treatment for the outcome pills — forwarded to OutcomeButtons.
+   *  'inactive' on the admin/manager read-only surface; 'default' elsewhere. */
+  outcomeAppearance?: 'default' | 'inactive';
 }
 
 function formatClosesDate(iso: string | null, locale: string): string | null {
@@ -53,6 +61,8 @@ export const MarketCard = ({
   linkToEvent = true,
   showRefreshAction = true,
   showCloseDate = true,
+  detailHref,
+  outcomeAppearance = 'default',
 }: MarketCardProps) => {
   const { t, i18n } = useTranslation();
   const isHebrew = i18n.language === 'he';
@@ -99,7 +109,8 @@ export const MarketCard = ({
       ? t(`markets.status.${effectiveStatus}`, { defaultValue: effectiveStatus.toUpperCase() })
       : null;
 
-  const cardHref = linkToEvent && market.event_id ? `/events/${market.event_id}` : null;
+  const cardHref =
+    detailHref ?? (linkToEvent && market.event_id ? `/events/${market.event_id}` : null);
 
   return (
     <article
@@ -146,6 +157,7 @@ export const MarketCard = ({
             outcomes={outcomeButtons}
             size="xl"
             disabled={!isInteractive}
+            appearance={outcomeAppearance}
             showPercentage={false}
             hoverShowsPercentage
             longTail={false}

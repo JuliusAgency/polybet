@@ -53,6 +53,16 @@ interface OutcomeButtonsProps {
    * interpreted as [Yes, No] — outcomes must already be ordered canonically.
    */
   longTail?: boolean;
+  /**
+   * Visual treatment for non-bettable surfaces.
+   *  - 'default': disabled pills keep the win/loss colour tint (used by the
+   *    user feed so closed/resolved markets still read with their odds).
+   *  - 'inactive': disabled pills render as neutral, muted, cursor-not-allowed
+   *    pills with NO win/loss tint — used only by the admin/manager read-only
+   *    Markets surface so betting reads as unmistakably switched off. Winner
+   *    outcomes still keep their win tint so resolved results stay legible.
+   */
+  appearance?: 'default' | 'inactive';
 }
 
 const SIZE_STYLES: Record<ButtonSize, { padY: string; padX: string; name: string; odds: string }> =
@@ -81,7 +91,8 @@ function tintFor(
   index: number,
   isWinner: boolean,
   disabled: boolean,
-  longTail: boolean
+  longTail: boolean,
+  appearance: 'default' | 'inactive' = 'default'
 ): CSSProperties {
   const role = index === 0 ? 'win' : 'loss';
   const tintVar = role === 'win' ? 'var(--color-win)' : 'var(--color-loss)';
@@ -91,6 +102,17 @@ function tintFor(
       backgroundColor: `color-mix(in oklch, ${tintVar} 18%, var(--color-bg-base))`,
       borderColor: `color-mix(in oklch, ${tintVar} 55%, transparent)`,
       color: tintVar,
+    };
+  }
+
+  // Read-only admin/manager surface: strip the win/loss tint entirely so the
+  // pill reads as switched off rather than a coloured action. Winner pills are
+  // handled above and keep their tint regardless of appearance.
+  if (appearance === 'inactive') {
+    return {
+      backgroundColor: 'var(--color-bg-base)',
+      borderColor: 'var(--color-border)',
+      color: 'var(--color-text-muted)',
     };
   }
 
@@ -149,6 +171,7 @@ export function OutcomeButtons({
   priceFormat = 'percent',
   selectedId,
   longTail = false,
+  appearance = 'default',
 }: OutcomeButtonsProps) {
   const styles = SIZE_STYLES[size];
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -186,7 +209,8 @@ export function OutcomeButtons({
           index,
           !!o.isWinner || isSelected,
           disabled || isUntradable,
-          longTail
+          longTail,
+          appearance
         );
         const style: CSSProperties = isHovered
           ? hoverTintFor(index)
@@ -217,12 +241,13 @@ export function OutcomeButtons({
 
         if (disabled || isUntradable || !onClick) {
           const dimmed = (disabled || isUntradable) && !o.isWinner;
+          const isInactive = appearance === 'inactive' && !o.isWinner;
           return (
             <div
               key={o.id}
-              className={baseClass}
+              className={`${baseClass}${isInactive ? ' cursor-not-allowed' : ''}`}
               style={{ ...style, opacity: dimmed ? 0.55 : 1 }}
-              aria-disabled={isUntradable || undefined}
+              aria-disabled={isUntradable || isInactive || undefined}
             >
               {body}
             </div>

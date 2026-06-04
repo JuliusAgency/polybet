@@ -90,6 +90,7 @@ export const Router = () => {
               <Route path="managers" element={<ManagersManagementPage />} />
               <Route path="managers/:id" element={<ManagerProfilePage />} />
               <Route path="markets" element={<AdminMarketsPage />} />
+              <Route path="markets/:id" element={<EventDetailPage readonly />} />
               <Route path="bets-log" element={<GlobalBetLogPage />} />
               <Route path="reports" element={<AdminReportsPage />} />
               <Route path="test-lab" element={<TestLabPage />} />
@@ -109,6 +110,7 @@ export const Router = () => {
             >
               <Route index element={<Navigate to={ROUTES.MANAGER.USERS} replace />} />
               <Route path="markets" element={<ManagerMarketsPage />} />
+              <Route path="markets/:id" element={<EventDetailPage readonly />} />
               <Route path="users" element={<UsersManagementPage />} />
               <Route path="users/:id" element={<UserActivityPage />} />
               <Route path="reports" element={<ReportsPage />} />

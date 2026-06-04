@@ -13,6 +13,12 @@ interface SingleMarketViewProps {
   userBet?: MyBet;
   description?: string | null;
   onOutcomeClick?: (market: Market, outcome: MarketOutcome) => void;
+  /** Read-only admin/manager surface: force the market card non-bettable and
+   *  render the outcome pills as inactive. */
+  readonly?: boolean;
+  /** Admin archive control for resolved markets (super_admin only). */
+  onArchive?: (market: Market) => void;
+  isArchiving?: boolean;
 }
 
 export const SingleMarketView = ({
@@ -20,6 +26,9 @@ export const SingleMarketView = ({
   userBet,
   description,
   onOutcomeClick,
+  readonly = false,
+  onArchive,
+  isArchiving = false,
 }: SingleMarketViewProps) => {
   const { t, i18n } = useTranslation();
   const isHebrew = i18n.language === 'he';
@@ -52,8 +61,11 @@ export const SingleMarketView = ({
       <MarketCard
         market={market}
         userBet={userBet}
-        mode={market.status === 'open' ? 'interactive' : 'readonly'}
+        mode={!readonly && market.status === 'open' ? 'interactive' : 'readonly'}
+        outcomeAppearance={readonly ? 'inactive' : 'default'}
         onOutcomeClick={onOutcomeClick}
+        onArchive={onArchive}
+        isArchiving={isArchiving}
         linkToEvent={false}
       />
 

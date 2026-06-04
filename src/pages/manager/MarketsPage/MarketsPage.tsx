@@ -1,10 +1,13 @@
 import { useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useMarkets, useAllowedCategoryTags } from '@/features/bet';
+import { useMarkets, useAllowedCategoryTags, groupMarketsByEvent } from '@/features/bet';
 import type { MarketStatusFilter } from '@/entities/market';
+import { isMarketEffectivelyOpen } from '@/entities/market';
+import { ROUTES, buildPath } from '@/app/router/routes';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { useIntersectionObserver } from '@/shared/hooks/useIntersectionObserver';
 import { MarketCard } from '@/widgets/MarketCard';
+import { EventCard } from '@/widgets/EventCard';
 import { StatusFilter } from '@/widgets/StatusFilter';
 import { CategoryFilter } from '@/widgets/CategoryFilter';
 import { CardGridSkeleton } from '@/shared/ui/CardGridSkeleton';
@@ -27,6 +30,16 @@ const MarketsPage = () => {
     void fetchNextPage();
   }, [fetchNextPage]);
   useIntersectionObserver(sentinelRef, handleLoadMore, !!hasNextPage && !isFetchingNextPage);
+
+  // Group same-event markets into a single Event card (mirrors the user feed).
+  const visibleMarkets =
+    statusFilter === 'open' ? markets.filter((m) => isMarketEffectivelyOpen(m, m.event)) : markets;
+  const feedItems = groupMarketsByEvent(visibleMarkets);
+
+  // Manager Markets is read-only: cards open the manager detail route (never the
+  // user `/events/:id`, which the RoleGuard would bounce away) and the outcome
+  // pills render as non-bettable. Managers have no archive capability.
+  const eventHref = (eventId: string) => buildPath(ROUTES.MANAGER.MARKET_DETAIL, { id: eventId });
 
   return (
     <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--color-bg-base)' }}>
@@ -87,17 +100,41 @@ const MarketsPage = () => {
         </p>
       )}
 
-      {!isLoading && !isError && markets.length === 0 && (
+      {!isLoading && !isError && feedItems.length === 0 && (
         <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
           {debouncedSearch ? t('markets.noResults') : t('markets.noMarkets')}
         </p>
       )}
 
-      {!isLoading && !isError && markets.length > 0 && (
+      {!isLoading && !isError && feedItems.length > 0 && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {markets.map((market) => (
-            <MarketCard key={market.id} market={market} mode="readonly" />
-          ))}
+          {feedItems.map((item) => {
+            const card =
+              item.type === 'event' ? (
+                <EventCard
+                  event={item.event}
+                  markets={item.markets}
+                  mode="readonly"
+                  outcomeAppearance="inactive"
+                  detailHref={eventHref(item.event.id)}
+                />
+              ) : (
+                <MarketCard
+                  market={item.market}
+                  mode="readonly"
+                  outcomeAppearance="inactive"
+                  detailHref={item.market.event_id ? eventHref(item.market.event_id) : undefined}
+                />
+              );
+            return (
+              <div
+                key={item.key}
+                style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 260px' }}
+              >
+                {card}
+              </div>
+            );
+          })}
         </div>
       )}
 

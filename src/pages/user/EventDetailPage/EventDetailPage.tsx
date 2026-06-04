@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { ROUTES } from '@/app/router/routes';
 import { useTranslation } from 'react-i18next';
@@ -9,6 +10,9 @@ import {
   useSimilarEvents,
   useUserBalance,
 } from '@/features/bet';
+import { useArchiveMarket } from '@/features/admin/markets/useArchiveMarket';
+import { useAuth } from '@/shared/hooks/useAuth';
+import type { Role } from '@/shared/types';
 import type { Market, MarketOutcome } from '@/entities/market';
 import { sortMarketsByYesDesc } from '@/entities/market';
 import { BetSlip } from '@/widgets/BetSlip';
@@ -26,9 +30,19 @@ interface SelectedBet {
   outcome: MarketOutcome;
 }
 
-const EventDetailPage = () => {
+interface EventDetailPageProps {
+  // Read-only mode for the super-admin / manager Markets surfaces: no BetSlip,
+  // no balance / user-activity, outcome pills rendered as non-bettable, and a
+  // role-aware back link. Defaults to the full user betting view.
+  readonly?: boolean;
+}
+
+const EventDetailPage = ({ readonly = false }: EventDetailPageProps = {}) => {
   const { t, i18n } = useTranslation();
   const { id } = useParams<{ id: string }>();
+  const { role } = useAuth();
+  const archiveMarket = useArchiveMarket();
+  const queryClient = useQueryClient();
 
   const { data: eventData, isLoading, isError, error } = useEventById(id);
   // Periodically refresh odds from Polymarket so the bet placement page can't be
@@ -52,6 +66,30 @@ const EventDetailPage = () => {
     setSelectedBet({ market, outcome });
   }, []);
 
+  // Archive is an admin-only action available on the read-only detail view for
+  // resolved markets. Managers do not archive (mirrors the manager Markets page,
+  // which never exposed it), so gate to super_admin.
+  const canArchive = readonly && role === 'super_admin';
+  const handleArchive = useCallback(
+    (market: Market) => {
+      if (!window.confirm(t('markets.archiveConfirm'))) return;
+      // useArchiveMarket invalidates ['markets']; also refresh THIS event's
+      // detail cache so the archived row updates immediately instead of waiting
+      // for the next useEventById refetch tick.
+      archiveMarket.mutate(
+        { marketId: market.id },
+        { onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['event', id] }) }
+      );
+    },
+    [archiveMarket, queryClient, id, t]
+  );
+
+  // In read-only mode no betting is possible: never wire the outcome click, so
+  // the BetSlip can never open and the pills stay inert.
+  const outcomeClickHandler = readonly ? undefined : handleOutcomeClick;
+  const cardAppearance: 'default' | 'inactive' | undefined = readonly ? 'inactive' : undefined;
+  const backTo = readonly ? marketsRouteForRole(role) : ROUTES.USER.MARKETS;
+
   if (isLoading) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
@@ -63,7 +101,7 @@ const EventDetailPage = () => {
   if (isError || !eventData) {
     return (
       <div>
-        <BackLink />
+        <BackLink to={backTo} />
         <p className="mt-4 text-sm" style={{ color: 'var(--color-loss)' }}>
           {t('eventDetail.loadError')}
           {error?.message ? `: ${error.message}` : ''}
@@ -91,7 +129,7 @@ const EventDetailPage = () => {
 
   return (
     <div>
-      <BackLink />
+      <BackLink to={backTo} />
 
       <header className="mt-4 flex items-start gap-4">
         <MarketThumbnail src={event.image_url} title={event.title} id={event.id} size="lg" />
@@ -135,7 +173,12 @@ const EventDetailPage = () => {
             market={markets[0]}
             userBet={betByMarketId.get(markets[0].id)}
             description={event.description}
-            onOutcomeClick={handleOutcomeClick}
+            onOutcomeClick={outcomeClickHandler}
+            readonly={readonly}
+            onArchive={canArchive ? handleArchive : undefined}
+            isArchiving={
+              archiveMarket.isPending && archiveMarket.variables?.marketId === markets[0].id
+            }
           />
         ) : (
           <>
@@ -182,8 +225,13 @@ const EventDetailPage = () => {
                   key={market.id}
                   market={market}
                   userBet={betByMarketId.get(market.id)}
-                  mode={market.status === 'open' ? 'interactive' : 'readonly'}
-                  onOutcomeClick={handleOutcomeClick}
+                  mode={!readonly && market.status === 'open' ? 'interactive' : 'readonly'}
+                  outcomeAppearance={cardAppearance}
+                  onOutcomeClick={outcomeClickHandler}
+                  onArchive={canArchive ? handleArchive : undefined}
+                  isArchiving={
+                    archiveMarket.isPending && archiveMarket.variables?.marketId === market.id
+                  }
                   isFirst={idx === 0}
                 />
               ))}
@@ -191,14 +239,14 @@ const EventDetailPage = () => {
           </>
         )}
 
-        <EventUserActivity markets={markets} bets={bets} />
+        {!readonly && <EventUserActivity markets={markets} bets={bets} />}
       </div>
 
       <div className="mt-10">
         <SimilarEventsList events={similar} isLoading={isSimilarLoading} />
       </div>
 
-      {selectedBet && (
+      {!readonly && selectedBet && (
         <BetSlip
           market={selectedBet.market}
           outcome={selectedBet.outcome}
@@ -211,11 +259,24 @@ const EventDetailPage = () => {
   );
 };
 
-const BackLink = () => {
+// Read-only EventDetailPage is mounted under all three role layouts; the back
+// link must return to the role's own Markets list, not the user feed.
+function marketsRouteForRole(role: Role | null): string {
+  switch (role) {
+    case 'super_admin':
+      return ROUTES.ADMIN.MARKETS;
+    case 'manager':
+      return ROUTES.MANAGER.MARKETS;
+    default:
+      return ROUTES.USER.MARKETS;
+  }
+}
+
+const BackLink = ({ to }: { to: string }) => {
   const { t } = useTranslation();
   return (
     <Link
-      to={ROUTES.USER.MARKETS}
+      to={to}
       className="inline-flex items-center gap-1.5 text-sm font-medium"
       style={{ color: 'var(--color-text-secondary)' }}
     >

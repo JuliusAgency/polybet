@@ -41,6 +41,13 @@ export interface EventCardProps {
   // When undefined, falls back to the legacy `visibleMarkets.length === 1`
   // collapse rule for back-compat with consumers that don't yet pass it.
   totalMarketsCount?: number;
+  /** Override the card click target. When omitted, falls back to the user
+   *  event-detail path (`/events/:id`). The admin/manager Markets surface passes
+   *  a role-scoped read-only detail path so clicking never hits the user route. */
+  detailHref?: string;
+  /** Visual treatment for the outcome pills — forwarded to OutcomeButtons (and
+   *  the inner market rows). 'inactive' on the admin/manager read-only surface. */
+  outcomeAppearance?: 'default' | 'inactive';
 }
 
 export const EventCard = ({
@@ -51,10 +58,12 @@ export const EventCard = ({
   onOutcomeClick,
   forceMultiRow = false,
   totalMarketsCount,
+  detailHref,
+  outcomeAppearance = 'default',
 }: EventCardProps) => {
   const { t, i18n } = useTranslation();
   const isHebrew = i18n.language === 'he';
-  const detailPath = `/events/${event.id}`;
+  const detailPath = detailHref ?? `/events/${event.id}`;
 
   const volumeLabel = formatVolume(event.volume ?? null);
   // Group bets by market_id (a user can place multiple bets on the same
@@ -190,6 +199,7 @@ export const EventCard = ({
               outcomes={singleOutcomeButtons}
               size="xl"
               disabled={!singleIsInteractive}
+              appearance={outcomeAppearance}
               showPercentage={false}
               hoverShowsPercentage
               longTail={false}
@@ -214,6 +224,7 @@ export const EventCard = ({
               market={market}
               userBet={betByMarketId.get(market.id)}
               mode={mode}
+              outcomeAppearance={outcomeAppearance}
               onOutcomeClick={onOutcomeClick}
             />
           ))}
@@ -271,10 +282,16 @@ interface EventMarketRowProps {
   market: Market;
   userBet: MyBet | undefined;
   mode: 'interactive' | 'readonly';
+  outcomeAppearance?: 'default' | 'inactive';
   onOutcomeClick?: (market: Market, outcome: MarketOutcome) => void;
 }
 
-function EventMarketRow({ market, mode, onOutcomeClick }: EventMarketRowProps) {
+function EventMarketRow({
+  market,
+  mode,
+  outcomeAppearance = 'default',
+  onOutcomeClick,
+}: EventMarketRowProps) {
   const { i18n } = useTranslation();
   const isHebrew = i18n.language === 'he';
 
@@ -326,6 +343,7 @@ function EventMarketRow({ market, mode, onOutcomeClick }: EventMarketRowProps) {
           outcomes={outcomeButtons}
           size="sm"
           disabled={!isInteractive}
+          appearance={outcomeAppearance}
           showPercentage={false}
           hoverShowsPercentage
           longTail={false}
