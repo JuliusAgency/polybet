@@ -89,6 +89,10 @@ const EventDetailPage = ({ readonly = false }: EventDetailPageProps = {}) => {
   const outcomeClickHandler = readonly ? undefined : handleOutcomeClick;
   const cardAppearance: 'default' | 'inactive' | undefined = readonly ? 'inactive' : undefined;
   const backTo = readonly ? marketsRouteForRole(role) : ROUTES.USER.MARKETS;
+  // Under the admin/manager shells the layout <main> has no padding (unlike
+  // UserLayout, which wraps content in max-w-7xl mx-auto px-4 py-6). In readonly
+  // mode supply the same envelope so content isn't flush against the sidebar.
+  const rootClass = readonly ? 'mx-auto w-full max-w-7xl px-4 py-6 sm:px-6' : undefined;
 
   if (isLoading) {
     return (
@@ -100,7 +104,7 @@ const EventDetailPage = ({ readonly = false }: EventDetailPageProps = {}) => {
 
   if (isError || !eventData) {
     return (
-      <div>
+      <div className={rootClass}>
         <BackLink to={backTo} />
         <p className="mt-4 text-sm" style={{ color: 'var(--color-loss)' }}>
           {t('eventDetail.loadError')}
@@ -128,7 +132,7 @@ const EventDetailPage = ({ readonly = false }: EventDetailPageProps = {}) => {
   const isHebrew = i18n.language === 'he';
 
   return (
-    <div>
+    <div className={rootClass}>
       <BackLink to={backTo} />
 
       <header className="mt-4 flex items-start gap-4">
