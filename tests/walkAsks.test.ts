@@ -1,6 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { walkAsks, serializeSide, type BookLevel } from '../supabase/functions/quote-bet/walkAsks.ts';
+import {
+  walkAsks,
+  serializeSide,
+  type BookLevel,
+} from '../supabase/functions/quote-bet/walkAsks.ts';
 
 // Regression guard for the bet-quote book walk (Task B).
 //
