@@ -90,9 +90,11 @@ const EventDetailPage = ({ readonly = false }: EventDetailPageProps = {}) => {
   const cardAppearance: 'default' | 'inactive' | undefined = readonly ? 'inactive' : undefined;
   const backTo = readonly ? marketsRouteForRole(role) : ROUTES.USER.MARKETS;
   // Under the admin/manager shells the layout <main> has no padding (unlike
-  // UserLayout, which wraps content in max-w-7xl mx-auto px-4 py-6). In readonly
-  // mode supply the same envelope so content isn't flush against the sidebar.
-  const rootClass = readonly ? 'mx-auto w-full max-w-7xl px-4 py-6 sm:px-6' : undefined;
+  // UserLayout, which wraps content in max-w-7xl mx-auto px-4 py-6). On those
+  // shells the main column is usually narrower than max-w-7xl, so mx-auto adds no
+  // gap and the only spacing from the sidebar is this horizontal padding — keep it
+  // generous (px-6 -> lg:px-10) so content isn't flush against the sidebar.
+  const rootClass = readonly ? 'mx-auto w-full max-w-7xl px-6 py-6 sm:px-8 lg:px-10' : undefined;
 
   if (isLoading) {
     return (
