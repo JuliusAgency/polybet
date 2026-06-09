@@ -1,21 +1,21 @@
 import { useMutation } from '@tanstack/react-query';
 import { invokeSupabaseFunction } from '@/shared/api/supabase';
 
-export type AdminReportType = 'managers_log' | 'bets_log' | 'system_dashboard';
+export type AdminReportType = 'managers_log' | 'bets_log' | 'system_dashboard' | 'managers_report';
 
 export interface AdminReportFilters {
   started_at?: string;
-  ended_at?:   string;
+  ended_at?: string;
 }
 
 interface ExportPayload {
   report_type: AdminReportType;
-  filters?:    AdminReportFilters;
-  locale?:     string;
+  filters?: AdminReportFilters;
+  locale?: string;
 }
 
 function normalizePdfBytes(data: unknown): Blob {
-  if (data instanceof Blob)        return data;
+  if (data instanceof Blob) return data;
   if (data instanceof ArrayBuffer) return new Blob([data], { type: 'application/pdf' });
   if (data instanceof Uint8Array) {
     const copy = new Uint8Array(data.byteLength);
@@ -26,9 +26,9 @@ function normalizePdfBytes(data: unknown): Blob {
 }
 
 function triggerDownload(blob: Blob, fileName: string) {
-  const url    = URL.createObjectURL(blob);
+  const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
-  anchor.href     = url;
+  anchor.href = url;
   anchor.download = fileName;
   document.body.appendChild(anchor);
   anchor.click();

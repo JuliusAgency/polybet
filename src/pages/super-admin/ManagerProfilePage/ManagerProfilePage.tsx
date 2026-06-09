@@ -20,7 +20,7 @@ import { useManagerUsers, useManagerActionLogs } from '@/features/admin/manager-
 import { useBetLimitSettings } from '@/features/admin/bet-limits';
 import { EffectiveLimitBadge } from '@/pages/super-admin/BetLimitsPage/components/EffectiveLimitBadge';
 import type { DbProfile } from '@/shared/types/database';
-import { formatInitiatorName } from '@/shared/utils';
+import { formatInitiatorName, mapBalanceErrorMessage } from '@/shared/utils';
 
 const ACTION_LOG_QUERY_KEY = ['admin', 'action-logs'];
 
@@ -118,7 +118,9 @@ const AdjustBalanceModal = ({ isOpen, onClose, type, targetUser, onSuccess }: Ad
       setNote('');
       onClose();
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : t('common.unknownError'));
+      setErrorMsg(
+        err instanceof Error ? mapBalanceErrorMessage(err.message, t) : t('common.unknownError')
+      );
     }
   };
 

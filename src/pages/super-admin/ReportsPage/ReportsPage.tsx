@@ -3,18 +3,19 @@ import { useTranslation } from 'react-i18next';
 import { useExportAdminReport, type AdminReportType } from '@/features/admin/reports';
 import { Card } from '@/shared/ui/Card';
 import { Button } from '@/shared/ui/Button';
+import { ManagersReportTable } from '@/widgets/ManagersReportTable';
 
 type PeriodPreset = 'thisWeek' | 'thisMonth' | 'thisQuarter' | 'thisYear' | 'custom';
 
 const selectStyle: React.CSSProperties = {
   backgroundColor: 'var(--color-bg-elevated)',
-  color:           'var(--color-text-primary)',
-  borderColor:     'var(--color-border)',
+  color: 'var(--color-text-primary)',
+  borderColor: 'var(--color-border)',
 };
 
 function getPeriodDates(preset: PeriodPreset): { started_at: string; ended_at: string } {
-  const now   = new Date();
-  const year  = now.getFullYear();
+  const now = new Date();
+  const year = now.getFullYear();
   const month = now.getMonth();
   const toIso = (d: Date) => d.toISOString();
 
@@ -31,20 +32,20 @@ function getPeriodDates(preset: PeriodPreset): { started_at: string; ended_at: s
     case 'thisMonth': {
       return {
         started_at: toIso(new Date(year, month, 1)),
-        ended_at:   toIso(new Date(year, month + 1, 0, 23, 59, 59, 999)),
+        ended_at: toIso(new Date(year, month + 1, 0, 23, 59, 59, 999)),
       };
     }
     case 'thisQuarter': {
       const qStart = Math.floor(month / 3) * 3;
       return {
         started_at: toIso(new Date(year, qStart, 1)),
-        ended_at:   toIso(new Date(year, qStart + 3, 0, 23, 59, 59, 999)),
+        ended_at: toIso(new Date(year, qStart + 3, 0, 23, 59, 59, 999)),
       };
     }
     case 'thisYear': {
       return {
         started_at: toIso(new Date(year, 0, 1)),
-        ended_at:   toIso(new Date(year, 11, 31, 23, 59, 59, 999)),
+        ended_at: toIso(new Date(year, 11, 31, 23, 59, 59, 999)),
       };
     }
     default:
@@ -53,25 +54,48 @@ function getPeriodDates(preset: PeriodPreset): { started_at: string; ended_at: s
 }
 
 const REPORTS: { type: AdminReportType; titleKey: string; descKey: string }[] = [
-  { type: 'managers_log',     titleKey: 'reports.types.managers_log',     descKey: 'reports.descriptions.managers_log'     },
-  { type: 'bets_log',         titleKey: 'reports.types.bets_log',         descKey: 'reports.descriptions.bets_log'         },
-  { type: 'system_dashboard', titleKey: 'reports.types.system_dashboard', descKey: 'reports.descriptions.system_dashboard' },
+  {
+    type: 'managers_log',
+    titleKey: 'reports.types.managers_log',
+    descKey: 'reports.descriptions.managers_log',
+  },
+  {
+    type: 'bets_log',
+    titleKey: 'reports.types.bets_log',
+    descKey: 'reports.descriptions.bets_log',
+  },
+  {
+    type: 'system_dashboard',
+    titleKey: 'reports.types.system_dashboard',
+    descKey: 'reports.descriptions.system_dashboard',
+  },
+  {
+    type: 'managers_report',
+    titleKey: 'reports.types.managers_report',
+    descKey: 'reports.descriptions.managers_report',
+  },
 ];
 
-const PERIOD_PRESETS: PeriodPreset[] = ['thisWeek', 'thisMonth', 'thisQuarter', 'thisYear', 'custom'];
+const PERIOD_PRESETS: PeriodPreset[] = [
+  'thisWeek',
+  'thisMonth',
+  'thisQuarter',
+  'thisYear',
+  'custom',
+];
 
 const AdminReportsPage = () => {
   const { t, i18n } = useTranslation();
-  const [preset, setPreset]           = useState<PeriodPreset>('thisMonth');
+  const [preset, setPreset] = useState<PeriodPreset>('thisMonth');
   const [customStart, setCustomStart] = useState('');
-  const [customEnd,   setCustomEnd]   = useState('');
+  const [customEnd, setCustomEnd] = useState('');
   const exportReport = useExportAdminReport();
 
   const getFilters = () => {
     if (preset === 'custom') {
       return {
         started_at: customStart ? new Date(customStart).toISOString() : undefined,
-        ended_at:   customEnd   ? new Date(customEnd).toISOString()   : undefined,
+        ended_at: customEnd ? new Date(customEnd).toISOString() : undefined,
       };
     }
     return getPeriodDates(preset);
@@ -102,9 +126,9 @@ const AdminReportsPage = () => {
               className="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
               style={{
                 backgroundColor: preset === p ? 'var(--color-accent)' : 'var(--color-bg-elevated)',
-                color:           'var(--color-text-primary)',
-                border:          '1px solid var(--color-border)',
-                cursor:          'pointer',
+                color: 'var(--color-text-primary)',
+                border: '1px solid var(--color-border)',
+                cursor: 'pointer',
               }}
             >
               {t(`reports.periods.${p}`)}
@@ -115,7 +139,10 @@ const AdminReportsPage = () => {
         {preset === 'custom' && (
           <div className="mt-4 flex flex-wrap items-end gap-3">
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+              <label
+                className="text-xs font-medium"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
                 {t('reports.startDate')}
               </label>
               <input
@@ -127,7 +154,10 @@ const AdminReportsPage = () => {
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+              <label
+                className="text-xs font-medium"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
                 {t('reports.endDate')}
               </label>
               <input
@@ -142,15 +172,23 @@ const AdminReportsPage = () => {
         )}
       </div>
 
+      {/* On-screen managers report — reacts to the selected period */}
+      <div className="mb-6">
+        <ManagersReportTable filters={getFilters()} />
+      </div>
+
       {/* Report cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {REPORTS.map(({ type, titleKey, descKey }) => {
-          const isThisCard  = exportReport.isPending && exportReport.variables?.report_type === type;
-          const isThisError = exportReport.isError   && exportReport.variables?.report_type === type;
+          const isThisCard = exportReport.isPending && exportReport.variables?.report_type === type;
+          const isThisError = exportReport.isError && exportReport.variables?.report_type === type;
 
           return (
             <Card key={type}>
-              <p className="mb-1 text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+              <p
+                className="mb-1 text-base font-semibold"
+                style={{ color: 'var(--color-text-primary)' }}
+              >
                 {t(titleKey)}
               </p>
               <p className="mb-4 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
@@ -161,11 +199,7 @@ const AdminReportsPage = () => {
                   {(exportReport.error as Error)?.message ?? t('common.unknownError')}
                 </p>
               )}
-              <Button
-                variant="primary"
-                onClick={() => handleExport(type)}
-                disabled={isThisCard}
-              >
+              <Button variant="primary" onClick={() => handleExport(type)} disabled={isThisCard}>
                 {isThisCard ? t('common.processing') : t('reports.exportPdf')}
               </Button>
             </Card>

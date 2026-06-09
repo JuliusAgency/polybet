@@ -29,7 +29,10 @@ export interface BetLogRow {
   manager_id: string | null;
   manager_username: string | null;
   manager_full_name: string | null;
+  market_id: string;
   market_description: string;
+  /** Polymarket market slug; null for markets synced without a slug. */
+  polymarket_slug: string | null;
   outcome_name: string;
 }
 

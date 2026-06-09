@@ -1,0 +1,1 @@
+export { ManagersReportTable } from './ManagersReportTable';

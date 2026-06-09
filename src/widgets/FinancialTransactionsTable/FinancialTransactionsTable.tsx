@@ -149,7 +149,9 @@ export const FinancialTransactionsTable = ({
                   className="px-4 py-3 text-xs max-w-[180px]"
                   style={{ color: 'var(--color-text-muted)' }}
                 >
-                  {tx.note ?? '—'}
+                  {/* line-clamp needs display:-webkit-box; apply it on an inner div,
+                      not the <td>, so it survives the cell's display:table-cell. */}
+                  <div className="break-words line-clamp-2">{tx.note ?? '—'}</div>
                 </td>
                 <td
                   className="px-4 py-3 font-mono text-xs"
