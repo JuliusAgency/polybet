@@ -4,6 +4,7 @@ import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
 import { Modal } from '@/shared/ui/Modal';
 import { MIN_ADJUST_AMOUNT, MAX_NOTE_LENGTH } from '@/shared/config/validation';
+import { mapBalanceErrorMessage } from '@/shared/utils';
 import { useManagerAdjustBalance } from '../../useManagerAdjustBalance';
 
 interface AdjustBalanceModalProps {
@@ -105,7 +106,9 @@ export const AdjustBalanceModal = ({
       : t('treasury.withdrawalTitle', { username });
 
   const genericError =
-    mutation.error && !showSuccess ? mutation.error.message || t('common.unknownError') : null;
+    mutation.error && !showSuccess
+      ? mapBalanceErrorMessage(mutation.error.message, t) || t('common.unknownError')
+      : null;
 
   const isSubmitting = mutation.isPending;
   const handleClose = isSubmitting ? () => {} : onClose;

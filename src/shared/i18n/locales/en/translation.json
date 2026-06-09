@@ -154,6 +154,7 @@
     "title": "Global Log",
     "betLog": "Bet Records",
     "financialLog": "Financial Log",
+    "openInPolymarket": "Open market on Polymarket",
     "comingSoon": "Bet records — coming soon",
     "manager": "Manager",
     "allManagers": "All managers",
@@ -237,7 +238,8 @@
     "deposit": "Deposit",
     "withdraw": "Withdraw",
     "success": "Done successfully",
-    "noUsers": "No users found"
+    "noUsers": "No users found",
+    "insufficientBalance": "Insufficient balance for withdrawal"
   },
   "markets": {
     "title": "Markets",
@@ -417,7 +419,8 @@
     "types": {
       "managers_log": "Actions Log",
       "bets_log": "General Log",
-      "system_dashboard": "System Dashboard"
+      "system_dashboard": "System Dashboard",
+      "managers_report": "Managers Report"
     },
     "periods": {
       "thisWeek": "This Week",
@@ -429,7 +432,17 @@
     "descriptions": {
       "managers_log": "Admin action log entries",
       "bets_log": "All placed bets",
-      "system_dashboard": "System KPIs and counts"
+      "system_dashboard": "System KPIs and counts",
+      "managers_report": "Deposits, withdrawals and profit per manager"
+    },
+    "managersReport": {
+      "tableTitle": "Managers Report",
+      "manager": "Manager",
+      "deposits": "Deposits",
+      "withdrawals": "Withdrawals",
+      "profit": "Profit",
+      "total": "Total",
+      "empty": "No managers found"
     }
   },
   "stats": {

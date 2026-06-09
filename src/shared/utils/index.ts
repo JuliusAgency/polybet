@@ -7,6 +7,8 @@
 export { formatVolume } from './formatVolume';
 export { formatProbability } from './formatProbability';
 export { formatSharePrice } from './formatSharePrice';
+export { mapBalanceErrorMessage } from './mapBalanceError';
+export { polymarketEventUrl } from './polymarketUrl';
 
 /**
  * Returns a display name for a transaction/action initiator.

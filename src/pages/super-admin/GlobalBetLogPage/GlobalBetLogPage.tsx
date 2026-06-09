@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/Button';
 import { Badge } from '@/shared/ui/Badge';
+import { ExternalLink } from '@/shared/ui/ExternalLink';
 import { TableSkeleton } from '@/shared/ui/TableSkeleton';
 import { useManagers } from '@/features/admin/managers';
 import { useBetLog } from '@/features/admin/bet-log';
 import type { BetStatus } from '@/features/admin/bet-log';
 import { FinancialTransactionsTable } from '@/widgets/FinancialTransactionsTable';
-import { formatSharePrice } from '@/shared/utils';
+import { formatSharePrice, polymarketEventUrl } from '@/shared/utils';
 import type { DbSyncRun } from '@/shared/types/database';
 import { SyncMarketsModal } from './components/SyncMarketsModal';
 
@@ -267,9 +268,22 @@ const GlobalBetLogPage = () => {
                         </td>
                         {/* Market */}
                         <td className="px-4 py-3" style={{ color: 'var(--color-text-primary)' }}>
-                          {row.market_description.length > 40
-                            ? `${row.market_description.slice(0, 40)}…`
-                            : row.market_description}
+                          {(() => {
+                            const label =
+                              row.market_description.length > 40
+                                ? `${row.market_description.slice(0, 40)}…`
+                                : row.market_description;
+                            return row.polymarket_slug ? (
+                              <ExternalLink
+                                href={polymarketEventUrl(row.polymarket_slug)}
+                                aria-label={`${t('globalLog.openInPolymarket')}: ${row.market_description}`}
+                              >
+                                {label}
+                              </ExternalLink>
+                            ) : (
+                              label
+                            );
+                          })()}
                         </td>
                         {/* Selection */}
                         <td className="px-4 py-3" style={{ color: 'var(--color-text-secondary)' }}>

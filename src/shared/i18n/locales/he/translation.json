@@ -154,6 +154,7 @@
     "title": "יומן כללי",
     "betLog": "תיעוד הימורים",
     "financialLog": "תיעוד תנועות כספים",
+    "openInPolymarket": "פתח את השוק ב-Polymarket",
     "comingSoon": "תיעוד הימורים — בקרוב",
     "manager": "מנהל",
     "allManagers": "כל המנהלים",
@@ -237,7 +238,8 @@
     "deposit": "הפקדה",
     "withdraw": "משיכה",
     "success": "בוצע בהצלחה",
-    "noUsers": "לא נמצאו משתמשים"
+    "noUsers": "לא נמצאו משתמשים",
+    "insufficientBalance": "אין מספיק יתרה למשיכה"
   },
   "markets": {
     "title": "שווקים",
@@ -417,7 +419,8 @@
     "types": {
       "managers_log": "יומן פעולות",
       "bets_log": "יומן כללי",
-      "system_dashboard": "לוח קכרה"
+      "system_dashboard": "לוח קכרה",
+      "managers_report": "דוח מנהלים"
     },
     "periods": {
       "thisWeek": "השבוע",
@@ -429,7 +432,17 @@
     "descriptions": {
       "managers_log": "רשומות יומן פעולות מנהלים",
       "bets_log": "כל ההימורים שהוצבו",
-      "system_dashboard": "מדדי מערכת וספירות"
+      "system_dashboard": "מדדי מערכת וספירות",
+      "managers_report": "הפקדות, משיכות ורווח לכל מנהל"
+    },
+    "managersReport": {
+      "tableTitle": "דוח מנהלים",
+      "manager": "מנהל",
+      "deposits": "הפקדות",
+      "withdrawals": "משיכות",
+      "profit": "רווח",
+      "total": "סה\"כ",
+      "empty": "לא נמצאו מנהלים"
     }
   },
   "stats": {

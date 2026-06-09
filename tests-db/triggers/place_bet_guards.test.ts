@@ -89,11 +89,17 @@ async function seedFreshMarket(
     const levels = book.asks ?? [[outcome.price, 1_000_000_000]];
     const flat = levels.flat();
     const bookUpdatedExpr = book.updated_at ?? FRESH;
+    // The trg_market_outcome_books_touch trigger (migration 20260609131610)
+    // overwrites updated_at with now() on every write, so it must be bypassed to
+    // seed a deliberately-aged book row (replica role skips triggers). This
+    // honestly simulates "the book hasn't been written in N minutes".
+    await c.query("SET LOCAL session_replication_role = 'replica'");
     await c.query(
       `INSERT INTO market_outcome_books (polymarket_token_id, outcome_id, asks, bids, updated_at)
        VALUES ($1, $2, $3::numeric[], '{}'::numeric[], ${bookUpdatedExpr})`,
       [tokenId, outcomeId, flat]
     );
+    await c.query("SET LOCAL session_replication_role = 'origin'");
   }
 
   return { marketId, outcomeId, tokenId };

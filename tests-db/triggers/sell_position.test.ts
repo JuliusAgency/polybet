@@ -248,10 +248,14 @@ describe('sell_position', () => {
       // which RLS blocks from writing market_outcome_books — the UPDATE would
       // silently affect 0 rows.
       await c.query('RESET role');
+      // Bypass trg_market_outcome_books_touch (migration 20260609131610), which
+      // would otherwise re-stamp updated_at to now() and defeat this aging.
+      await c.query("SET LOCAL session_replication_role = 'replica'");
       await c.query(
         `UPDATE market_outcome_books SET updated_at = now() - interval '2 minutes' WHERE polymarket_token_id = $1`,
         [tokenId]
       );
+      await c.query("SET LOCAL session_replication_role = 'origin'");
       await expect(callSell(c, positionId, 100, 0.5)).rejects.toThrow(/book is stale/i);
     });
   });

@@ -2,13 +2,14 @@ export const SUPPORTED_REPORT_TYPES = [
   'managers_log',
   'bets_log',
   'system_dashboard',
+  'managers_report',
 ] as const;
 
 export type SupportedReportType = (typeof SUPPORTED_REPORT_TYPES)[number];
 
 export interface ExportFilters {
   started_at: string | null;
-  ended_at:   string | null;
+  ended_at: string | null;
 }
 
 export interface ExportRequestPayload {
@@ -23,38 +24,40 @@ export interface KpiRow {
 
 export interface TableSection {
   columns: string[];
-  rows:    string[][];
+  rows: string[][];
 }
 
 export interface ReportDocument {
-  title:    string;
+  title: string;
   filename: string;
-  period:   string;
-  type:     SupportedReportType;
-  locale:   ReportLocale;
-  kpis?:    KpiRow[];
-  table?:   TableSection;
+  period: string;
+  type: SupportedReportType;
+  locale: ReportLocale;
+  kpis?: KpiRow[];
+  table?: TableSection;
 }
 
 export interface ReportDataset {
-  report_type:   string;
+  report_type: string;
   generated_at?: string | null;
-  filters?:      Partial<ExportFilters> | null;
-  data?:         unknown;
+  filters?: Partial<ExportFilters> | null;
+  data?: unknown;
 }
 
 export type ReportLocale = 'he' | 'en';
 
 const REPORT_TITLES: Record<ReportLocale, Record<SupportedReportType, string>> = {
   he: {
-    managers_log:     'יומן פעולות',
-    bets_log:         'יומן כללי',
+    managers_log: 'יומן פעולות',
+    bets_log: 'יומן כללי',
     system_dashboard: 'לוח בקרה',
+    managers_report: 'דוח מנהלים',
   },
   en: {
-    managers_log:     'Action Log',
-    bets_log:         'Bets Log',
+    managers_log: 'Action Log',
+    bets_log: 'Bets Log',
     system_dashboard: 'System Dashboard',
+    managers_report: 'Managers Report',
   },
 };
 
@@ -97,7 +100,7 @@ export function validateExportRequest(body: unknown): {
 
   const filters: ExportFilters = {
     started_at: normalizeIsoDate(rawFilters?.started_at, 'started_at'),
-    ended_at:   normalizeIsoDate(rawFilters?.ended_at,   'ended_at'),
+    ended_at: normalizeIsoDate(rawFilters?.ended_at, 'ended_at'),
   };
 
   if (
@@ -124,13 +127,16 @@ function formatNum(value: unknown): string {
   return String(value ?? '—');
 }
 
-function safePeriod(filters: Partial<ExportFilters> | null | undefined, locale: ReportLocale): string {
+function safePeriod(
+  filters: Partial<ExportFilters> | null | undefined,
+  locale: ReportLocale
+): string {
   const start = filters?.started_at ? formatDate(filters.started_at) : null;
-  const end   = filters?.ended_at   ? formatDate(filters.ended_at)   : null;
+  const end = filters?.ended_at ? formatDate(filters.ended_at) : null;
   const allTime = locale === 'he' ? 'כל הזמן' : 'All time';
   if (start && end) return `${start} – ${end}`;
   if (start) return `${start} –`;
-  if (end)   return `– ${end}`;
+  if (end) return `– ${end}`;
   return allTime;
 }
 
@@ -140,25 +146,25 @@ const MANAGERS_LOG_COLUMNS: Record<ReportLocale, string[]> = {
 };
 
 function buildManagersLogDocument(dataset: ReportDataset, locale: ReportLocale): ReportDocument {
-  const data    = isRecord(dataset.data) ? dataset.data : {};
+  const data = isRecord(dataset.data) ? dataset.data : {};
   const rawRows = Array.isArray(data['rows']) ? data['rows'] : [];
 
   const rows: string[][] = rawRows.map((row) => {
     if (!isRecord(row)) return ['', '', '', '', ''];
     return [
       row['created_at'] ? formatDate(String(row['created_at'])) : '—',
-      String(row['action']          ?? '—'),
+      String(row['action'] ?? '—'),
       String(row['target_username'] ?? '—'),
-      String(row['actor_username']  ?? '—'),
-      String(row['actor_role']      ?? '—'),
+      String(row['actor_username'] ?? '—'),
+      String(row['actor_role'] ?? '—'),
     ];
   });
 
   return {
-    title:    REPORT_TITLES[locale].managers_log,
-    type:     'managers_log',
+    title: REPORT_TITLES[locale].managers_log,
+    type: 'managers_log',
     locale,
-    period:   safePeriod(dataset.filters, locale),
+    period: safePeriod(dataset.filters, locale),
     filename: `managers-log-${new Date().toISOString().slice(0, 10)}.pdf`,
     table: {
       columns: MANAGERS_LOG_COLUMNS[locale],
@@ -173,7 +179,7 @@ const BETS_LOG_COLUMNS: Record<ReportLocale, string[]> = {
 };
 
 function buildBetsLogDocument(dataset: ReportDataset, locale: ReportLocale): ReportDocument {
-  const data    = isRecord(dataset.data) ? dataset.data : {};
+  const data = isRecord(dataset.data) ? dataset.data : {};
   const rawRows = Array.isArray(data['rows']) ? data['rows'] : [];
 
   const rows: string[][] = rawRows.map((row) => {
@@ -181,7 +187,7 @@ function buildBetsLogDocument(dataset: ReportDataset, locale: ReportLocale): Rep
     const market = String(row['market_description'] ?? '—');
     return [
       row['placed_at'] ? formatDate(String(row['placed_at'])) : '—',
-      String(row['user_username']    ?? '—'),
+      String(row['user_username'] ?? '—'),
       String(row['manager_username'] ?? '—'),
       market.length > 35 ? `${market.slice(0, 35)}…` : market,
       formatNum(row['stake']),
@@ -192,10 +198,10 @@ function buildBetsLogDocument(dataset: ReportDataset, locale: ReportLocale): Rep
   });
 
   return {
-    title:    REPORT_TITLES[locale].bets_log,
-    type:     'bets_log',
+    title: REPORT_TITLES[locale].bets_log,
+    type: 'bets_log',
     locale,
-    period:   safePeriod(dataset.filters, locale),
+    period: safePeriod(dataset.filters, locale),
     filename: `bets-log-${new Date().toISOString().slice(0, 10)}.pdf`,
     table: {
       columns: BETS_LOG_COLUMNS[locale],
@@ -204,22 +210,28 @@ function buildBetsLogDocument(dataset: ReportDataset, locale: ReportLocale): Rep
   };
 }
 
-const DASHBOARD_KPIS: Record<ReportLocale, {
-  total: string; exposure: string; profit: string;
-  payouts: string; stakes: string;
-}> = {
+const DASHBOARD_KPIS: Record<
+  ReportLocale,
+  {
+    total: string;
+    exposure: string;
+    profit: string;
+    payouts: string;
+    stakes: string;
+  }
+> = {
   he: {
-    total:   'סך נקודות במערכת',
-    exposure:'חשיפה פתוחה',
-    profit:  'רווח מערכת',
-    stakes:  'סך ניתוח שנגבה',
+    total: 'סך נקודות במערכת',
+    exposure: 'חשיפה פתוחה',
+    profit: 'רווח מערכת',
+    stakes: 'סך ניתוח שנגבה',
     payouts: 'שולם לזוכים',
   },
   en: {
-    total:   'Total System Points',
-    exposure:'Open Exposure',
-    profit:  'System Profit',
-    stakes:  'Total Stakes Collected',
+    total: 'Total System Points',
+    exposure: 'Open Exposure',
+    profit: 'System Profit',
+    stakes: 'Total Stakes Collected',
     payouts: 'Paid out to winners',
   },
 };
@@ -234,42 +246,98 @@ const DASHBOARD_ROWS: Record<ReportLocale, string[]> = {
   en: ['Users', 'Managers', 'Markets'],
 };
 
-function buildSystemDashboardDocument(dataset: ReportDataset, locale: ReportLocale): ReportDocument {
-  const data   = isRecord(dataset.data) ? dataset.data : {};
-  const kpis   = isRecord(data['kpis'])   ? data['kpis']   : {};
+function buildSystemDashboardDocument(
+  dataset: ReportDataset,
+  locale: ReportLocale
+): ReportDocument {
+  const data = isRecord(dataset.data) ? dataset.data : {};
+  const kpis = isRecord(data['kpis']) ? data['kpis'] : {};
   const counts = isRecord(data['counts']) ? data['counts'] : {};
   const labels = DASHBOARD_KPIS[locale];
   const rowLabels = DASHBOARD_ROWS[locale];
 
   return {
-    title:    REPORT_TITLES[locale].system_dashboard,
-    type:     'system_dashboard',
+    title: REPORT_TITLES[locale].system_dashboard,
+    type: 'system_dashboard',
     locale,
-    period:   safePeriod(dataset.filters, locale),
+    period: safePeriod(dataset.filters, locale),
     filename: `system-dashboard-${new Date().toISOString().slice(0, 10)}.pdf`,
     kpis: [
-      { label: labels.total,    value: formatNum(kpis['total_system_points'])     },
-      { label: labels.exposure, value: formatNum(kpis['open_exposure'])           },
-      { label: labels.stakes,   value: formatNum(kpis['total_stakes_collected'])  },
-      { label: labels.payouts,  value: formatNum(kpis['total_payouts_to_winners'])},
-      { label: labels.profit,   value: formatNum(kpis['system_profit'])           },
+      { label: labels.total, value: formatNum(kpis['total_system_points']) },
+      { label: labels.exposure, value: formatNum(kpis['open_exposure']) },
+      { label: labels.stakes, value: formatNum(kpis['total_stakes_collected']) },
+      { label: labels.payouts, value: formatNum(kpis['total_payouts_to_winners']) },
+      { label: labels.profit, value: formatNum(kpis['system_profit']) },
     ],
     table: {
       columns: DASHBOARD_COLUMNS[locale],
       rows: [
-        [rowLabels[0], String(counts['users']    ?? '0')],
+        [rowLabels[0], String(counts['users'] ?? '0')],
         [rowLabels[1], String(counts['managers'] ?? '0')],
-        [rowLabels[2], String(counts['markets']  ?? '0')],
+        [rowLabels[2], String(counts['markets'] ?? '0')],
       ],
     },
   };
 }
 
-export function buildReportDocument(dataset: ReportDataset, locale: ReportLocale = 'en'): ReportDocument {
+const MANAGERS_REPORT_COLUMNS: Record<ReportLocale, string[]> = {
+  he: ['מנהל', 'הפקדות', 'משיכות', 'רווח'],
+  en: ['Manager', 'Deposits', 'Withdrawals', 'Profit'],
+};
+
+function buildManagersReportDocument(dataset: ReportDataset, locale: ReportLocale): ReportDocument {
+  const data = isRecord(dataset.data) ? dataset.data : {};
+  const rawRows = Array.isArray(data['rows']) ? data['rows'] : [];
+  const totals = isRecord(data['totals']) ? data['totals'] : {};
+
+  const rows: string[][] = rawRows.map((row) => {
+    if (!isRecord(row)) return ['', '', '', ''];
+    const name = row['manager_full_name']
+      ? String(row['manager_full_name'])
+      : `@${String(row['manager_username'] ?? '—')}`;
+    return [
+      name,
+      formatNum(row['deposits']),
+      formatNum(row['withdrawals']),
+      formatNum(row['profit']),
+    ];
+  });
+
+  // Append a TOTAL row.
+  const totalLabel = locale === 'he' ? 'סה"כ' : 'Total';
+  rows.push([
+    totalLabel,
+    formatNum(totals['deposits']),
+    formatNum(totals['withdrawals']),
+    formatNum(totals['profit']),
+  ]);
+
+  return {
+    title: REPORT_TITLES[locale].managers_report,
+    type: 'managers_report',
+    locale,
+    period: safePeriod(dataset.filters, locale),
+    filename: `managers-report-${new Date().toISOString().slice(0, 10)}.pdf`,
+    table: {
+      columns: MANAGERS_REPORT_COLUMNS[locale],
+      rows,
+    },
+  };
+}
+
+export function buildReportDocument(
+  dataset: ReportDataset,
+  locale: ReportLocale = 'en'
+): ReportDocument {
   switch (dataset.report_type) {
-    case 'managers_log':     return buildManagersLogDocument(dataset, locale);
-    case 'bets_log':         return buildBetsLogDocument(dataset, locale);
-    case 'system_dashboard': return buildSystemDashboardDocument(dataset, locale);
+    case 'managers_log':
+      return buildManagersLogDocument(dataset, locale);
+    case 'bets_log':
+      return buildBetsLogDocument(dataset, locale);
+    case 'system_dashboard':
+      return buildSystemDashboardDocument(dataset, locale);
+    case 'managers_report':
+      return buildManagersReportDocument(dataset, locale);
     default:
       throw new Error(`Unsupported report_type: ${dataset.report_type}`);
   }

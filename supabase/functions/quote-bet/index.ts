@@ -168,7 +168,9 @@ Deno.serve(async (req: Request) => {
         asks: asksFlat,
         bids: bidsFlat,
         hash: book.hash ?? null,
-        updated_at: nowIso,
+        // updated_at is stamped by the DB trigger trg_market_outcome_books_touch
+        // (migration 20260609131610) using the Postgres clock, so place_bet's
+        // staleness guard never sees edge↔db clock skew. Do not send it here.
       },
       { onConflict: 'polymarket_token_id' }
     );
