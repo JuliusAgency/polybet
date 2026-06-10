@@ -10,4 +10,20 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Store the auth session in sessionStorage rather than the supabase-js default
+// (localStorage). This scopes the access/refresh token to the browser tab and
+// clears it on tab close, shrinking the window in which an XSS payload or a
+// malicious extension can exfiltrate a live session. Trade-off: users must
+// re-authenticate when they open a fresh tab. Falls back to the in-memory
+// default if sessionStorage is unavailable (e.g. hardened private modes).
+const authStorage =
+  typeof window !== 'undefined' && window.sessionStorage ? window.sessionStorage : undefined;
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    storage: authStorage,
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+  },
+});

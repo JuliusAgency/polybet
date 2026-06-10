@@ -57,6 +57,14 @@ Deno.serve(async (req: Request) => {
 
   const { role, fullName, username, password, phone, notes, margin } = body;
 
+  // Bound-check margin (managers only) to prevent mass-assignment of an
+  // arbitrary value. Margin is a fraction in [0, 1].
+  if (margin !== undefined && margin !== null) {
+    if (typeof margin !== 'number' || !Number.isFinite(margin) || margin < 0 || margin > 1) {
+      return jsonWithCors({ error: 'invalid_margin' }, 400);
+    }
+  }
+
   // ── 3. Authorize caller ───────────────────────────────────────────────────
   const authResult = await authorizeEdgeCall(req, {
     allowedRoles: ['super_admin', 'manager'],
