@@ -2,14 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { withTransaction } from '../helpers/pg';
 import { seedEventWithMarket, seedOutcome } from '../factories';
 
-// Coverage for migration 20260609132406_managers_report_dataset:
-// admin_build_managers_report_dataset(start, end) returns per-manager
-// Deposits / Withdrawals / Profit for a period.
+// Coverage for migration 20260610115136_managers_report_profit_formula
+// (supersedes 20260609132406): admin_build_managers_report_dataset(start, end)
+// returns per-manager Deposits / Withdrawals / Profit for a period.
 //
 //   Deposits    = manager-initiated balance_transactions type='adjustment' (+)
 //   Withdrawals = manager-initiated type='transfer' magnitude (stored -, reported +)
-//   Profit      = house settlement P/L on the group's positions SETTLED in window
-//                 (won: shares*avg_price - shares ; lost: shares*avg_price)
+//   Profit      = Deposits - Withdrawals (spec: Net Profit Calculator).
+//                 Positions/settlements do NOT participate (QA fix 2026-06-10).
 //
 // Uses the seeded manager (0002) -> user1 (0003) link and asserts on DELTAS so it
 // is independent of any baseline rows in the window. Everything rolls back.
@@ -44,8 +44,8 @@ async function managerRow(
   };
 }
 
-describe('admin_build_managers_report_dataset (migration 20260609132406)', () => {
-  it('aggregates deposits, withdrawals and house profit per manager within the period', async () => {
+describe('admin_build_managers_report_dataset (migration 20260610115136)', () => {
+  it('aggregates deposits, withdrawals and profit = deposits - withdrawals within the period', async () => {
     await withTransaction(async (c) => {
       const before = await managerRow(c);
 
@@ -59,6 +59,8 @@ describe('admin_build_managers_report_dataset (migration 20260609132406)', () =>
 
       // One won + one lost position settled inside the window, for the linked
       // user. Distinct outcomes — positions are UNIQUE per (user_id, outcome_id).
+      // Deliberately kept seeded: regression guard proving settlements no longer
+      // leak into profit (the old house-P/L formula would have added -20).
       const { market } = await seedEventWithMarket(c);
       const wonOutcome = await seedOutcome(c, { market_id: market.id, name: 'Yes' });
       const lostOutcome = await seedOutcome(c, { market_id: market.id, name: 'No' });
@@ -75,8 +77,9 @@ describe('admin_build_managers_report_dataset (migration 20260609132406)', () =>
       expect(after.deposits - before.deposits).toBeCloseTo(1000, 6);
       expect(after.withdrawals - before.withdrawals).toBeCloseTo(400, 6);
 
-      // House profit: won -> 100*0.6 - 100 = -40 ; lost -> 50*0.4 = +20 ; net -20.
-      expect(after.profit - before.profit).toBeCloseTo(-20, 6);
+      // Profit = deposits - withdrawals: 1000 - 400 = 600. The settled positions
+      // above must NOT shift this (old formula would have produced 600 - 20).
+      expect(after.profit - before.profit).toBeCloseTo(600, 6);
     });
   });
 
@@ -93,6 +96,7 @@ describe('admin_build_managers_report_dataset (migration 20260609132406)', () =>
 
       const after = await managerRow(c);
       expect(after.deposits - before.deposits).toBeCloseTo(0, 6);
+      expect(after.profit - before.profit).toBeCloseTo(0, 6);
     });
   });
 });
