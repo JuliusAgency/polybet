@@ -29,7 +29,7 @@ export type EdgeAuthorizationResult =
 
 export function authorizeEdgeRequest(
   context: EdgeAuthorizationContext,
-  options: EdgeAuthorizationOptions = {},
+  options: EdgeAuthorizationOptions = {}
 ): EdgeAuthorizationResult {
   const { allowServiceRole = false, allowedRoles } = options;
 
@@ -51,10 +51,13 @@ export function authorizeEdgeRequest(
   }
 
   if (context.profileError) {
+    // Log the raw DB/PostgREST error server-side only; never leak schema
+    // details (table/column/constraint names) to the caller.
+    console.error('[edgeAuth] profile lookup failed:', context.profileError);
     return {
       ok: false,
       status: 500,
-      body: { error: 'internal_error', details: context.profileError },
+      body: { error: 'internal_error' },
     };
   }
 

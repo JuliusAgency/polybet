@@ -5,24 +5,10 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>polybet</title>
-    <script>
-      // Resolve theme before paint to avoid flash of wrong theme.
-      // Mirror logic in ThemeProvider; keep the storage key in sync with
-      // THEME_STORAGE_KEY and the default with THEME_DEFAULT in
-      // src/shared/theme/const.ts.
-      (function () {
-        var theme = 'light';
-        try {
-          var stored = localStorage.getItem('polybet-theme');
-          if (stored === 'light' || stored === 'dark') {
-            theme = stored;
-          }
-        } catch (_e) {
-          // localStorage may be unavailable (private mode, sandbox) — fall through to default.
-        }
-        document.documentElement.setAttribute('data-theme', theme);
-      })();
-    </script>
+    <!-- Theme-before-paint (FOUC prevention). Externalised so the production
+         CSP can keep script-src 'self' without 'unsafe-inline'. Render-blocking
+         in <head> on purpose, so it runs before first paint. -->
+    <script src="/theme-init.js"></script>
   </head>
   <body>
     <div id="root"></div>

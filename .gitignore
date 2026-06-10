@@ -36,3 +36,6 @@ dist-ssr
 /blob-report/
 /playwright/.cache/
 /e2e/.auth/
+
+# Supabase CLI local link state (project ref / pooler url) — never commit
+supabase/.temp/

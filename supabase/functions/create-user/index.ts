@@ -90,7 +90,8 @@ Deno.serve(async (req: Request) => {
     .maybeSingle();
 
   if (usernameCheckErr) {
-    return jsonWithCors({ error: 'internal_error', details: usernameCheckErr.message }, 500);
+    console.error('[create-user] username check failed:', usernameCheckErr.message);
+    return jsonWithCors({ error: 'internal_error' }, 500);
   }
 
   if (existingProfile) {
@@ -105,10 +106,11 @@ Deno.serve(async (req: Request) => {
   });
 
   if (createAuthErr || !newAuthUser?.user) {
-    return jsonWithCors(
-      { error: 'internal_error', details: createAuthErr?.message ?? 'Failed to create auth user' },
-      500
+    console.error(
+      '[create-user] auth.admin.createUser failed:',
+      createAuthErr?.message ?? 'no user returned'
     );
+    return jsonWithCors({ error: 'internal_error' }, 500);
   }
 
   const newUserId = newAuthUser.user.id;
@@ -138,7 +140,8 @@ Deno.serve(async (req: Request) => {
   if (profileInsertErr) {
     // Attempt cleanup: remove the auth user we just created
     await adminClient.auth.admin.deleteUser(newUserId);
-    return jsonWithCors({ error: 'internal_error', details: profileInsertErr.message }, 500);
+    console.error('[create-user] profiles insert failed:', profileInsertErr.message);
+    return jsonWithCors({ error: 'internal_error' }, 500);
   }
 
   // ── 11. Role-specific inserts ─────────────────────────────────────────────
@@ -155,7 +158,8 @@ Deno.serve(async (req: Request) => {
       // Attempt cleanup
       await adminClient.from('profiles').delete().eq('id', newUserId);
       await adminClient.auth.admin.deleteUser(newUserId);
-      return jsonWithCors({ error: 'internal_error', details: managerInsertErr.message }, 500);
+      console.error('[create-user] managers insert failed:', managerInsertErr.message);
+      return jsonWithCors({ error: 'internal_error' }, 500);
     }
   } else {
     // role === 'user'
@@ -169,7 +173,8 @@ Deno.serve(async (req: Request) => {
         // Attempt cleanup
         await adminClient.from('profiles').delete().eq('id', newUserId);
         await adminClient.auth.admin.deleteUser(newUserId);
-        return jsonWithCors({ error: 'internal_error', details: linkInsertErr.message }, 500);
+        console.error('[create-user] manager_user_links insert failed:', linkInsertErr.message);
+        return jsonWithCors({ error: 'internal_error' }, 500);
       }
     }
     // If super_admin creates a user, skip manager_user_links (not applicable in this sprint)
@@ -187,15 +192,17 @@ Deno.serve(async (req: Request) => {
       }
       await adminClient.from('profiles').delete().eq('id', newUserId);
       await adminClient.auth.admin.deleteUser(newUserId);
-      return jsonWithCors({ error: 'internal_error', details: balanceInsertErr.message }, 500);
+      console.error('[create-user] balances insert failed:', balanceInsertErr.message);
+      return jsonWithCors({ error: 'internal_error' }, 500);
     }
   }
 
   // ── 12. Return success ────────────────────────────────────────────────────
+  // Do NOT echo the password back: the caller supplied it and it would
+  // otherwise be captured in edge-function request/response logs.
   return jsonWithCors({
     success: true,
     id: newUserId,
     username,
-    generatedPassword: password,
   });
 });
