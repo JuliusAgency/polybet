@@ -33,6 +33,8 @@ export interface BetLogRow {
   market_description: string;
   /** Polymarket market slug; null for markets synced without a slug. */
   polymarket_slug: string | null;
+  /** Polymarket EVENT slug (events.slug); null when the market has no linked event. */
+  polymarket_event_slug: string | null;
   outcome_name: string;
 }
 

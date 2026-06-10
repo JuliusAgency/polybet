@@ -8,7 +8,7 @@ import { useManagers } from '@/features/admin/managers';
 import { useBetLog } from '@/features/admin/bet-log';
 import type { BetStatus } from '@/features/admin/bet-log';
 import { FinancialTransactionsTable } from '@/widgets/FinancialTransactionsTable';
-import { formatSharePrice, polymarketEventUrl } from '@/shared/utils';
+import { formatSharePrice, polymarketMarketUrl } from '@/shared/utils';
 import type { DbSyncRun } from '@/shared/types/database';
 import { SyncMarketsModal } from './components/SyncMarketsModal';
 
@@ -273,9 +273,12 @@ const GlobalBetLogPage = () => {
                               row.market_description.length > 40
                                 ? `${row.market_description.slice(0, 40)}…`
                                 : row.market_description;
-                            return row.polymarket_slug ? (
+                            return row.polymarket_event_slug ? (
                               <ExternalLink
-                                href={polymarketEventUrl(row.polymarket_slug)}
+                                href={polymarketMarketUrl(
+                                  row.polymarket_event_slug,
+                                  row.polymarket_slug
+                                )}
                                 aria-label={`${t('globalLog.openInPolymarket')}: ${row.market_description}`}
                               >
                                 {label}
