@@ -24,10 +24,12 @@ export const CredentialCard = ({ username, password, onDone }: CredentialCardPro
   });
 
   useEffect(() => {
+    // Snapshot the ref so cleanup uses the value from when the effect ran.
+    const timers = timersRef.current;
     return () => {
       // Clear all pending timers when the component unmounts
-      if (timersRef.current.username) clearTimeout(timersRef.current.username);
-      if (timersRef.current.password) clearTimeout(timersRef.current.password);
+      if (timers.username) clearTimeout(timers.username);
+      if (timers.password) clearTimeout(timers.password);
     };
   }, []);
 

@@ -64,7 +64,7 @@ const EventDetailPage = ({ readonly = false }: EventDetailPageProps = {}) => {
 
   const handleOutcomeClick = useCallback((market: Market, outcome: MarketOutcome) => {
     setSelectedBet({ market, outcome });
-  }, []);
+  }, [setSelectedBet]);
 
   // Archive is an admin-only action available on the read-only detail view for
   // resolved markets. Managers do not archive (mirrors the manager Markets page,

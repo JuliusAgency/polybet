@@ -75,7 +75,7 @@ const SavedMarketsPage = () => {
 
   const handleOutcomeClick = useCallback((market: Market, outcome: MarketOutcome) => {
     setSelectedBet({ market, outcome });
-  }, []);
+  }, [setSelectedBet]);
 
   const handleBetSuccess = () => {
     setSelectedBet(null);

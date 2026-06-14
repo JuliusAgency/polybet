@@ -355,8 +355,7 @@ export async function renderTablePdf(doc: ReportDocument): Promise<Uint8Array> {
   const isRTL = doc.locale === 'he';
 
   const pdfDoc = await PDFDocument.create();
-  // deno-lint-ignore no-explicit-any
-  pdfDoc.registerFontkit(fontkit as any);
+  pdfDoc.registerFontkit(fontkit as Parameters<typeof pdfDoc.registerFontkit>[0]);
 
   const fontBytes = loadHebrewFont();
   const font = await pdfDoc.embedFont(fontBytes);

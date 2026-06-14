@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   useSystemSetting,
@@ -19,11 +19,13 @@ export const SettingsPage = () => {
   const [inputValue, setInputValue] = useState<string>(String(DEFAULT_ARCHIVE_AFTER_HOURS));
   const [saved, setSaved] = useState(false);
 
-  useEffect(() => {
-    if (archiveAfterHoursValue != null) {
-      setInputValue(String(archiveAfterHoursValue));
-    }
-  }, [archiveAfterHoursValue]);
+  // Sync the input with the persisted value once it loads (and on later
+  // changes), adjusting state during render instead of in an effect.
+  const [syncedValue, setSyncedValue] = useState<number | null>(null);
+  if (archiveAfterHoursValue != null && archiveAfterHoursValue !== syncedValue) {
+    setSyncedValue(archiveAfterHoursValue);
+    setInputValue(String(archiveAfterHoursValue));
+  }
 
   const handleSave = () => {
     const parsed = parseInt(inputValue, 10);

@@ -3,7 +3,6 @@
 // Called by the frontend every ~30s for currently visible markets.
 // Auth: authenticated user (any role) — no admin required.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { authorizeEdgeCall } from '../_shared/edgeAuth.ts';
 import { buildCorsPreflightResponse, jsonWithCors } from '../_shared/cors.ts';
 import { fetchGammaMarketsByConditionIds, buildConditionIdsUrl } from '../_shared/gammaUrls.ts';

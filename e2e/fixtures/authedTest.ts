@@ -10,14 +10,17 @@ import type { TestUserKey } from './users';
 const ROLE: TestUserKey = 'user1';
 
 export const test = base.extend({
-  context: async ({ context }, use) => {
+  // Playwright passes the fixture callback positionally; name it `provide`
+  // (not `use`) so the react-hooks lint rule doesn't mistake it for React's
+  // `use` hook.
+  context: async ({ context }, provide) => {
     const entries = readSessionStorage(ROLE);
     await context.addInitScript((snapshot: Record<string, string>) => {
       for (const [key, value] of Object.entries(snapshot)) {
         window.sessionStorage.setItem(key, value);
       }
     }, entries);
-    await use(context);
+    await provide(context);
   },
 });
 

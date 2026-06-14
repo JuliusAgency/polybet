@@ -70,10 +70,10 @@ export const MarketCard = ({
     market.polymarket_id ? [market.polymarket_id] : [],
     false
   );
-  useTicker(10_000);
+  const now = useTicker(10_000);
 
   const isStale = market.last_synced_at
-    ? Date.now() - new Date(market.last_synced_at).getTime() > MARKETS_STALE_THRESHOLD_MS
+    ? now - new Date(market.last_synced_at).getTime() > MARKETS_STALE_THRESHOLD_MS
     : true;
   const effectiveStatus = getMarketEffectiveStatus(market);
   const isInteractive = mode === 'interactive' && effectiveStatus === 'open';

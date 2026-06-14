@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   useMarkets,
@@ -63,17 +63,22 @@ const MarketsFeedPage = () => {
   const TAB_TRANSITION_MS = 280;
   const [isTabTransitioning, setIsTabTransitioning] = useState(false);
   const tabKey = `${tagSlug ?? 'all'}|${myBetsOnly ? 'mb' : ''}|${savedOnly ? 'sv' : ''}`;
-  const lastTabKeyRef = useRef(tabKey);
-  useEffect(() => {
-    if (lastTabKeyRef.current === tabKey) return;
-    lastTabKeyRef.current = tabKey;
+  const [lastTabKey, setLastTabKey] = useState(tabKey);
+  // Adjust state during render when the tab changes (React's recommended
+  // pattern over a setState-in-effect): flips the skeleton on immediately.
+  if (lastTabKey !== tabKey) {
+    setLastTabKey(tabKey);
     setIsTabTransitioning(true);
+  }
+  // Clear the flag after a max window once a transition starts...
+  useEffect(() => {
+    if (!isTabTransitioning) return;
     const id = window.setTimeout(() => setIsTabTransitioning(false), TAB_TRANSITION_MS);
     return () => window.clearTimeout(id);
-  }, [tabKey]);
-  // Also drop the flag immediately as soon as the underlying query reports
-  // it's no longer fetching — so when data arrives faster than the timeout,
-  // we don't keep an empty skeleton on screen.
+  }, [isTabTransitioning]);
+  // ...or immediately as soon as the underlying query reports it's no longer
+  // fetching — so when data arrives faster than the timeout, we don't keep an
+  // empty skeleton on screen.
   useEffect(() => {
     if (!isFetching && isTabTransitioning) {
       const id = window.setTimeout(() => setIsTabTransitioning(false), 80);
@@ -145,7 +150,7 @@ const MarketsFeedPage = () => {
 
   const handleOutcomeClick = useCallback((market: Market, outcome: MarketOutcome) => {
     setSelectedBet({ market, outcome });
-  }, []);
+  }, [setSelectedBet]);
 
   const handleBetSuccess = () => {
     setSelectedBet(null);
@@ -181,9 +186,11 @@ const MarketsFeedPage = () => {
   // can avoid collapsing into the single Yes/No visual when only one market
   // is currently open but the event was originally multi-choice. Reuses the
   // same RPC + cache as EventBookmarkButton (`['event-market-counts', ...]`).
-  const eventIdsInFeed = useMemo(
-    () => feedItems.flatMap((item) => (item.type === 'event' ? [item.event.id] : [])),
-    [feedItems]
+  // Recomputed each render; React Compiler memoizes it, and useEventMarketCounts
+  // keys on the array by value (TanStack Query hashes the key) so identity churn
+  // does not cause extra refetches.
+  const eventIdsInFeed = feedItems.flatMap((item) =>
+    item.type === 'event' ? [item.event.id] : []
   );
   const { data: eventMarketCounts } = useEventMarketCounts(eventIdsInFeed);
 

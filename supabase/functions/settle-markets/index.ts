@@ -127,8 +127,7 @@ Deno.serve(async (req: Request) => {
 // then resolves it to our internal outcome id.
 
 async function lookupWinnerFromGamma(
-  // deno-lint-ignore no-explicit-any
-  supabase: SupabaseClient<any>,
+  supabase: SupabaseClient,
   marketId: string,
   polymarketId: string
 ): Promise<string | undefined> {

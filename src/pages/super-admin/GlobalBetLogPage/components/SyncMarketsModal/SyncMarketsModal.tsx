@@ -24,7 +24,10 @@ export const SyncMarketsModal = ({ isOpen, onClose, onCompleted }: SyncMarketsMo
   const runQuery = useSyncRun(runId);
   const reportedRunIdRef = useRef<string | null>(null);
   const onCompletedRef = useRef(onCompleted);
-  onCompletedRef.current = onCompleted;
+  // Keep the latest callback in a ref without writing to it during render.
+  useEffect(() => {
+    onCompletedRef.current = onCompleted;
+  }, [onCompleted]);
 
   const run = runQuery.data;
   const isRunTerminal = run ? isSyncRunTerminal(run.status) : false;
@@ -69,7 +72,11 @@ export const SyncMarketsModal = ({ isOpen, onClose, onCompleted }: SyncMarketsMo
 
   useEffect(() => {
     if (isOpen) return;
-
+    // Legitimate reset-on-close: the modal can be closed externally (parent
+    // flips isOpen), so cleanup must react to isOpen rather than live in a
+    // click handler. It also resets a mutation and clears a ref, which cannot
+    // run during render — an effect is the correct home.
+    /* eslint-disable-next-line react-hooks/set-state-in-effect */
     setRunId(null);
     setSelectedMaxPages(1);
     resetMutation();

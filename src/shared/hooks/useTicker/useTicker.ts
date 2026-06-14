@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
 
-/** Forces a re-render every `intervalMs` milliseconds.
- *  Use in components that display relative time labels ("X seconds ago"). */
-export function useTicker(intervalMs: number): void {
-  const [, setTick] = useState(0);
+/** Re-renders every `intervalMs` milliseconds and returns the timestamp of the
+ *  latest tick. Use in components that display relative time labels
+ *  ("X seconds ago") — read the returned value instead of calling `Date.now()`
+ *  during render (which is impure). */
+export function useTicker(intervalMs: number): number {
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    const id = setInterval(() => setTick((n) => n + 1), intervalMs);
+    const id = setInterval(() => setNow(Date.now()), intervalMs);
     return () => clearInterval(id);
   }, [intervalMs]);
+  return now;
 }
