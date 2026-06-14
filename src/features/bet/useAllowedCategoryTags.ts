@@ -12,6 +12,7 @@ export interface AllowedCategoryTag {
 // services/market-tracker/src/config.ts CATEGORY_WHITELIST.
 const FALLBACK_TAGS: AllowedCategoryTag[] = [
   { slug: 'trending', label: 'Trending', mode: 'featured' },
+  { slug: 'world-cup', label: 'World Cup', mode: 'tag' },
   { slug: 'politics', label: 'Politics', mode: 'tag' },
   { slug: 'world', label: 'World', mode: 'tag' },
   { slug: 'sports', label: 'Sports', mode: 'tag' },

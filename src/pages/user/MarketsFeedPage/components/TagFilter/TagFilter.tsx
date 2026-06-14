@@ -2,6 +2,9 @@ import { useTranslation } from 'react-i18next';
 import { CLOSING_TODAY_TAG_SLUG } from '@/entities/market';
 import type { AllowedCategoryTag } from '@/features/bet';
 import './trendingChip.css';
+import './worldCupChip.css';
+
+const WORLD_CUP_TAG_SLUG = 'world-cup';
 
 interface TagFilterProps {
   value: string | null;
@@ -39,10 +42,14 @@ export function TagFilter({
   // chip (including the "All categories" fallback) should look active.
   const effectiveValue = myBetsActive || savedActive ? undefined : value;
 
-  // Pull Trending out so we can slot "Closing today" directly after it;
-  // the rest keeps Polymarket's original ordering.
+  // Pull Trending and World Cup out so we can render them as signature chips
+  // (cyan flame / gold trophy) and slot "Closing today" right after them; the
+  // rest keeps Polymarket's original ordering.
   const trendingTag = tags.find((tag) => tag.slug === 'trending') ?? null;
-  const restTags = tags.filter((tag) => tag.slug !== 'trending');
+  const worldCupTag = tags.find((tag) => tag.slug === WORLD_CUP_TAG_SLUG) ?? null;
+  const restTags = tags.filter(
+    (tag) => tag.slug !== 'trending' && tag.slug !== WORLD_CUP_TAG_SLUG
+  );
 
   return (
     <div className="mt-2 flex flex-wrap gap-1.5">
@@ -60,6 +67,24 @@ export function TagFilter({
               aria-pressed={isActive}
             >
               <FlameIcon active={isActive} />
+              <span>{label}</span>
+            </button>
+          );
+        })()}
+      {worldCupTag &&
+        (() => {
+          const isActive = effectiveValue === worldCupTag.slug;
+          const label = t(`markets.tags.${worldCupTag.slug}`, {
+            defaultValue: worldCupTag.label,
+          });
+          return (
+            <button
+              key={worldCupTag.slug}
+              onClick={() => onChange(isActive ? null : worldCupTag.slug)}
+              className={`world-cup-chip ${isActive ? 'world-cup-chip--active' : ''}`}
+              aria-pressed={isActive}
+            >
+              <TrophyIcon />
               <span>{label}</span>
             </button>
           );
@@ -172,6 +197,32 @@ function TargetIcon() {
       <circle cx="12" cy="12" r="10" />
       <circle cx="12" cy="12" r="6" />
       <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function TrophyIcon() {
+  // Trophy — reads as "World Cup / championship". Gold is supplied by the
+  // chip's currentColor so it tracks the active/inactive gold states.
+  return (
+    <svg
+      className="world-cup-chip__trophy"
+      width="11"
+      height="11"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+      <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+      <path d="M4 22h16" />
+      <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
+      <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
+      <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
     </svg>
   );
 }

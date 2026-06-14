@@ -1,0 +1,85 @@
+/*
+ * World Cup chip — signature gold variant of the category chip. Same silhouette
+ * as Trending, but shifts the whole chip into a warm gold so it reads as a
+ * premium, time-boxed event category. The gold is a fixed oklch (not derived
+ * from --color-accent) because the category's identity IS the gold — it must
+ * stay gold in both light and dark themes.
+ *
+ * The active text is a dark gold-ink rather than --color-bg-base: gold is a
+ * light colour in both themes, so white text would wash out. Dark ink keeps
+ * the active label legible on the gold fill regardless of theme.
+ */
+
+.world-cup-chip {
+  --world-cup-gold: oklch(78% 0.15 82);
+  --world-cup-ink: oklch(28% 0.06 75);
+
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.125rem 0.7rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  isolation: isolate;
+
+  color: color-mix(in srgb, var(--world-cup-gold) 82%, var(--color-text-primary));
+  background-color: color-mix(in srgb, var(--world-cup-gold) 10%, var(--color-bg-elevated));
+  border: 1px solid color-mix(in srgb, var(--world-cup-gold) 40%, var(--color-border));
+  box-shadow:
+    0 0 0 0 color-mix(in srgb, var(--world-cup-gold) 0%, transparent),
+    inset 0 0 0 0 color-mix(in srgb, var(--world-cup-gold) 0%, transparent);
+
+  transition:
+    background-color 180ms cubic-bezier(0.33, 1, 0.68, 1),
+    border-color 180ms cubic-bezier(0.33, 1, 0.68, 1),
+    color 180ms cubic-bezier(0.33, 1, 0.68, 1),
+    transform 180ms cubic-bezier(0.33, 1, 0.68, 1),
+    box-shadow 220ms cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+.world-cup-chip:hover {
+  background-color: color-mix(in srgb, var(--world-cup-gold) 18%, var(--color-bg-elevated));
+  border-color: color-mix(in srgb, var(--world-cup-gold) 60%, var(--color-border));
+  color: color-mix(in srgb, var(--world-cup-gold) 95%, var(--color-text-primary));
+  transform: translateY(-0.5px);
+  box-shadow:
+    0 0 14px -4px color-mix(in srgb, var(--world-cup-gold) 50%, transparent),
+    inset 0 0 0 0 transparent;
+}
+
+.world-cup-chip:active {
+  transform: translateY(0);
+}
+
+.world-cup-chip--active {
+  color: var(--world-cup-ink);
+  background-color: var(--world-cup-gold);
+  border-color: var(--world-cup-gold);
+  box-shadow:
+    0 0 18px -2px color-mix(in srgb, var(--world-cup-gold) 60%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, white 28%, transparent);
+}
+
+.world-cup-chip--active:hover {
+  background-color: var(--world-cup-gold);
+  color: var(--world-cup-ink);
+  transform: translateY(-0.5px);
+}
+
+.world-cup-chip__trophy {
+  flex-shrink: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .world-cup-chip,
+  .world-cup-chip:hover,
+  .world-cup-chip--active:hover {
+    transform: none;
+    transition-duration: 0ms;
+  }
+}
