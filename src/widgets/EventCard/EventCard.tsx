@@ -5,6 +5,7 @@ import {
   getMarketEffectiveStatus,
   getOrderedOutcomes,
   getYesProbability,
+  getResolvedWinnerOutcome,
   sortMarketsByYesDesc,
 } from '@/entities/market';
 import type { MarketEvent } from '@/entities/event';
@@ -122,9 +123,7 @@ export const EventCard = ({
   const singleEffectiveStatus = singleMarket ? getMarketEffectiveStatus(singleMarket) : null;
   const singleIsInteractive =
     !!singleMarket && mode === 'interactive' && singleEffectiveStatus === 'open';
-  const singleWinner = singleMarket?.winning_outcome_id
-    ? (singleMarket.market_outcomes.find((o) => o.id === singleMarket.winning_outcome_id) ?? null)
-    : null;
+  const singleWinner = singleMarket ? getResolvedWinnerOutcome(singleMarket) : null;
   // Canonical [Yes, No] ordering — see MarketCard rationale.
   const singleOrderedOutcomes = singleMarket ? getOrderedOutcomes(singleMarket) : [];
   const singleOutcomeButtons: OutcomeButton[] = singleOrderedOutcomes.map((o) => ({
@@ -297,9 +296,7 @@ function EventMarketRow({
   const effectiveStatus = getMarketEffectiveStatus(market);
   const isInteractive = mode === 'interactive' && effectiveStatus === 'open';
 
-  const winnerOutcome = market.winning_outcome_id
-    ? (market.market_outcomes.find((o) => o.id === market.winning_outcome_id) ?? null)
-    : null;
+  const winnerOutcome = getResolvedWinnerOutcome(market);
 
   const orderedOutcomes = getOrderedOutcomes(market);
   const outcomeButtons: OutcomeButton[] = orderedOutcomes.map((o) => ({

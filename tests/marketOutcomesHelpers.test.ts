@@ -5,6 +5,7 @@ import {
   getNoOutcome,
   getOrderedOutcomes,
   getYesProbability,
+  getResolvedWinnerOutcome,
   isBinaryMarket,
   sortMarketsByYesDesc,
 } from '../src/entities/market/outcomes';
@@ -53,6 +54,43 @@ test('getNoOutcome handles common negative aliases', () => {
   const no = outcome({ name: ' no ', price: 0.99 });
   const yes = outcome({ name: 'yes', price: 0.01 });
   assert.equal(getNoOutcome(market({ market_outcomes: [no, yes] })), no);
+});
+
+test('getResolvedWinnerOutcome only returns a winner once the market is resolved', () => {
+  const yes = outcome({ name: 'Yes', price: 0.007 });
+  const no = outcome({ name: 'No', price: 0.993 });
+  const outcomes = [yes, no];
+
+  // Open market carrying a stray winning_outcome_id must NOT surface a winner —
+  // otherwise its pill renders the elevated winner tint while still tradable.
+  assert.equal(
+    getResolvedWinnerOutcome(
+      market({ status: 'open', winning_outcome_id: no.id, market_outcomes: outcomes })
+    ),
+    null
+  );
+
+  // Resolved / archived markets do surface the winner.
+  assert.equal(
+    getResolvedWinnerOutcome(
+      market({ status: 'resolved', winning_outcome_id: no.id, market_outcomes: outcomes })
+    ),
+    no
+  );
+  assert.equal(
+    getResolvedWinnerOutcome(
+      market({ status: 'archived', winning_outcome_id: no.id, market_outcomes: outcomes })
+    ),
+    no
+  );
+
+  // Resolved with no recorded winner stays null.
+  assert.equal(
+    getResolvedWinnerOutcome(
+      market({ status: 'resolved', winning_outcome_id: null, market_outcomes: outcomes })
+    ),
+    null
+  );
 });
 
 test('getOrderedOutcomes always returns [Yes, No] for binary markets', () => {

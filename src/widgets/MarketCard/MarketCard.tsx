@@ -5,6 +5,7 @@ import {
   getMarketEffectiveStatus,
   getOrderedOutcomes,
   getYesProbability,
+  getResolvedWinnerOutcome,
   isBinaryMarket,
 } from '@/entities/market';
 import type { MyBet } from '@/entities/bet';
@@ -78,9 +79,9 @@ export const MarketCard = ({
   const effectiveStatus = getMarketEffectiveStatus(market);
   const isInteractive = mode === 'interactive' && effectiveStatus === 'open';
 
-  const winnerOutcome = market.winning_outcome_id
-    ? (market.market_outcomes.find((o) => o.id === market.winning_outcome_id) ?? null)
-    : null;
+  // Winner tint follows resolution, not a stray winning_outcome_id on an open
+  // market — see getResolvedWinnerOutcome.
+  const winnerOutcome = getResolvedWinnerOutcome(market);
 
   // Canonical [Yes, No] order — OutcomeButtons relies on index 0 == Yes for
   // colours and the long-tail dimming. Without this, a market whose embedded

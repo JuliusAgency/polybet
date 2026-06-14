@@ -4,8 +4,27 @@ const YES_NAMES = new Set(['yes', 'true', 'long']);
 const NO_NAMES = new Set(['no', 'false', 'short']);
 
 type OutcomesHolder = Pick<Market, 'market_outcomes'>;
+type WinnerHolder = Pick<Market, 'status' | 'winning_outcome_id' | 'market_outcomes'>;
 
 const normalize = (s: string) => s.trim().toLowerCase();
+
+/**
+ * The winning outcome of a market — but ONLY once the market is genuinely
+ * resolved (or archived after resolution).
+ *
+ * Polymarket can populate `winning_outcome_id` on a market whose status is
+ * still `open` (e.g. an eliminated team's "Will X win?" market that hasn't
+ * flipped to `resolved` yet). Deriving the winner from `winning_outcome_id`
+ * alone then paints that outcome's pill with the elevated winner tint while the
+ * market is still tradable — so the "Buy"/"Buy No" buttons of such rows render
+ * a different colour from their open peers. Gating on resolved status keeps the
+ * winner highlight tied to a settled market and the open rows visually uniform.
+ */
+export function getResolvedWinnerOutcome(market: WinnerHolder): MarketOutcome | null {
+  if (market.status !== 'resolved' && market.status !== 'archived') return null;
+  if (!market.winning_outcome_id) return null;
+  return market.market_outcomes.find((o) => o.id === market.winning_outcome_id) ?? null;
+}
 
 export function isBinaryMarket(market: OutcomesHolder): boolean {
   return market.market_outcomes.length === 2;

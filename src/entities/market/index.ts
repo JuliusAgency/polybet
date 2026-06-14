@@ -9,6 +9,7 @@ export {
   getNoOutcome,
   getOrderedOutcomes,
   getYesProbability,
+  getResolvedWinnerOutcome,
   sortMarketsByYesDesc,
 } from './outcomes';
 export { TRENDING_TAG_SLUG, CLOSING_TODAY_TAG_SLUG } from './tagSlugs';

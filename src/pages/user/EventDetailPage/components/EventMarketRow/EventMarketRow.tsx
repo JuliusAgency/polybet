@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import type { Market, MarketOutcome } from '@/entities/market';
-import { getOrderedOutcomes, getYesProbability } from '@/entities/market';
+import { getOrderedOutcomes, getYesProbability, getResolvedWinnerOutcome } from '@/entities/market';
 import type { MyBet } from '@/entities/bet';
 import { Badge } from '@/shared/ui/Badge';
 import { BookmarkButton } from '@/shared/ui/BookmarkButton';
@@ -41,9 +41,10 @@ export const EventMarketRow = ({
   const effectiveStatus = market.status;
   const isInteractive = mode === 'interactive' && effectiveStatus === 'open';
 
-  const winnerOutcome = market.winning_outcome_id
-    ? (market.market_outcomes.find((o) => o.id === market.winning_outcome_id) ?? null)
-    : null;
+  // Winner tint must follow resolution, not a stray winning_outcome_id on an
+  // open market — otherwise that row's pills render a different colour. See
+  // getResolvedWinnerOutcome.
+  const winnerOutcome = getResolvedWinnerOutcome(market);
 
   const orderedOutcomes = getOrderedOutcomes(market);
   // Polymarket parity: every outcome with a CLOB token stays clickable. The
