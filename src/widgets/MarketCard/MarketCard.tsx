@@ -160,7 +160,6 @@ export const MarketCard = ({
             appearance={outcomeAppearance}
             showPercentage={false}
             hoverShowsPercentage
-            longTail={false}
             onClick={
               isInteractive && onOutcomeClick
                 ? (outcomeId) => {

@@ -6,7 +6,6 @@ import {
   getOrderedOutcomes,
   getYesProbability,
   isBinaryMarket,
-  isLongTailMarket,
   sortMarketsByYesDesc,
 } from '../src/entities/market/outcomes';
 import type { Market, MarketOutcome } from '../src/entities/market/types';
@@ -96,31 +95,6 @@ test('getYesProbability returns the Yes-side price', () => {
   const no = outcome({ name: 'No', price: 0.58 });
   assert.equal(getYesProbability(market({ market_outcomes: [no, yes] })), 0.42);
   assert.equal(getYesProbability(market({ market_outcomes: [no] })), null);
-});
-
-test('isLongTailMarket trips on closed status even when price is high', () => {
-  const closed = market({
-    status: 'closed',
-    market_outcomes: [outcome({ name: 'Yes', price: 0.9 }), outcome({ name: 'No', price: 0.1 })],
-  });
-  assert.equal(isLongTailMarket(closed), true);
-});
-
-test('isLongTailMarket trips on yes price below threshold', () => {
-  const tail = market({
-    market_outcomes: [
-      outcome({ name: 'Yes', price: 0.005 }),
-      outcome({ name: 'No', price: 0.995 }),
-    ],
-  });
-  assert.equal(isLongTailMarket(tail), true);
-});
-
-test('isLongTailMarket false for healthy open market', () => {
-  const fine = market({
-    market_outcomes: [outcome({ name: 'Yes', price: 0.4 }), outcome({ name: 'No', price: 0.6 })],
-  });
-  assert.equal(isLongTailMarket(fine), false);
 });
 
 test('sortMarketsByYesDesc orders by yes-price desc, stable for ties / nulls last', () => {

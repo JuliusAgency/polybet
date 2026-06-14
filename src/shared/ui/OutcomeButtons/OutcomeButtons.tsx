@@ -44,16 +44,6 @@ interface OutcomeButtonsProps {
    */
   selectedId?: string;
   /**
-   * When true, applies Polymarket-style "long-tail" treatment:
-   *  - the leading (Yes) outcome is dimmed (de-facto eliminated)
-   *  - the trailing (No) outcome is intensified (the dominant action)
-   *
-   * Caller decides when to flip this on (typically when Yes price < threshold
-   * or the market's effective status is no longer 'open'). Indices are
-   * interpreted as [Yes, No] — outcomes must already be ordered canonically.
-   */
-  longTail?: boolean;
-  /**
    * Visual treatment for non-bettable surfaces.
    *  - 'default': disabled pills keep the win/loss colour tint (used by the
    *    user feed so closed/resolved markets still read with their odds).
@@ -91,7 +81,6 @@ function tintFor(
   index: number,
   isWinner: boolean,
   disabled: boolean,
-  longTail: boolean,
   appearance: 'default' | 'inactive' = 'default'
 ): CSSProperties {
   const role = index === 0 ? 'win' : 'loss';
@@ -113,24 +102,6 @@ function tintFor(
       backgroundColor: 'var(--color-bg-base)',
       borderColor: 'var(--color-border)',
       color: 'var(--color-text-muted)',
-    };
-  }
-
-  // Long-tail dimming: the eliminated Yes side fades into a neutral pill so
-  // the eye lands on the dominant No action instead. Mirrors Polymarket's
-  // treatment of <1% sub-markets in multi-outcome events.
-  if (longTail) {
-    if (index === 0) {
-      return {
-        backgroundColor: 'var(--color-bg-base)',
-        borderColor: 'var(--color-border)',
-        color: 'var(--color-text-muted)',
-      };
-    }
-    return {
-      backgroundColor: `color-mix(in oklch, ${tintVar} 14%, var(--color-bg-base))`,
-      borderColor: `color-mix(in oklch, ${tintVar} 45%, transparent)`,
-      color: tintVar,
     };
   }
 
@@ -170,7 +141,6 @@ export function OutcomeButtons({
   hoverShowsPercentage = false,
   priceFormat = 'percent',
   selectedId,
-  longTail = false,
   appearance = 'default',
 }: OutcomeButtonsProps) {
   const styles = SIZE_STYLES[size];
@@ -209,7 +179,6 @@ export function OutcomeButtons({
           index,
           !!o.isWinner || isSelected,
           disabled || isUntradable,
-          longTail,
           appearance
         );
         const style: CSSProperties = isHovered

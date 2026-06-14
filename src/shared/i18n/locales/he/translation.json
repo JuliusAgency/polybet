@@ -331,8 +331,6 @@
     "noActiveBets": "אין הימורים פעילים",
     "totalLocked": "סך חסום",
     "afterBet": "לאחר הימור",
-    "afterBetIfWin": "אם ננצח",
-    "afterBetIfLose": "אם נפסיד",
     "status": {
       "open": "פתוח",
       "closed": "סגור",

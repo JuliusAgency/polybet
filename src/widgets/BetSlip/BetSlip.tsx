@@ -132,9 +132,6 @@ export const BetSlip = ({
   // "To win": gross shares (each pays $1). Profit = shares - stake.
   const toWin = effectiveShares;
   const profitIfWin = effectiveShares !== null ? effectiveShares - stake! : null;
-  const balanceIfWin =
-    effectiveShares !== null ? availableBalance - stake! + effectiveShares : null;
-  const balanceIfLose = isValidStake && !isInsufficient ? availableBalance - stake! : null;
 
   const isUntradable = !selected.polymarket_token_id;
   // Only treat as "low liquidity" when the book row exists and reports partial.
@@ -490,43 +487,6 @@ export const BetSlip = ({
                       +${profitIfWin.toFixed(2)}
                     </span>
                   </div>
-                )}
-
-                {/* Post-bet balance preview (our extra over the reference) */}
-                {balanceIfWin !== null && balanceIfLose !== null && (
-                  <>
-                    <div className="my-1 h-px" style={{ backgroundColor: 'var(--color-border)' }} />
-                    <div className="flex items-center justify-between text-xs">
-                      <span style={{ color: 'var(--color-text-muted)' }}>
-                        {t('markets.afterBetIfWin')}
-                      </span>
-                      <span className="font-mono">
-                        <span style={{ color: 'var(--color-win)' }}>{balanceIfWin.toFixed(2)}</span>
-                        <span className="mx-1" style={{ color: 'var(--color-text-muted)' }}>
-                          ←
-                        </span>
-                        <span style={{ color: 'var(--color-text-secondary)' }}>
-                          {availableBalance.toFixed(2)}
-                        </span>
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs">
-                      <span style={{ color: 'var(--color-text-muted)' }}>
-                        {t('markets.afterBetIfLose')}
-                      </span>
-                      <span className="font-mono">
-                        <span style={{ color: 'var(--color-error)' }}>
-                          {balanceIfLose.toFixed(2)}
-                        </span>
-                        <span className="mx-1" style={{ color: 'var(--color-text-muted)' }}>
-                          ←
-                        </span>
-                        <span style={{ color: 'var(--color-text-secondary)' }}>
-                          {availableBalance.toFixed(2)}
-                        </span>
-                      </span>
-                    </div>
-                  </>
                 )}
               </div>
             )}

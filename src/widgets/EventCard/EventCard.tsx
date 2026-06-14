@@ -202,7 +202,6 @@ export const EventCard = ({
               appearance={outcomeAppearance}
               showPercentage={false}
               hoverShowsPercentage
-              longTail={false}
               onClick={
                 singleIsInteractive && onOutcomeClick
                   ? (outcomeId) => {
@@ -346,7 +345,6 @@ function EventMarketRow({
           appearance={outcomeAppearance}
           showPercentage={false}
           hoverShowsPercentage
-          longTail={false}
           onClick={
             isInteractive && onOutcomeClick
               ? (outcomeId) => {

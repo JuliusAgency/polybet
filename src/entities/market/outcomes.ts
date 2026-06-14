@@ -1,6 +1,4 @@
-import { LONG_TAIL_PROBABILITY_THRESHOLD } from '../../shared/config/markets';
 import type { Market, MarketOutcome } from './types';
-import { getMarketEffectiveStatus } from './effectiveStatus';
 
 const YES_NAMES = new Set(['yes', 'true', 'long']);
 const NO_NAMES = new Set(['no', 'false', 'short']);
@@ -44,24 +42,6 @@ export function getOrderedOutcomes(market: OutcomesHolder): MarketOutcome[] {
 /** Yes-side probability (0..1) for a binary market, or null. */
 export function getYesProbability(market: OutcomesHolder): number | null {
   return getYesOutcome(market)?.price ?? null;
-}
-
-/**
- * "Long-tail" markets are visually de-emphasised in lists (gray %, intensified
- * No button). Trips when EITHER:
- *  - the market is no longer effectively open (closed / resolved / expired)
- *  - the Yes-side price is below the threshold (de-facto eliminated outcome)
- *
- * Both signals together cover the Polymarket-style behaviour where eliminated
- * sub-markets stay tradable but visually fall to the bottom of the list.
- */
-export function isLongTailMarket(
-  market: Market,
-  threshold: number = LONG_TAIL_PROBABILITY_THRESHOLD
-): boolean {
-  if (getMarketEffectiveStatus(market) !== 'open') return true;
-  const yesPrice = getYesProbability(market);
-  return yesPrice != null && yesPrice < threshold;
 }
 
 /**
