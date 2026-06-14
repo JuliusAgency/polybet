@@ -34,21 +34,24 @@ export const CredentialCard = ({ username, password, onDone }: CredentialCardPro
   }, []);
 
   const handleCopy = (field: keyof CopyState, value: string) => {
-    navigator.clipboard.writeText(value).then(() => {
-      if (timersRef.current[field]) clearTimeout(timersRef.current[field]!);
-      setCopyError(null);
-      setCopied((prev) => ({ ...prev, [field]: true }));
-      timersRef.current[field] = setTimeout(() => {
-        setCopied((prev) => ({ ...prev, [field]: false }));
-        timersRef.current[field] = null;
-      }, 1500);
-    }).catch(() => {
-      setCopyError(field);
-      timersRef.current[field] = setTimeout(() => {
+    navigator.clipboard
+      .writeText(value)
+      .then(() => {
+        if (timersRef.current[field]) clearTimeout(timersRef.current[field]!);
         setCopyError(null);
-        timersRef.current[field] = null;
-      }, 3000);
-    });
+        setCopied((prev) => ({ ...prev, [field]: true }));
+        timersRef.current[field] = setTimeout(() => {
+          setCopied((prev) => ({ ...prev, [field]: false }));
+          timersRef.current[field] = null;
+        }, 1500);
+      })
+      .catch(() => {
+        setCopyError(field);
+        timersRef.current[field] = setTimeout(() => {
+          setCopyError(null);
+          timersRef.current[field] = null;
+        }, 3000);
+      });
   };
 
   return (
@@ -110,10 +113,7 @@ export const CredentialCard = ({ username, password, onDone }: CredentialCardPro
       </div>
 
       {/* Password warning */}
-      <p
-        className="text-sm"
-        style={{ color: 'var(--color-warning)' }}
-      >
+      <p className="text-sm" style={{ color: 'var(--color-warning)' }}>
         {t('users.passwordWarning')}
       </p>
 

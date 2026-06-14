@@ -73,9 +73,12 @@ const SavedMarketsPage = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedBet, setSelectedBet] = useState<SelectedBet | null>(null);
 
-  const handleOutcomeClick = useCallback((market: Market, outcome: MarketOutcome) => {
-    setSelectedBet({ market, outcome });
-  }, [setSelectedBet]);
+  const handleOutcomeClick = useCallback(
+    (market: Market, outcome: MarketOutcome) => {
+      setSelectedBet({ market, outcome });
+    },
+    [setSelectedBet]
+  );
 
   const handleBetSuccess = () => {
     setSelectedBet(null);

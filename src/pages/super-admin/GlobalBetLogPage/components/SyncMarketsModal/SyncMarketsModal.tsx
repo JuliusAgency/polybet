@@ -6,7 +6,13 @@ import { Modal } from '@/shared/ui/Modal';
 import { Button } from '@/shared/ui/Button';
 import { ProgressBar } from '@/shared/ui/ProgressBar';
 import { useSyncMarkets, useSyncRun } from '@/features/admin/settlement';
-import { SYNC_SCOPE_OPTIONS, getSyncRunFreshness, getSyncRunProgressPercent, isSyncRunProgressIndeterminate, isSyncRunTerminal } from '@/features/admin/settlement/syncRunUi';
+import {
+  SYNC_SCOPE_OPTIONS,
+  getSyncRunFreshness,
+  getSyncRunProgressPercent,
+  isSyncRunProgressIndeterminate,
+  isSyncRunTerminal,
+} from '@/features/admin/settlement/syncRunUi';
 
 interface SyncMarketsModalProps {
   isOpen: boolean;
@@ -102,11 +108,12 @@ export const SyncMarketsModal = ({ isOpen, onClose, onCompleted }: SyncMarketsMo
     return t(`settlement.phase.${run.phase}`, { defaultValue: run.phase });
   }, [run, t]);
 
-  const statusTone = run?.status === 'failed'
-    ? 'var(--color-loss)'
-    : run?.status === 'completed_with_warnings'
-      ? 'var(--color-warning)'
-      : 'var(--color-text-secondary)';
+  const statusTone =
+    run?.status === 'failed'
+      ? 'var(--color-loss)'
+      : run?.status === 'completed_with_warnings'
+        ? 'var(--color-warning)'
+        : 'var(--color-text-secondary)';
   const canStart = !syncMutation.isPending && !runId;
 
   return (
@@ -133,7 +140,9 @@ export const SyncMarketsModal = ({ isOpen, onClose, onCompleted }: SyncMarketsMo
                   className="rounded-xl border px-4 py-3 text-start transition-colors"
                   style={{
                     borderColor: isActive ? 'var(--color-accent)' : 'var(--color-border)',
-                    backgroundColor: isActive ? 'color-mix(in srgb, var(--color-accent) 14%, transparent)' : 'var(--color-bg-surface)',
+                    backgroundColor: isActive
+                      ? 'color-mix(in srgb, var(--color-accent) 14%, transparent)'
+                      : 'var(--color-bg-surface)',
                     color: 'var(--color-text-primary)',
                   }}
                 >
@@ -143,7 +152,7 @@ export const SyncMarketsModal = ({ isOpen, onClose, onCompleted }: SyncMarketsMo
                       option.maxPages === 0
                         ? 'settlement.scopeHintAll'
                         : 'settlement.scopeHintPages',
-                      { count: option.maxPages },
+                      { count: option.maxPages }
                     )}
                   </div>
                 </button>
@@ -178,7 +187,10 @@ export const SyncMarketsModal = ({ isOpen, onClose, onCompleted }: SyncMarketsMo
 
       {runId && (
         <div className="flex flex-col gap-4">
-          <div className="rounded-xl border px-4 py-3" style={{ borderColor: 'var(--color-border)' }}>
+          <div
+            className="rounded-xl border px-4 py-3"
+            style={{ borderColor: 'var(--color-border)' }}
+          >
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
@@ -195,12 +207,12 @@ export const SyncMarketsModal = ({ isOpen, onClose, onCompleted }: SyncMarketsMo
                 <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
                   {isIndeterminateProgress
                     ? t('settlement.progressPendingTotal', {
-                      current: run?.progress_current ?? 0,
-                    })
+                        current: run?.progress_current ?? 0,
+                      })
                     : t('settlement.progressCount', {
-                      current: run?.progress_current ?? 0,
-                      total: run?.progress_total ?? 0,
-                    })}
+                        current: run?.progress_current ?? 0,
+                        total: run?.progress_total ?? 0,
+                      })}
                 </p>
               </div>
             </div>
@@ -223,7 +235,10 @@ export const SyncMarketsModal = ({ isOpen, onClose, onCompleted }: SyncMarketsMo
                 <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
                   {item.label}
                 </p>
-                <p className="mt-1 text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                <p
+                  className="mt-1 text-lg font-semibold"
+                  style={{ color: 'var(--color-text-primary)' }}
+                >
                   {item.value}
                 </p>
               </div>
@@ -243,7 +258,12 @@ export const SyncMarketsModal = ({ isOpen, onClose, onCompleted }: SyncMarketsMo
               {t(isRunning ? 'settlement.keepOpenRunning' : 'settlement.keepOpenDone')}
             </p>
             {isRunning && freshness.secondsSinceUpdate !== null && (
-              <p className="mt-2 text-xs" style={{ color: freshness.isStale ? 'var(--color-warning)' : 'var(--color-text-secondary)' }}>
+              <p
+                className="mt-2 text-xs"
+                style={{
+                  color: freshness.isStale ? 'var(--color-warning)' : 'var(--color-text-secondary)',
+                }}
+              >
                 {freshness.isStale
                   ? t('settlement.progressWaiting', { seconds: freshness.secondsSinceUpdate })
                   : t('settlement.progressUpdatedAgo', { seconds: freshness.secondsSinceUpdate })}
@@ -252,7 +272,10 @@ export const SyncMarketsModal = ({ isOpen, onClose, onCompleted }: SyncMarketsMo
           </div>
 
           {!!run?.errors.length && (
-            <div className="rounded-xl border px-4 py-3" style={{ borderColor: 'var(--color-border)' }}>
+            <div
+              className="rounded-xl border px-4 py-3"
+              style={{ borderColor: 'var(--color-border)' }}
+            >
               <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                 {t('settlement.issueListTitle')}
               </p>
@@ -289,12 +312,7 @@ export const SyncMarketsModal = ({ isOpen, onClose, onCompleted }: SyncMarketsMo
                 {t('settlement.runAgain')}
               </Button>
             )}
-            <Button
-              variant="primary"
-              type="button"
-              onClick={handleClose}
-              disabled={isRunning}
-            >
+            <Button variant="primary" type="button" onClick={handleClose} disabled={isRunning}>
               {isRunTerminal ? t('common.done') : t('common.processing')}
             </Button>
           </div>

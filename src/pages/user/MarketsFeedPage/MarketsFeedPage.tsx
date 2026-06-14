@@ -148,9 +148,12 @@ const MarketsFeedPage = () => {
 
   useIntersectionObserver(sentinelRef, handleLoadMore, !!hasNextPage && !isFetchingNextPage);
 
-  const handleOutcomeClick = useCallback((market: Market, outcome: MarketOutcome) => {
-    setSelectedBet({ market, outcome });
-  }, [setSelectedBet]);
+  const handleOutcomeClick = useCallback(
+    (market: Market, outcome: MarketOutcome) => {
+      setSelectedBet({ market, outcome });
+    },
+    [setSelectedBet]
+  );
 
   const handleBetSuccess = () => {
     setSelectedBet(null);
