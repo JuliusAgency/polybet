@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures/authedTest';
 
 // Authenticated baseline: a logged-in user1 (seeded by 002_test_users.sql,
 // no markets/bets), so the feed renders with whatever real markets the

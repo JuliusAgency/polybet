@@ -2,6 +2,7 @@ import { test as setup, expect } from '@playwright/test';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { TEST_USERS, type TestUserKey } from './fixtures/users';
+import { saveSessionStorage } from './fixtures/sessionStorage';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -37,10 +38,14 @@ setup('authenticate as user1', async ({ page }) => {
   await signInAs(page, 'user1');
   await expect(page).not.toHaveURL(/sign-in/);
   await page.context().storageState({ path: storageStatePath('user1') });
+  // The Supabase session lives in sessionStorage (client.ts hardening), which
+  // storageState() does NOT capture — snapshot it separately for authedTest.
+  await saveSessionStorage(page, 'user1');
 });
 
 setup('authenticate as admin', async ({ page }) => {
   await signInAs(page, 'admin');
   await expect(page).not.toHaveURL(/sign-in/);
   await page.context().storageState({ path: storageStatePath('admin') });
+  await saveSessionStorage(page, 'admin');
 });

@@ -92,6 +92,35 @@ describe('SellSlip', () => {
     expect(screen.getByLabelText(/shares to sell/i)).toHaveValue('100');
   });
 
+  // Regression for the 2026-06-11 "Max" bug: positions.shares arrives as a
+  // float64 (e.g. DB 2058.823529411764709 -> JS 2058.823529411765). Max must
+  // forward that value at FULL precision — no toFixed/floor — because the
+  // sell_position clamp (migration 20260611164627) relies on receiving the
+  // float64 repr, never more than the JSON value the client was given.
+  it('Max keeps full float64 precision for fractional share counts', async () => {
+    const fractionalShares = 2058.823529411765;
+    rpcMock.mockResolvedValueOnce({ data: { status: 'closed' }, error: null });
+    renderWithProviders(
+      <SellSlip
+        position={makePosition({ shares: fractionalShares, cost_basis: 350, avg_price: 0.17 })}
+        onClose={() => {}}
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /max/i }));
+    expect(screen.getByLabelText(/shares to sell/i)).toHaveValue('2058.823529411765');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Sell' }));
+    await vi.waitFor(() => {
+      expect(rpcMock).toHaveBeenCalled();
+    });
+    expect(rpcMock).toHaveBeenCalledWith('sell_position', {
+      p_position_id: 'pos-1',
+      p_shares: fractionalShares,
+      p_expected_price: 0.5,
+    });
+  });
+
   it('sends sell_position with the position id, shares and expected price', async () => {
     rpcMock.mockResolvedValueOnce({ data: { status: 'closed' }, error: null });
     renderWithProviders(<SellSlip position={makePosition()} onClose={() => {}} />);

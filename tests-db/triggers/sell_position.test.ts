@@ -362,3 +362,107 @@ describe('sell_position', () => {
     });
   });
 });
+
+// Migration 20260611164627: a sell request exceeding the held shares by at most
+// GREATEST(shares * 1e-9, c_dust) is float64 serialization noise (the client
+// receives `shares` as a JSON double, which can round UP vs the exact numeric)
+// and is clamped to "sell everything". Genuine oversells still raise.
+describe('sell_position float64 clamp', () => {
+  /** Seed a buy whose share count is a non-terminating decimal (350 / 0.17). */
+  const seedFractional = (c: PoolClient) => seedAndBuy(c, { price: 0.17, stake: 350 });
+
+  it('clamps a within-epsilon overshoot to a full sell and closes the position', async () => {
+    await withTransaction(async (c) => {
+      const { positionId } = await seedFractional(c);
+
+      const heldRow = await c.query<{ shares: string }>(
+        'SELECT shares::text AS shares FROM positions WHERE id = $1',
+        [positionId]
+      );
+      const heldText = heldRow.rows[0].shares;
+      // Sanity: the seed really produced a high-precision fraction.
+      expect(heldText).toMatch(/\.\d{8,}/);
+
+      const postBuy = await c.query<{ available: string; in_play: string }>(
+        'SELECT available, in_play FROM balances WHERE user_id = $1',
+        [USER1]
+      );
+      const inPlayPostBuy = Number(postBuy.rows[0].in_play);
+
+      // Overshoot computed IN SQL: held * (1 + 1e-10), inside the 1e-9 epsilon.
+      // (Adding the epsilon in JS would collapse back to `held` in float64 and
+      // test nothing.)
+      await authAs(c, USER1);
+      const res = await c.query<{ sell_position: Record<string, unknown> }>(
+        `SELECT sell_position(
+           $1::uuid,
+           (SELECT shares * 1.0000000001 FROM positions WHERE id = $1),
+           $2::numeric
+         ) AS sell_position`,
+        [positionId, 0.5]
+      );
+      const out = res.rows[0].sell_position;
+      expect(out.status).toBe('closed');
+      expect(Number(out.remaining_shares)).toBe(0);
+      expect(Number(out.sold_shares)).toBeCloseTo(Number(heldText), 6);
+
+      const pos = await c.query<{ shares: string; cost_basis: string; status: string }>(
+        'SELECT shares::text AS shares, cost_basis::text AS cost_basis, status FROM positions WHERE id = $1',
+        [positionId]
+      );
+      expect(Number(pos.rows[0].shares)).toBe(0);
+      expect(Number(pos.rows[0].cost_basis)).toBe(0);
+      expect(pos.rows[0].status).toBe('closed');
+
+      // The trade ledger records the EXACT held amount (clamped), not the
+      // overshot request — compared in the SQL domain to avoid float64.
+      const trade = await c.query<{ same: boolean }>(
+        `SELECT shares = $2::numeric AS same FROM trades WHERE position_id = $1 AND side = 'sell'`,
+        [positionId, heldText]
+      );
+      expect(trade.rows).toHaveLength(1);
+      expect(trade.rows[0].same).toBe(true);
+
+      // in_play released in full: the entire cost basis (350) is gone.
+      const after = await c.query<{ in_play: string }>(
+        'SELECT in_play FROM balances WHERE user_id = $1',
+        [USER1]
+      );
+      expect(Number(after.rows[0].in_play)).toBeCloseTo(inPlayPostBuy - 350, 6);
+    });
+  });
+
+  it('accepts the actual JS float64 round-trip of the held shares (client Max path)', async () => {
+    await withTransaction(async (c) => {
+      const { positionId } = await seedFractional(c);
+      const heldRow = await c.query<{ shares: string }>(
+        'SELECT shares::text AS shares FROM positions WHERE id = $1',
+        [positionId]
+      );
+      // Exactly what the frontend does: numeric -> JSON -> JS number -> rpc.
+      const jsValue = Number(heldRow.rows[0].shares);
+
+      const out = await callSell(c, positionId, jsValue, 0.5);
+      // Whether float64 rounded up (clamp) or down (sub-dust remainder), the
+      // position must end fully closed.
+      expect(out.status).toBe('closed');
+      expect(Number(out.remaining_shares)).toBe(0);
+    });
+  });
+
+  it('still rejects an overshoot above the epsilon', async () => {
+    await withTransaction(async (c) => {
+      const { positionId } = await seedFractional(c);
+      await authAs(c, USER1);
+      const attempt = c.query(
+        `SELECT sell_position(
+           $1::uuid,
+           (SELECT shares * 1.001 FROM positions WHERE id = $1),
+           $2::numeric
+         )`,
+        [positionId, 0.5]
+      );
+      await expect(attempt).rejects.toThrow(/more shares than held/i);
+    });
+  });
+});

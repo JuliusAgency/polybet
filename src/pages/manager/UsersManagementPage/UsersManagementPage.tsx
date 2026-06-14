@@ -20,6 +20,7 @@ interface ModalState {
   userId: string;
   username: string;
   type: 'deposit' | 'withdrawal';
+  available?: number;
 }
 
 interface EditTarget {
@@ -241,7 +242,12 @@ const UsersManagementPage = () => {
                           className="px-3 py-1 text-xs"
                           disabled={isInactive}
                           onClick={() =>
-                            setModalState({ userId: row.user_id, username, type: 'withdrawal' })
+                            setModalState({
+                              userId: row.user_id,
+                              username,
+                              type: 'withdrawal',
+                              available: row.balances?.available,
+                            })
                           }
                         >
                           {t('treasury.withdraw')}

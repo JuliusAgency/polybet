@@ -12,6 +12,7 @@ interface ModalState {
   userId: string;
   username: string;
   type: 'deposit' | 'withdrawal';
+  available?: number;
 }
 
 const TreasuryPage = () => {
@@ -178,7 +179,12 @@ const TreasuryPage = () => {
                           className="text-xs px-3 py-1"
                           disabled={isInactive}
                           onClick={() =>
-                            setModalState({ userId: row.user_id, username, type: 'withdrawal' })
+                            setModalState({
+                              userId: row.user_id,
+                              username,
+                              type: 'withdrawal',
+                              available: row.balances?.available,
+                            })
                           }
                         >
                           {t('treasury.withdraw')}

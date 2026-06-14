@@ -14,11 +14,7 @@ const USER_ID = '00000000-0000-0000-0000-000000000003'; // user1
 
 type Client = Parameters<Parameters<typeof withTransaction>[0]>[0];
 
-async function insertFill(
-  c: Client,
-  marketId: string,
-  outcomeId: string
-): Promise<string> {
+async function insertFill(c: Client, marketId: string, outcomeId: string): Promise<string> {
   const pos = await c.query<{ id: string }>(
     `INSERT INTO positions (user_id, market_id, outcome_id, shares, avg_price, cost_basis, status)
      VALUES ($1, $2, $3, 10, 0.5, 5, 'open')

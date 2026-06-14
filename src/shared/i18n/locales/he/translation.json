@@ -239,7 +239,10 @@
     "withdraw": "משיכה",
     "success": "בוצע בהצלחה",
     "noUsers": "לא נמצאו משתמשים",
-    "insufficientBalance": "אין מספיק יתרה למשיכה"
+    "insufficientBalance": "אין מספיק יתרה למשיכה",
+    "availableHint": "זמין: {{amount}}",
+    "maxButton": "מקס׳",
+    "exceedsAvailable": "הסכום חורג מהיתרה הזמינה ({{amount}})"
   },
   "markets": {
     "title": "שווקים",

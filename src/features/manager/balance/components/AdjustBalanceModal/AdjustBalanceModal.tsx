@@ -13,7 +13,16 @@ interface AdjustBalanceModalProps {
   userId: string;
   username: string;
   type: 'deposit' | 'withdrawal';
+  /** Current available balance; enables the Max button + over-max validation
+   *  for withdrawals when provided. */
+  available?: number;
 }
+
+// The backend clamp (migration 20260611170133) treats a withdrawal within one
+// cent above the true balance as "withdraw everything", so the client allows
+// the same tolerance: the displayed available is round(x, 2) and can sit up to
+// a cent above the exact numeric balance.
+const FULL_WITHDRAW_TOLERANCE = 0.01;
 
 export const AdjustBalanceModal = ({
   isOpen,
@@ -21,6 +30,7 @@ export const AdjustBalanceModal = ({
   userId,
   username,
   type,
+  available,
 }: AdjustBalanceModalProps) => {
   const { t } = useTranslation();
   const [amount, setAmount] = useState('');
@@ -65,6 +75,16 @@ export const AdjustBalanceModal = ({
     }
     if (parsed < MIN_ADJUST_AMOUNT) {
       setAmountError(t('treasury.minAmountError', { amount: MIN_ADJUST_AMOUNT }));
+      return false;
+    }
+    // Compare in whole cents: float64 addition (1200 + 0.01) can land a hair
+    // below parseFloat('1200.01') and misjudge the exact tolerance boundary.
+    if (
+      type === 'withdrawal' &&
+      available !== undefined &&
+      Math.round(parsed * 100) > Math.round(available * 100) + FULL_WITHDRAW_TOLERANCE * 100
+    ) {
+      setAmountError(t('treasury.exceedsAvailable', { amount: available.toFixed(2) }));
       return false;
     }
     if (note.trim().length > MAX_NOTE_LENGTH) {
@@ -135,6 +155,29 @@ export const AdjustBalanceModal = ({
               disabled={isSubmitting}
               error={amountError}
             />
+
+            {type === 'withdrawal' && available !== undefined && (
+              <div className="flex items-center justify-between gap-2 -mt-2">
+                <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                  {t('treasury.availableHint', { amount: available.toFixed(2) })}
+                </span>
+                <Button
+                  variant="secondary"
+                  type="button"
+                  className="text-xs px-3 py-1"
+                  disabled={isSubmitting}
+                  onClick={() => {
+                    // toFixed(2) ROUNDS (1199.9999987 -> "1200.00") on purpose:
+                    // it matches what the manager sees in the users table, and
+                    // the RPC clamp absorbs the <= 0.01 overshoot.
+                    setAmount(available.toFixed(2));
+                    setAmountError('');
+                  }}
+                >
+                  {t('treasury.maxButton')}
+                </Button>
+              </div>
+            )}
 
             <Input
               label={t('treasury.note')}

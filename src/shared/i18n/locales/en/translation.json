@@ -239,7 +239,10 @@
     "withdraw": "Withdraw",
     "success": "Done successfully",
     "noUsers": "No users found",
-    "insufficientBalance": "Insufficient balance for withdrawal"
+    "insufficientBalance": "Insufficient balance for withdrawal",
+    "availableHint": "Available: {{amount}}",
+    "maxButton": "Max",
+    "exceedsAvailable": "Amount exceeds available balance ({{amount}})"
   },
   "markets": {
     "title": "Markets",
