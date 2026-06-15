@@ -137,9 +137,9 @@ describe('BetSlip — shares model', () => {
 
     expect(screen.getAllByText(/no longer tradable|untradable|לא זמין/i).length).toBeGreaterThan(0);
 
-    await userEvent.type(screen.getByLabelText(/stake/i), '10');
+    await userEvent.type(screen.getByLabelText(/amount/i), '10');
 
-    expect(screen.getByRole('button', { name: /confirm/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /trade/i })).toBeDisabled();
     expect(rpcMock).not.toHaveBeenCalled();
   });
 
@@ -156,7 +156,7 @@ describe('BetSlip — shares model', () => {
       />
     );
 
-    await userEvent.type(screen.getByLabelText(/stake/i), '25');
+    await userEvent.type(screen.getByLabelText(/amount/i), '25');
 
     // Outcome selector shows both sides in cents.
     expect(screen.getByText('71¢')).toBeInTheDocument();
@@ -179,8 +179,8 @@ describe('BetSlip — shares model', () => {
       />
     );
 
-    await userEvent.type(screen.getByLabelText(/stake/i), '25');
-    await userEvent.click(screen.getByRole('button', { name: /confirm/i }));
+    await userEvent.type(screen.getByLabelText(/amount/i), '25');
+    await userEvent.click(screen.getByRole('button', { name: /trade/i }));
 
     await vi.waitFor(() => {
       expect(rpcMock).toHaveBeenCalled();
@@ -207,10 +207,10 @@ describe('BetSlip — shares model', () => {
       />
     );
 
-    await userEvent.type(screen.getByLabelText(/stake/i), '25');
+    await userEvent.type(screen.getByLabelText(/amount/i), '25');
     // Switch from the initially-selected Yes to No.
     await userEvent.click(screen.getByRole('button', { name: /no/i }));
-    await userEvent.click(screen.getByRole('button', { name: /confirm/i }));
+    await userEvent.click(screen.getByRole('button', { name: /trade/i }));
 
     await vi.waitFor(() => {
       expect(rpcMock).toHaveBeenCalled();
@@ -235,10 +235,10 @@ describe('BetSlip — shares model', () => {
       />
     );
 
-    await userEvent.type(screen.getByLabelText(/stake/i), '25');
+    await userEvent.type(screen.getByLabelText(/amount/i), '25');
 
     expect(screen.getByText(/order book is unavailable|לא זמין/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /confirm/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /trade/i })).toBeDisabled();
     expect(rpcMock).not.toHaveBeenCalled();
   });
 
@@ -259,8 +259,8 @@ describe('BetSlip — shares model', () => {
       />
     );
 
-    await userEvent.type(screen.getByLabelText(/stake/i), '25');
-    await userEvent.click(screen.getByRole('button', { name: /confirm/i }));
+    await userEvent.type(screen.getByLabelText(/amount/i), '25');
+    await userEvent.click(screen.getByRole('button', { name: /trade/i }));
 
     await vi.waitFor(() => {
       expect(screen.getByText(/odds have been updated|המקדמים עודכנו/i)).toBeInTheDocument();

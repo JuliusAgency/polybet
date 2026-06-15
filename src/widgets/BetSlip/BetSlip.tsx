@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
-import { Modal } from '@/shared/ui/Modal';
+import { SidePanel } from '@/shared/ui/SidePanel';
 import { Button } from '@/shared/ui/Button';
 import { Spinner } from '@/shared/ui/Spinner';
 import { OutcomeButtons, type OutcomeButton } from '@/shared/ui/OutcomeButtons';
@@ -88,6 +88,20 @@ export const BetSlip = ({
     [market]
   );
 
+  // Polymarket-style header: event thumbnail + event title + "Market · Outcome".
+  // The selected outcome name is tinted by its canonical side (Yes→win green,
+  // No→loss red), matching the solid outcome buttons below.
+  const selectedIndex = outcomeButtons.findIndex((o) => o.id === selectedOutcomeId);
+  const outcomeColor =
+    selectedIndex === 0
+      ? 'var(--color-win)'
+      : selectedIndex === 1
+        ? 'var(--color-loss)'
+        : 'var(--color-text-primary)';
+  const headerImage = market.image_url ?? market.event?.image_url ?? null;
+  const eventTitle = market.event?.title ?? null;
+  const marketLabel = market.group_label ?? market.question;
+
   const { mutateAsync: placeBet, isPending } = usePlaceBet();
 
   const stake = parseStake(amount);
@@ -148,10 +162,6 @@ export const BetSlip = ({
   const handleAmountChange = (value: string) => {
     setAmount(value);
     setSubmitError(null);
-  };
-
-  const handleAllIn = () => {
-    handleAmountChange(availableBalance.toFixed(2));
   };
 
   const handleConfirm = async () => {
@@ -304,48 +314,80 @@ export const BetSlip = ({
   } as const;
 
   return (
-    <Modal isOpen onClose={onClose} title={t('markets.betSlipTitle')}>
+    <SidePanel isOpen onClose={onClose}>
       <div className="flex flex-col gap-4">
-        {/* Market question — light, informational */}
-        <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
-          {market.question}
-        </p>
-
-        {/* Buy / Sell mode tabs (Polymarket-style: green buy, red sell) */}
-        <div
-          className="flex gap-1 rounded-lg p-1"
-          style={{ backgroundColor: 'var(--color-bg-base)' }}
-        >
-          {(['buy', 'sell'] as const).map((m) => {
-            const active = mode === m;
-            return (
-              <button
-                key={m}
-                type="button"
-                onClick={() => setMode(m)}
-                className="flex-1 rounded-md px-3 py-2 text-sm font-semibold transition-colors"
-                style={{
-                  backgroundColor: active
-                    ? m === 'buy'
-                      ? 'var(--color-win)'
-                      : 'var(--color-loss)'
-                    : 'transparent',
-                  color: active ? '#ffffff' : 'var(--color-text-secondary)',
-                  border: 'none',
-                  cursor: 'pointer',
-                }}
-              >
-                {t(m === 'buy' ? 'markets.buyTab' : 'markets.sellTab')}
-              </button>
-            );
-          })}
+        {/* Header — event thumbnail + event title + "Market · Outcome" */}
+        <div className="flex items-center gap-3 pe-6">
+          {headerImage && (
+            <img
+              src={headerImage}
+              alt=""
+              className="h-9 w-9 shrink-0 rounded-md object-cover"
+              style={{ backgroundColor: 'var(--color-bg-base)' }}
+            />
+          )}
+          <div className="min-w-0">
+            {eventTitle && (
+              <p className="truncate text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                {eventTitle}
+              </p>
+            )}
+            <p
+              className="truncate text-sm font-semibold"
+              style={{ color: 'var(--color-text-primary)' }}
+            >
+              {marketLabel}
+              <span className="mx-1" style={{ color: 'var(--color-text-muted)' }}>
+                ·
+              </span>
+              <span style={{ color: outcomeColor }}>{selected.name}</span>
+            </p>
+          </div>
         </div>
 
-        {/* Outcome side selector (Yes / No), price shown in cents */}
+        {/* Buy / Sell text tabs + order type, sharing a hairline divider */}
+        <div
+          className="flex items-center justify-between border-b"
+          style={{ borderColor: 'var(--color-border)' }}
+        >
+          <div className="flex gap-5">
+            {(['buy', 'sell'] as const).map((m) => {
+              const active = mode === m;
+              return (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setMode(m)}
+                  className="-mb-px border-b-2 pb-2 text-sm font-semibold transition-colors"
+                  style={{
+                    borderColor: active ? 'var(--color-text-primary)' : 'transparent',
+                    color: active ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+                    background: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {t(m === 'buy' ? 'markets.buyTab' : 'markets.sellTab')}
+                </button>
+              );
+            })}
+          </div>
+          {/* Order type — this app only supports market orders; shown for parity. */}
+          <span
+            aria-hidden
+            className="flex items-center gap-1 pb-2 text-sm"
+            style={{ color: 'var(--color-text-secondary)' }}
+          >
+            {t('markets.orderTypeMarket')}
+            <span className="text-xs">▾</span>
+          </span>
+        </div>
+
+        {/* Outcome side selector (Yes / No) — solid Polymarket fill, cents */}
         <OutcomeButtons
           outcomes={outcomeButtons}
           size="xl"
           priceFormat="cents"
+          appearance="solid"
           selectedId={selectedOutcomeId}
           onClick={handleSelectOutcome}
         />
@@ -358,83 +400,82 @@ export const BetSlip = ({
               </div>
             )}
 
-            {/* Amount — large Polymarket-style display. The number lives on its own
-            full-width row so it never competes with the label and cannot
-            overflow the card (incl. long balances in RTL). */}
-            <div className="rounded-lg p-3" style={{ backgroundColor: 'var(--color-bg-base)' }}>
+            {/* Amount — label on the left, large $ figure on the right
+            (Polymarket-style). Grey when empty. */}
+            <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between gap-3">
                 <label
                   htmlFor="betslip-amount"
-                  className="text-sm font-medium"
-                  style={{ color: 'var(--color-text-secondary)' }}
+                  className="text-base font-semibold"
+                  style={{ color: 'var(--color-text-primary)' }}
                 >
-                  {t('markets.stakeLabel')}
+                  {t('markets.amount')}
                 </label>
-                <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                <div className="flex min-w-0 items-baseline justify-end gap-0.5">
+                  <span
+                    className="shrink-0 text-3xl font-bold"
+                    style={{
+                      color: amount ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
+                    }}
+                  >
+                    $
+                  </span>
+                  <input
+                    id="betslip-amount"
+                    type="text"
+                    inputMode="decimal"
+                    value={amount}
+                    onChange={(e) => handleAmountChange(e.target.value)}
+                    placeholder="0"
+                    disabled={isUntradable}
+                    aria-label={t('markets.amount')}
+                    className="w-32 min-w-0 bg-transparent text-end text-3xl font-bold leading-tight outline-none"
+                    style={{
+                      color: amount ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Balance + max-bet hints sit quietly under the figure. */}
+              <div className="flex items-center justify-between text-xs">
+                <span style={{ color: 'var(--color-text-muted)' }}>
                   {t('markets.balance', { amount: availableBalance.toFixed(2) })}
                 </span>
+                {hasBetLimit && (
+                  <span style={{ color: 'var(--color-text-muted)' }}>
+                    {t('markets.maxBet', { amount: maxBetLimit })}
+                  </span>
+                )}
               </div>
-
-              <div className="mt-2 flex items-baseline gap-1">
-                <span
-                  className="shrink-0 text-2xl font-bold"
-                  style={{
-                    color: amount ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
-                  }}
-                >
-                  $
-                </span>
-                <input
-                  id="betslip-amount"
-                  type="text"
-                  inputMode="decimal"
-                  value={amount}
-                  onChange={(e) => handleAmountChange(e.target.value)}
-                  placeholder="0"
-                  disabled={isUntradable}
-                  aria-label={t('markets.stakeLabel')}
-                  className="w-full min-w-0 flex-1 bg-transparent text-end text-3xl font-bold leading-tight outline-none"
-                  style={{ color: 'var(--color-text-primary)' }}
-                />
-              </div>
-
-              {hasBetLimit && (
-                <p className="mt-1 text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                  {t('markets.maxBet', { amount: maxBetLimit })}
-                </p>
-              )}
 
               {(isInsufficient || isOverLimit) && (
-                <p className="mt-1 text-xs" style={{ color: 'var(--color-error)' }}>
+                <p className="text-xs" style={{ color: 'var(--color-error)' }}>
                   {isInsufficient
                     ? t('markets.insufficientBalance')
                     : t('markets.exceedsMaxBet', { amount: maxBetLimit })}
                 </p>
               )}
 
-              {/* Quick-add chips (+$1 / +$5 / +$10 / +$100) + All In */}
-              <div className="mt-3 flex flex-wrap items-center gap-2">
+              {/* Quick-add chips (+$1 / +$5 / +$10 / +$100), right-aligned */}
+              <div className="flex flex-wrap items-center justify-end gap-2">
                 {QUICK_ADD_AMOUNTS.map((inc) => (
-                  <Button
+                  <button
                     key={inc}
-                    variant="secondary"
                     type="button"
-                    className="text-sm"
                     disabled={isUntradable}
                     onClick={() => handleAmountChange(((stake ?? 0) + inc).toFixed(2))}
+                    className="rounded-lg border px-3 py-1 text-xs font-medium transition-colors hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                    style={{
+                      borderColor: 'var(--color-border)',
+                      color: 'var(--color-text-secondary)',
+                      backgroundColor: 'transparent',
+                      cursor: isUntradable ? 'not-allowed' : 'pointer',
+                    }}
                   >
                     +${inc}
-                  </Button>
+                  </button>
                 ))}
-                <Button
-                  variant="secondary"
-                  onClick={handleAllIn}
-                  type="button"
-                  className="text-sm"
-                  disabled={isUntradable}
-                >
-                  {t('markets.allIn')}
-                </Button>
               </div>
             </div>
 
@@ -518,19 +559,19 @@ export const BetSlip = ({
               </p>
             )}
 
-            {/* Primary CTA full-width, secondary Cancel below (Polymarket-style) */}
-            <div className="flex flex-col gap-2">
+            {/* Single blue "Trade" CTA (Polymarket-style) + terms footer */}
+            <div className="flex flex-col gap-3">
               <Button
                 variant="primary"
                 onClick={handleConfirm}
                 disabled={isConfirmDisabled}
-                className="w-full"
+                className="w-full py-3 text-base"
               >
-                {isPending ? t('common.saving') : t('markets.confirmBet')}
+                {isPending ? t('common.saving') : t('markets.trade')}
               </Button>
-              <Button variant="secondary" onClick={onClose} type="button" className="w-full">
-                {t('common.cancel')}
-              </Button>
+              <p className="text-center text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                {t('markets.byTradingTerms')}
+              </p>
             </div>
           </>
         )}
@@ -555,6 +596,6 @@ export const BetSlip = ({
             </div>
           ))}
       </div>
-    </Modal>
+    </SidePanel>
   );
 };

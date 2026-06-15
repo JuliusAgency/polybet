@@ -91,3 +91,15 @@
     transition-duration: 0ms;
   }
 }
+
+/*
+ * Single-line scrollable chip row (Polymarket-style category bar). Chips do not
+ * wrap — the row scrolls horizontally with the scrollbar visually hidden.
+ */
+.tag-filter-row {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/old Edge */
+}
+.tag-filter-row::-webkit-scrollbar {
+  display: none; /* WebKit */
+}

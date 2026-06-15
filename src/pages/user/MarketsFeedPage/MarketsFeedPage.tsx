@@ -21,8 +21,6 @@ import { CardGridSkeleton } from '@/shared/ui/CardGridSkeleton';
 import { BetSlip } from '@/widgets/BetSlip';
 import { MarketCard } from '@/widgets/MarketCard';
 import { EventCard } from '@/widgets/EventCard';
-import { BalanceWidget } from '@/widgets/BalanceWidget';
-import { ActiveBetsDrawer } from '@/widgets/ActiveBetsDrawer';
 import { StatusFilter } from '@/widgets/StatusFilter';
 import { TagFilter } from './components/TagFilter';
 
@@ -137,7 +135,6 @@ const MarketsFeedPage = () => {
   const isLoadingSaved = isLoadingSavedMarkets || isLoadingSavedEvents;
   const isErrorSaved = isErrorSavedMarkets || isErrorSavedEvents;
   const errorSaved = errorSavedMarkets ?? errorSavedEvents;
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedBet, setSelectedBet] = useState<SelectedBet | null>(null);
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -160,10 +157,25 @@ const MarketsFeedPage = () => {
   };
 
   const availableBalance = balance?.available ?? 0;
-  const inPlay = balance?.in_play ?? 0;
-  const openBetsCount = openBets.length;
 
   const hasBets = myBetMarketIds.length > 0;
+
+  // Saved-only toggle (moved here from the removed BalanceWidget). Saved is
+  // mutually exclusive with my-bets and the tag filter, so turning it on clears
+  // both; turning it off returns to the default Popular (`trending`) tag so the
+  // feed isn't left empty.
+  const handleSavedToggle = () => {
+    setSavedOnly((current) => {
+      const next = !current;
+      if (next) {
+        setMyBetsOnly(false);
+        setTagSlug(null);
+      } else {
+        setTagSlug('trending');
+      }
+      return next;
+    });
+  };
 
   // Lookups operate on open bets only — settled bets must not surface in the
   // feed UI (badges, "your stake" lines). They live in the My Bets history page.
@@ -218,105 +230,88 @@ const MarketsFeedPage = () => {
         {t('markets.title')}
       </h1>
 
-      {/* Balance widget */}
-      <BalanceWidget
-        available={availableBalance}
-        inPlay={inPlay}
-        openBetsCount={openBetsCount}
-        isLoading={!balance}
-        onOpenDrawer={() => setIsDrawerOpen(true)}
-        onOpenSaved={() => {
-          setSavedOnly((current) => {
-            const next = !current;
-            // Saved is mutually exclusive with my-bets and the tag filter.
-            // Turning ON clears my-bets and tag so the feed has a single intent.
-            // Turning OFF returns to the default Popular (`trending`) tag —
-            // otherwise the feed would render empty until the user picks one.
-            if (next) {
-              setMyBetsOnly(false);
-              setTagSlug(null);
-            } else {
-              setTagSlug('trending');
-            }
-            return next;
-          });
-        }}
-        savedActive={savedOnly}
-        clickableCount={savedFeedCount}
-      />
-
-      {/* Filters */}
+      {/* Category bar — Polymarket-style sub-bar directly under the top nav:
+          scrollable category chips (incl. Saved + My bets) on the start side,
+          search on the end side. */}
       <div className="mb-4">
-        {/* Row: status pills + my-bets toggle + search */}
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2">
+          {/* Tag filter — curated popular categories from Polymarket.
+              My-bets, Saved and tag selection are mutually exclusive: turning
+              one on clears the others so the feed has a single intent. */}
+          <div className="min-w-0 flex-1">
+            <TagFilter
+              value={tagSlug}
+              onChange={(next) => {
+                setTagSlug(next);
+                if (myBetsOnly) setMyBetsOnly(false);
+                if (savedOnly) setSavedOnly(false);
+              }}
+              tags={allowedTags}
+              showMyBets={hasBets}
+              myBetsActive={myBetsOnly}
+              savedActive={savedOnly}
+              onSavedToggle={handleSavedToggle}
+              savedCount={savedFeedCount}
+              onMyBetsToggle={() => {
+                setMyBetsOnly((v) => {
+                  const nextValue = !v;
+                  if (nextValue) {
+                    setTagSlug(null);
+                    setSavedOnly(false);
+                  }
+                  return nextValue;
+                });
+              }}
+            />
+          </div>
+
+          {/* Search — pinned to the end of the bar. */}
+          {!myBetsOnly && (
+            <div className="relative flex shrink-0 items-center">
+              <div
+                className="pointer-events-none absolute inset-y-0 flex items-center"
+                style={{ insetInlineStart: '10px' }}
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{ color: 'var(--color-text-muted)' }}
+                >
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t('markets.searchPlaceholder')}
+                className="w-40 rounded-full border py-1 text-sm outline-none sm:w-52"
+                style={{
+                  backgroundColor: 'var(--color-bg-elevated)',
+                  borderColor: 'var(--color-border)',
+                  color: 'var(--color-text-primary)',
+                  paddingInlineStart: '2rem',
+                  paddingInlineEnd: '0.75rem',
+                }}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Status pills — only relevant when browsing "All categories" with no
+            category / Saved / My bets intent. Hidden otherwise (Polymarket UX). */}
+        {tagSlug === null && !savedOnly && !myBetsOnly && (
+          <div className="mt-3">
             <StatusFilter value={statusFilter} onChange={setStatusFilter} />
           </div>
-          <div className="flex items-center gap-2">
-            {!myBetsOnly && (
-              <div className="relative flex items-center">
-                <div
-                  className="pointer-events-none absolute inset-y-0 flex items-center"
-                  style={{ insetInlineStart: '10px' }}
-                >
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    style={{ color: 'var(--color-text-muted)' }}
-                  >
-                    <circle cx="11" cy="11" r="8" />
-                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                  </svg>
-                </div>
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={t('markets.searchPlaceholder')}
-                  className="rounded-full border py-1 text-sm outline-none"
-                  style={{
-                    backgroundColor: 'var(--color-bg-elevated)',
-                    borderColor: 'var(--color-border)',
-                    color: 'var(--color-text-primary)',
-                    paddingInlineStart: '2rem',
-                    paddingInlineEnd: '0.75rem',
-                  }}
-                />
-              </div>
-            )}
-          </div>
-        </div>
-        {/* Tag filter — curated popular categories from Polymarket.
-            My-bets and tag selection are mutually exclusive: turning one on
-            clears the other so the feed has a single intent at any time. */}
-        <TagFilter
-          value={tagSlug}
-          onChange={(next) => {
-            setTagSlug(next);
-            if (myBetsOnly) setMyBetsOnly(false);
-            if (savedOnly) setSavedOnly(false);
-          }}
-          tags={allowedTags}
-          showMyBets={hasBets}
-          myBetsActive={myBetsOnly}
-          savedActive={savedOnly}
-          onMyBetsToggle={() => {
-            setMyBetsOnly((v) => {
-              const nextValue = !v;
-              if (nextValue) {
-                setTagSlug(null);
-                setSavedOnly(false);
-              }
-              return nextValue;
-            });
-          }}
-        />
+        )}
       </div>
 
       {/* Loading state — initial load */}
@@ -409,9 +404,12 @@ const MarketsFeedPage = () => {
         </p>
       )}
 
-      {/* BetSlip modal */}
+      {/* BetSlip side panel. Keyed on market+outcome so picking a different
+          outcome while the panel is open remounts it with fresh state (the
+          page stays interactive — no backdrop). */}
       {selectedBet && (
         <BetSlip
+          key={`${selectedBet.market.id}:${selectedBet.outcome.id}`}
           market={selectedBet.market}
           outcome={selectedBet.outcome}
           availableBalance={availableBalance}
@@ -419,9 +417,6 @@ const MarketsFeedPage = () => {
           onSuccess={handleBetSuccess}
         />
       )}
-
-      {/* Active bets drawer */}
-      <ActiveBetsDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
     </div>
   );
 };

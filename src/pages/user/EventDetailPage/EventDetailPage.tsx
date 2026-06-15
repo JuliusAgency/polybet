@@ -255,8 +255,11 @@ const EventDetailPage = ({ readonly = false }: EventDetailPageProps = {}) => {
         <SimilarEventsList events={similar} isLoading={isSimilarLoading} />
       </div>
 
+      {/* Keyed on market+outcome so switching outcome while the panel is open
+          remounts it with fresh state (no backdrop — page stays interactive). */}
       {!readonly && selectedBet && (
         <BetSlip
+          key={`${selectedBet.market.id}:${selectedBet.outcome.id}`}
           market={selectedBet.market}
           outcome={selectedBet.outcome}
           availableBalance={balance?.available ?? 0}

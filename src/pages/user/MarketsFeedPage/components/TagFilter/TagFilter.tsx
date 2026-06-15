@@ -14,6 +14,11 @@ interface TagFilterProps {
   onMyBetsToggle?: () => void;
   showMyBets?: boolean;
   savedActive?: boolean;
+  /** When provided, a Saved chip is rendered inside the category row (next to
+   *  My bets). Toggles the saved-only feed view. */
+  onSavedToggle?: () => void;
+  /** Count of cards on the Saved tab, shown as a badge on the Saved chip. */
+  savedCount?: number;
 }
 
 /**
@@ -33,6 +38,8 @@ export function TagFilter({
   onMyBetsToggle,
   showMyBets = false,
   savedActive = false,
+  onSavedToggle,
+  savedCount,
 }: TagFilterProps) {
   const { t } = useTranslation();
 
@@ -47,12 +54,10 @@ export function TagFilter({
   // rest keeps Polymarket's original ordering.
   const trendingTag = tags.find((tag) => tag.slug === 'trending') ?? null;
   const worldCupTag = tags.find((tag) => tag.slug === WORLD_CUP_TAG_SLUG) ?? null;
-  const restTags = tags.filter(
-    (tag) => tag.slug !== 'trending' && tag.slug !== WORLD_CUP_TAG_SLUG
-  );
+  const restTags = tags.filter((tag) => tag.slug !== 'trending' && tag.slug !== WORLD_CUP_TAG_SLUG);
 
   return (
-    <div className="mt-2 flex flex-wrap gap-1.5">
+    <div className="tag-filter-row flex items-center gap-1.5 overflow-x-auto whitespace-nowrap">
       {trendingTag &&
         (() => {
           const isActive = effectiveValue === trendingTag.slug;
@@ -63,7 +68,7 @@ export function TagFilter({
             <button
               key={trendingTag.slug}
               onClick={() => onChange(isActive ? null : trendingTag.slug)}
-              className={`trending-chip ${isActive ? 'trending-chip--active' : ''}`}
+              className={`trending-chip shrink-0 ${isActive ? 'trending-chip--active' : ''}`}
               aria-pressed={isActive}
             >
               <FlameIcon active={isActive} />
@@ -81,7 +86,7 @@ export function TagFilter({
             <button
               key={worldCupTag.slug}
               onClick={() => onChange(isActive ? null : worldCupTag.slug)}
-              className={`world-cup-chip ${isActive ? 'world-cup-chip--active' : ''}`}
+              className={`world-cup-chip shrink-0 ${isActive ? 'world-cup-chip--active' : ''}`}
               aria-pressed={isActive}
             >
               <TrophyIcon />
@@ -95,7 +100,7 @@ export function TagFilter({
           <button
             onClick={() => onChange(isActive ? null : CLOSING_TODAY_TAG_SLUG)}
             aria-pressed={isActive}
-            className="flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors"
+            className="flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors"
             style={{
               backgroundColor: isActive
                 ? 'var(--color-accent)'
@@ -119,7 +124,7 @@ export function TagFilter({
           <button
             key={tag.slug}
             onClick={() => onChange(isActive ? null : tag.slug)}
-            className="rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors"
+            className="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors"
             style={{
               backgroundColor: isActive
                 ? 'var(--color-accent)'
@@ -139,7 +144,7 @@ export function TagFilter({
         return (
           <button
             onClick={() => onChange(null)}
-            className="rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors"
+            className="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors"
             style={{
               backgroundColor: isActive
                 ? 'var(--color-accent)'
@@ -154,11 +159,41 @@ export function TagFilter({
           </button>
         );
       })()}
+      {onSavedToggle && (
+        <button
+          onClick={onSavedToggle}
+          aria-pressed={savedActive}
+          className="flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors"
+          style={{
+            backgroundColor: savedActive
+              ? 'var(--color-accent)'
+              : 'color-mix(in srgb, var(--color-accent) 3%, var(--color-bg-elevated))',
+            color: savedActive
+              ? 'var(--color-bg-base)'
+              : 'color-mix(in srgb, var(--color-accent) 25%, var(--color-text-secondary))',
+            border: `1px solid ${savedActive ? 'var(--color-accent)' : 'color-mix(in srgb, var(--color-accent) 12%, var(--color-border))'}`,
+          }}
+        >
+          <BookmarkIcon active={savedActive} />
+          <span>{t('markets.savedButton')}</span>
+          {typeof savedCount === 'number' && (
+            <span
+              className="rounded-full px-1.5 py-0.5 text-[0.625rem] font-semibold leading-none"
+              style={{
+                backgroundColor: savedActive ? 'var(--color-bg-base)' : 'var(--color-accent)',
+                color: savedActive ? 'var(--color-accent)' : 'var(--color-bg-base)',
+              }}
+            >
+              {savedCount}
+            </span>
+          )}
+        </button>
+      )}
       {showMyBets && onMyBetsToggle && (
         <button
           onClick={onMyBetsToggle}
           aria-pressed={myBetsActive}
-          className="flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors"
+          className="flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors"
           style={{
             backgroundColor: myBetsActive
               ? 'var(--color-accent)'
@@ -223,6 +258,30 @@ function TrophyIcon() {
       <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
       <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
       <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+    </svg>
+  );
+}
+
+interface BookmarkIconProps {
+  active: boolean;
+}
+
+function BookmarkIcon({ active }: BookmarkIconProps) {
+  // Bookmark — matches the Saved/BookmarkButton semantics elsewhere in the app.
+  // Filled when the saved-only view is active, outline otherwise.
+  return (
+    <svg
+      width="11"
+      height="11"
+      viewBox="0 0 24 24"
+      fill={active ? 'currentColor' : 'none'}
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
     </svg>
   );
 }

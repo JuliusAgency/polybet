@@ -51,8 +51,11 @@ interface OutcomeButtonsProps {
    *    pills with NO win/loss tint — used only by the admin/manager read-only
    *    Markets surface so betting reads as unmistakably switched off. Winner
    *    outcomes still keep their win tint so resolved results stay legible.
+   *  - 'solid': Polymarket trade-panel look — the selected/winner side is filled
+   *    solid with its win/loss colour and white text; the other side is a flat
+   *    neutral grey. Used by the BetSlip side panel.
    */
-  appearance?: 'default' | 'inactive';
+  appearance?: 'default' | 'inactive' | 'solid';
 }
 
 const SIZE_STYLES: Record<ButtonSize, { padY: string; padX: string; name: string; odds: string }> =
@@ -81,10 +84,23 @@ function tintFor(
   index: number,
   isWinner: boolean,
   disabled: boolean,
-  appearance: 'default' | 'inactive' = 'default'
+  appearance: 'default' | 'inactive' | 'solid' = 'default'
 ): CSSProperties {
   const role = index === 0 ? 'win' : 'loss';
   const tintVar = role === 'win' ? 'var(--color-win)' : 'var(--color-loss)';
+
+  // Polymarket trade-panel look: selected/winner side filled solid with white
+  // text; the other side a flat neutral grey.
+  if (appearance === 'solid') {
+    if (isWinner) {
+      return { backgroundColor: tintVar, borderColor: tintVar, color: '#ffffff' };
+    }
+    return {
+      backgroundColor: 'var(--color-bg-base)',
+      borderColor: 'var(--color-border)',
+      color: 'var(--color-text-secondary)',
+    };
+  }
 
   if (isWinner) {
     return {
@@ -181,9 +197,16 @@ export function OutcomeButtons({
           disabled || isUntradable,
           appearance
         );
-        const style: CSSProperties = isHovered
-          ? hoverTintFor(index)
-          : { ...baseStyle, ...(isDimmed ? { opacity: 0.5 } : null) };
+        // Solid mode keeps its flat fills on hover (no win/loss recolour); a
+        // light brightness bump on the neutral side signals interactivity.
+        const style: CSSProperties =
+          isHovered && appearance !== 'solid'
+            ? hoverTintFor(index)
+            : {
+                ...baseStyle,
+                ...(isDimmed ? { opacity: 0.5 } : null),
+                ...(isHovered && appearance === 'solid' ? { filter: 'brightness(1.05)' } : null),
+              };
         const pct = showPercentage ? formatPrice(o.price, priceFormat) : null;
         const hoverPct = hoverShowsPercentage ? formatPrice(o.price, priceFormat) : null;
 
