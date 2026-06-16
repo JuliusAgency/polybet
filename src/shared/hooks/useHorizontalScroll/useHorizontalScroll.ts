@@ -1,4 +1,4 @@
-import { type RefObject, useEffect } from 'react';
+import { useCallback, useRef } from 'react';
 
 // Pointer travel (px) past which a press is treated as a drag rather than a
 // click — keeps chip taps working while still allowing grab-and-drag scrolling.
@@ -11,6 +11,15 @@ const DRAG_THRESHOLD_PX = 5;
  * single-row chip/tag bar with a hidden scrollbar cannot be scrolled at all by
  * a plain mouse.
  *
+ * Returns a callback ref — attach it with `<div ref={useHorizontalScroll()}>`.
+ * A callback ref is the deliberate choice over `RefObject` + `useEffect`: the
+ * row element is rendered conditionally (the chip data loads async, so the first
+ * render returns null before the ref'd div exists). With an effect keyed on the
+ * ref object, the listeners would be attached on mount — when the element is
+ * still absent — and never re-attach once the data arrives. React invokes a
+ * callback ref exactly when the node enters (node) and leaves (null) the DOM, so
+ * the listeners bind precisely when the row mounts, regardless of render order.
+ *
  * Wheel: the listener is attached natively with `{ passive: false }` because
  * React's synthetic `onWheel` is passive and cannot `preventDefault()`, which is
  * needed to stop the page from scrolling vertically while we move the row.
@@ -21,9 +30,16 @@ const DRAG_THRESHOLD_PX = 5;
  * A press that moves past DRAG_THRESHOLD_PX becomes a drag and the subsequent
  * click is swallowed so the chip under the pointer is not toggled.
  */
-export function useHorizontalScroll(ref: RefObject<HTMLElement | null>): void {
-  useEffect(() => {
-    const el = ref.current;
+export function useHorizontalScroll<T extends HTMLElement = HTMLElement>(): (
+  node: T | null,
+) => void {
+  // Cleanup for the currently-attached node, so we can detach when the node is
+  // swapped or unmounted (React calls the callback ref with null on unmount).
+  const cleanupRef = useRef<(() => void) | null>(null);
+
+  return useCallback((el: T | null) => {
+    cleanupRef.current?.();
+    cleanupRef.current = null;
     if (!el) return;
 
     const canScroll = () => el.scrollWidth > el.clientWidth;
@@ -96,7 +112,7 @@ export function useHorizontalScroll(ref: RefObject<HTMLElement | null>): void {
     el.addEventListener('pointercancel', endDrag);
     el.addEventListener('click', onClickCapture, true);
 
-    return () => {
+    cleanupRef.current = () => {
       el.removeEventListener('wheel', onWheel);
       el.removeEventListener('pointerdown', onPointerDown);
       el.removeEventListener('pointermove', onPointerMove);
@@ -104,5 +120,5 @@ export function useHorizontalScroll(ref: RefObject<HTMLElement | null>): void {
       el.removeEventListener('pointercancel', endDrag);
       el.removeEventListener('click', onClickCapture, true);
     };
-  }, [ref]);
+  }, []);
 }

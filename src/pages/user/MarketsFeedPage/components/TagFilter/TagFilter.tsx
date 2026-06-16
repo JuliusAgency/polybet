@@ -1,4 +1,3 @@
-import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CLOSING_TODAY_TAG_SLUG } from '@/entities/market';
 import { useHorizontalScroll } from '@/shared/hooks/useHorizontalScroll';
@@ -44,8 +43,7 @@ export function TagFilter({
   savedCount,
 }: TagFilterProps) {
   const { t } = useTranslation();
-  const rowRef = useRef<HTMLDivElement | null>(null);
-  useHorizontalScroll(rowRef);
+  const setRowRef = useHorizontalScroll<HTMLDivElement>();
 
   if (tags.length === 0) return null;
 
@@ -62,7 +60,7 @@ export function TagFilter({
 
   return (
     <div
-      ref={rowRef}
+      ref={setRowRef}
       className="tag-filter-row flex items-center gap-1.5 overflow-x-auto whitespace-nowrap"
     >
       {trendingTag &&
