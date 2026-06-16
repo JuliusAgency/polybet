@@ -24,6 +24,13 @@
     color-mix(in srgb, var(--color-accent) 8%, transparent),
     transparent 70%
   );
+  /* Dissolve the bottom edge (glow + lowest flags) into the flat page background
+     instead of cutting off on a hard line. Alpha mask: opaque to 74% of the
+     height, then fades to nothing — clearing the vertically-centred title/
+     subtitle (which bottoms out around ~67% across the height clamp). Applies in
+     LTR and RTL (the [dir='rtl'] rule only overrides `background`). */
+  -webkit-mask-image: linear-gradient(to bottom, #000 74%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 74%, transparent 100%);
   isolation: isolate;
   user-select: none;
 }
