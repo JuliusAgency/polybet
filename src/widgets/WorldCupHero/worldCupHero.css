@@ -19,23 +19,21 @@
   align-items: center; /* vertically centre the title block */
   border-radius: 0.75rem;
   /* Subtle field, focused under the wheel on the end side. */
-  background:
-    radial-gradient(
-      110% 90% at 80% 120%,
-      color-mix(in srgb, var(--color-accent) 8%, transparent),
-      transparent 70%
-    );
+  background: radial-gradient(
+    110% 90% at 80% 120%,
+    color-mix(in srgb, var(--color-accent) 8%, transparent),
+    transparent 70%
+  );
   isolation: isolate;
   user-select: none;
 }
 
 [dir='rtl'] .wc-hero {
-  background:
-    radial-gradient(
-      110% 90% at 20% 120%,
-      color-mix(in srgb, var(--color-accent) 8%, transparent),
-      transparent 70%
-    );
+  background: radial-gradient(
+    110% 90% at 20% 120%,
+    color-mix(in srgb, var(--color-accent) 8%, transparent),
+    transparent 70%
+  );
 }
 
 /* Rotation centre lives below the hero's bottom edge so the radius (341px) puts
@@ -54,9 +52,21 @@
   z-index: 1;
 }
 
-/* RTL: mirror the wheel to the left so it stays opposite the (now right-aligned) title. */
+/* RTL: a true horizontal mirror of the wheel (not just a reposition) so the arc
+   handedness, flag tilt, and spin all mirror the LTR hero. scaleX(-1) flips the
+   whole wheel; the flag content is counter-flipped below so flags/% stay readable.
+   The pointer-drag delta is negated in JS to keep dragging intuitive. */
 [dir='rtl'] .wc-hero__wheel-layer {
   left: 22%;
+  transform: translateX(-50%) scaleX(-1);
+}
+
+/* Counter-flip flag content. Math: the layer's scaleX(-1) and this inner
+   scaleX(-1) conjugate the wheel rotations to their inverse (S·R(φ)·S = R(-φ))
+   and cancel the reflection — so each flag mirrors its position/tilt while its
+   image and "50%" label render the right way round. */
+[dir='rtl'] .wc-flag__inner {
+  transform: translate(-50%, -50%) scaleX(-1);
 }
 
 .wc-hero__wheel-layer:active {

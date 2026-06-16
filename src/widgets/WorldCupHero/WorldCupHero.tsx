@@ -27,7 +27,11 @@ function shortestDelta(deg: number): number {
  * pushed it. Percentages are a placeholder (50%) until real odds are wired.
  */
 export function WorldCupHero() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  // In RTL the wheel is mirrored via scaleX(-1) (see worldCupHero.css), which
+  // visually inverts rotation. The drag handler negates its delta to compensate
+  // so dragging the wheel still follows the pointer.
+  const isRTL = i18n.language === 'he';
 
   const layerRef = useRef<HTMLDivElement>(null);
   const wheelRef = useRef<HTMLDivElement>(null);
@@ -87,7 +91,9 @@ export function WorldCupHero() {
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!draggingRef.current) return;
     const current = centreAngle(e);
-    const delta = shortestDelta(current - pointerAngleRef.current);
+    const raw = shortestDelta(current - pointerAngleRef.current);
+    // RTL wheel is mirrored (scaleX(-1)), so invert the drag delta.
+    const delta = isRTL ? -raw : raw;
     pointerAngleRef.current = current;
     angleRef.current += delta;
     if (delta !== 0) dirRef.current = delta > 0 ? 1 : -1;
