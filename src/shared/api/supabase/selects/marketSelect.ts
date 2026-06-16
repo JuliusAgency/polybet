@@ -17,9 +17,9 @@ const MARKET_EVENT_JOIN = `event:event_id(${EVENT_SELECT})`;
 // event join + outcomes. Used by useMarkets, useMarketsByIds, useEventsByIds,
 // useMarketRefresh. ALL consumers must use the same fragment, otherwise the
 // cache merge in useMarketRefresh may write rows that omit fields read by the UI.
-export const MARKET_SELECT_FULL = `id, polymarket_id, question, status, winning_outcome_id, category, image_url, close_at, last_synced_at, created_at, volume, sort_volume, trending_rank, volume_24hr, event_id, group_label, tag_slugs, ${MARKET_EVENT_JOIN}, ${MARKET_OUTCOMES_JOIN}`;
+export const MARKET_SELECT_FULL = `id, polymarket_id, question, status, winning_outcome_id, category, image_url, close_at, last_synced_at, created_at, volume, sort_volume, trending_rank, volume_24hr, event_id, group_label, tag_slugs, sports_market_type, line, ${MARKET_EVENT_JOIN}, ${MARKET_OUTCOMES_JOIN}`;
 
 // MARKET_SELECT_NO_EVENT — used by useEventById, which fetches the event row
 // separately and inlines it client-side. Excludes feed-only columns
 // (sort_volume, trending_rank, volume_24hr, tag_slugs).
-export const MARKET_SELECT_NO_EVENT = `id, polymarket_id, question, status, winning_outcome_id, category, image_url, close_at, last_synced_at, created_at, volume, event_id, group_label, ${MARKET_OUTCOMES_JOIN}`;
+export const MARKET_SELECT_NO_EVENT = `id, polymarket_id, question, status, winning_outcome_id, category, image_url, close_at, last_synced_at, created_at, volume, event_id, group_label, sports_market_type, line, ${MARKET_OUTCOMES_JOIN}`;

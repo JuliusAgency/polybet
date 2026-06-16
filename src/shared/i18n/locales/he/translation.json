@@ -251,7 +251,15 @@
     "tabProps": "הימורי צד",
     "tabMap": "מפה",
     "gamesPlaceholder": "המשחקים יגיעו בקרוב.",
-    "mapPlaceholder": "המפה תגיע בקרוב."
+    "mapPlaceholder": "המפה תגיע בקרוב.",
+    "gamesEmpty": "אין משחקים מתוזמנים כרגע.",
+    "gamesError": "טעינת המשחקים נכשלה. נסו שוב.",
+    "gamesScheduled": "מתוזמן",
+    "orderBook": "ספר פקודות",
+    "draw": "תיקו",
+    "spread": "מפתח",
+    "total": "סך הכל",
+    "noLine": "—"
   },
   "markets": {
     "title": "שווקים",

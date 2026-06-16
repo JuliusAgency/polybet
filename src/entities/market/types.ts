@@ -27,6 +27,10 @@ export interface Market {
   sort_volume?: number | null;
   event_id: string | null;
   group_label: string | null;
+  // Sports market classification for the World Cup Games tab. Null on
+  // non-sports markets. See migration 20260616143809.
+  sports_market_type?: string | null;
+  line?: number | null;
   // Denormalized from events.tag_slugs (migration 069). May be missing on
   // legacy cached records read before the column existed; treat as optional.
   tag_slugs?: string[];

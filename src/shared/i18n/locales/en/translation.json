@@ -251,7 +251,15 @@
     "tabProps": "Props",
     "tabMap": "Map",
     "gamesPlaceholder": "Games are coming soon.",
-    "mapPlaceholder": "The map is coming soon."
+    "mapPlaceholder": "The map is coming soon.",
+    "gamesEmpty": "No games scheduled right now.",
+    "gamesError": "Couldn't load games. Please try again.",
+    "gamesScheduled": "Scheduled",
+    "orderBook": "Order Book",
+    "draw": "Draw",
+    "spread": "Spread",
+    "total": "Total",
+    "noLine": "—"
   },
   "markets": {
     "title": "Markets",

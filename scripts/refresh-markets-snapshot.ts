@@ -41,9 +41,16 @@ function quote(value: unknown): string {
   if (typeof value === 'boolean') return value ? 'TRUE' : 'FALSE';
   if (value instanceof Date) return `'${value.toISOString()}'`;
   if (Array.isArray(value)) {
+    // jsonb array (e.g. events.teams) — elements are objects. Emit a JSON
+    // string literal; Postgres casts the unknown-typed literal to jsonb on
+    // insert. Scalar arrays (text[] like tag_slugs) stay array literals.
+    const hasObject = value.some((v) => v !== null && typeof v === 'object');
+    if (hasObject) return `'${JSON.stringify(value).replace(/'/g, "''")}'`;
     const inner = value.map((v) => String(v).replace(/'/g, "''")).join(',');
     return `'{${inner}}'`;
   }
+  // Plain jsonb object.
+  if (typeof value === 'object') return `'${JSON.stringify(value).replace(/'/g, "''")}'`;
   return `'${String(value).replace(/'/g, "''")}'`;
 }
 
@@ -77,6 +84,9 @@ async function main(): Promise<void> {
       'tag_slug',
       'tag_label',
       'tag_slugs',
+      'game_start_time',
+      'sport',
+      'teams',
       'is_visible',
       'created_at',
     ];
@@ -104,6 +114,8 @@ async function main(): Promise<void> {
       'event_id',
       'volume',
       'group_label',
+      'sports_market_type',
+      'line',
       'image_url',
       'created_at',
     ];

@@ -49,11 +49,22 @@ interface GammaMarket {
   tokens?: Array<{ token_id: string; winner?: boolean }>;
   updatedAt?: string | null;
   resolutionDate?: string | null;
+  // Sports market classification (present on /markets sports rows). Feeds the
+  // Games tab columns (moneyline | spreads | totals) + the handicap line.
+  sportsMarketType?: string | null;
+  line?: number | string | null;
 }
 
 interface SyncRequestBody {
   run_id?: string;
   mode?: 'full' | 'resolved_only' | 'active_page' | 'backfill' | 'hot_set';
+}
+
+/** Normalize a Gamma spread/total line to a finite number, else null. */
+function gammaLineOrNull(raw: number | string | null | undefined): number | null {
+  if (raw == null || raw === '') return null;
+  const n = typeof raw === 'number' ? raw : Number(raw);
+  return Number.isFinite(n) ? n : null;
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -1034,6 +1045,11 @@ async function upsertMarket(
     // 20260527093751_fix_stranded_hidden_event_visibility): is_visible OR autoShowAll.
     // On insert (existing === null) this is just autoShowAll.
     is_visible: existing === null ? autoShowAll : Boolean(existing.is_visible) || autoShowAll,
+    // Sports classification — only include when Gamma provides it, so this
+    // market-level sync never nulls metadata set by the event-first crawl
+    // (market-tracker), which is the authoritative source for game grouping.
+    ...(gm.sportsMarketType ? { sports_market_type: gm.sportsMarketType } : {}),
+    ...(gammaLineOrNull(gm.line) != null ? { line: gammaLineOrNull(gm.line) } : {}),
   };
 
   const { error: upsertErr } = await supabase

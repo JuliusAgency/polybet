@@ -8,6 +8,7 @@ import {
   useMyBets,
   useAllowedCategoryTags,
   useEventMarketCounts,
+  useWorldCupGames,
   groupMarketsByEvent,
 } from '@/features/bet';
 import { useFavoriteMarkets, useFavoriteEvents } from '@/features/favorites';
@@ -23,6 +24,8 @@ import { MarketCard } from '@/widgets/MarketCard';
 import { EventCard } from '@/widgets/EventCard';
 import { StatusFilter } from '@/widgets/StatusFilter';
 import { WorldCupHero } from '@/widgets/WorldCupHero';
+import { GamesList } from '@/widgets/GamesList';
+import { WORLD_CUP_TAG_SLUG } from '@/shared/config/worldCup';
 import { TagFilter } from './components/TagFilter';
 import { WorldCupSubTabs, type WorldCupTab } from './components/WorldCupSubTabs';
 
@@ -57,6 +60,15 @@ const MarketsFeedPage = () => {
     hasNextPage,
     isFetchingNextPage,
   } = useMarkets(statusFilter, debouncedSearch, null, tagSlug);
+
+  // World Cup Games sub-tab: match cards (France vs. Senegal) with their
+  // moneyline markets. Only fetched while the Games sub-tab is active.
+  const worldCupGamesEnabled = tagSlug === WORLD_CUP_TAG_SLUG && worldCupTab === 'games';
+  const {
+    data: worldCupGames = [],
+    isLoading: isLoadingGames,
+    isError: isErrorGames,
+  } = useWorldCupGames(worldCupGamesEnabled);
 
   // Tab-transition skeleton (Bug 1): TanStack Query keeps cached data per
   // (tagSlug) — switching back to a previously-loaded tag is instant, so
@@ -358,13 +370,26 @@ const MarketsFeedPage = () => {
         </div>
       )}
 
-      {/* Games / Map sub-tabs are placeholders for now. */}
-      {isWorldCup && worldCupTab !== 'props' && (
+      {/* World Cup Games sub-tab: match cards grouped by day. */}
+      {isWorldCup && worldCupTab === 'games' && (
+        <GamesList
+          games={worldCupGames}
+          isLoading={isLoadingGames}
+          isError={isErrorGames}
+          onOutcomeClick={handleOutcomeClick}
+          selected={
+            selectedBet
+              ? { marketId: selectedBet.market.id, outcomeId: selectedBet.outcome.id }
+              : null
+          }
+        />
+      )}
+
+      {/* Map sub-tab is a placeholder for now. */}
+      {isWorldCup && worldCupTab === 'map' && (
         <div className="flex min-h-[40vh] items-center justify-center">
           <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-            {worldCupTab === 'games'
-              ? t('worldCup.gamesPlaceholder')
-              : t('worldCup.mapPlaceholder')}
+            {t('worldCup.mapPlaceholder')}
           </p>
         </div>
       )}
