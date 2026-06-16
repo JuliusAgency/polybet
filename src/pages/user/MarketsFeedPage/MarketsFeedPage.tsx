@@ -24,6 +24,7 @@ import { EventCard } from '@/widgets/EventCard';
 import { StatusFilter } from '@/widgets/StatusFilter';
 import { WorldCupHero } from '@/widgets/WorldCupHero';
 import { TagFilter } from './components/TagFilter';
+import { WorldCupSubTabs, type WorldCupTab } from './components/WorldCupSubTabs';
 
 interface SelectedBet {
   market: Market;
@@ -39,6 +40,9 @@ const MarketsFeedPage = () => {
   const [tagSlug, setTagSlug] = useState<string | null>('trending');
   const [myBetsOnly, setMyBetsOnly] = useState(false);
   const [savedOnly, setSavedOnly] = useState(false);
+  // World Cup tab sub-navigation. Games is the default landing sub-tab; Props
+  // holds the actual market feed, Games/Map are placeholders for now.
+  const [worldCupTab, setWorldCupTab] = useState<WorldCupTab>('games');
   const debouncedSearch = useDebounce(searchQuery, 300);
 
   const { data: allowedTags = [] } = useAllowedCategoryTags();
@@ -224,13 +228,17 @@ const MarketsFeedPage = () => {
   const feedIsError = savedOnly ? isErrorSaved : myBetsOnly ? isErrorMyBets : isError;
   const feedError = savedOnly ? errorSaved : myBetsOnly ? errorMyBets : error;
 
+  // World Cup tab: the hero + sub-tabs render below the tag bar, and the market
+  // feed is shown only on the Props sub-tab (Games/Map are placeholders).
+  const isWorldCup = tagSlug === 'world-cup';
+  const showFeed = !isWorldCup || worldCupTab === 'props';
+
   return (
     <div>
-      {/* Header — the World Cup tab gets the animated flag-wheel hero in place
-          of the plain page title; every other tab keeps the simple heading. */}
-      {tagSlug === 'world-cup' ? (
-        <WorldCupHero />
-      ) : (
+      {/* Header — every tab except World Cup keeps the plain page title. On
+          World Cup the page title is omitted: the animated flag-wheel hero
+          (which carries its own heading) renders below the tag bar instead. */}
+      {!isWorldCup && (
         <h1 className="mb-6 text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
           {t('markets.title')}
         </h1>
@@ -320,101 +328,129 @@ const MarketsFeedPage = () => {
         )}
       </div>
 
-      {/* Loading state — initial load */}
-      {feedIsLoading && <CardGridSkeleton count={8} />}
-
-      {/* Error state */}
-      {feedIsError && (
-        <p className="text-sm" style={{ color: 'var(--color-error)' }}>
-          {t('common.error')}: {feedError?.message}
-        </p>
-      )}
-
-      {/* Empty state — no markets at all */}
-      {!feedIsLoading && !feedIsError && feedItems.length === 0 && (
-        <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-          {savedOnly
-            ? t('markets.noSaved')
-            : myBetsOnly
-              ? hasBets
-                ? t('markets.noMyBetsForStatus')
-                : t('markets.noMyBets')
-              : debouncedSearch
-                ? t('markets.noResults')
-                : t('markets.noMarkets')}
-        </p>
-      )}
-
-      {/* Feed grid: events grouped + standalone markets */}
-      {!feedIsLoading && !feedIsError && feedItems.length > 0 && (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {feedItems.map((item, index) => {
-            const card =
-              item.type === 'event' ? (
-                <EventCard
-                  event={item.event}
-                  markets={item.markets}
-                  bets={bets ?? []}
-                  mode={item.event.status === 'archived' ? 'readonly' : 'interactive'}
-                  onOutcomeClick={handleOutcomeClick}
-                  // In "my bets" mode only the user's wagered markets are passed;
-                  // force multi-row so a truly multi-market event doesn't collapse
-                  // into the single-market visual just because siblings were filtered out.
-                  forceMultiRow={myBetsOnly}
-                  totalMarketsCount={eventMarketCounts?.[item.event.id]}
-                />
-              ) : (
-                <MarketCard
-                  market={item.market}
-                  userBet={userBetForMarket(item.market.id)}
-                  betCount={betCountForMarket(item.market.id)}
-                  mode={
-                    item.market.status === 'open' || item.market.status === 'closed'
-                      ? 'interactive'
-                      : 'readonly'
-                  }
-                  showRefreshAction={false}
-                  showCloseDate={false}
-                  onOutcomeClick={handleOutcomeClick}
-                />
-              );
-            return (
-              <div
-                key={item.key}
-                className="card-enter"
-                style={{
-                  contentVisibility: 'auto',
-                  containIntrinsicSize: 'auto 260px',
-                  // Staggered cascade for a diagonal top-to-bottom reveal.
-                  // Capped so infinite-scroll cards never accrue an unbounded
-                  // delay — the cascade runs across the first ~15 cards, the
-                  // rest fade in together a beat later. The animation fires once
-                  // on mount (stable key), so polling/refetch never replays it.
-                  animationDelay: `${Math.min(index, 14) * 35}ms`,
-                }}
-              >
-                {card}
-              </div>
-            );
-          })}
+      {/* World Cup: the animated hero and its Games/Props/Map sub-tabs render
+          below the tag bar. Props shows the market feed; Games/Map are stubs. */}
+      {isWorldCup && (
+        <div className="mb-4">
+          <WorldCupHero />
+          <WorldCupSubTabs value={worldCupTab} onChange={setWorldCupTab} />
         </div>
       )}
 
-      {/* Infinite scroll sentinel — disabled in fixed-result-set views (my-bets, saved). */}
-      {!myBetsOnly && !savedOnly && <div ref={sentinelRef} className="h-4" />}
-
-      {/* Loading next page */}
-      {!myBetsOnly && !savedOnly && isFetchingNextPage && (
-        <div className="mt-4 flex justify-center">
-          <Spinner size="sm" />
+      {/* Games / Map sub-tabs are placeholders for now. */}
+      {isWorldCup && worldCupTab !== 'props' && (
+        <div className="flex min-h-[40vh] items-center justify-center">
+          <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+            {worldCupTab === 'games'
+              ? t('worldCup.gamesPlaceholder')
+              : t('worldCup.mapPlaceholder')}
+          </p>
         </div>
       )}
 
-      {/* All pages loaded */}
-      {!myBetsOnly && !savedOnly && !hasNextPage && markets.length > 0 && !isLoading && (
-        <p className="mt-4 text-center text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-          {t('markets.allLoaded')}
-        </p>
+      {/* Market feed — shown on every tab, and on World Cup only under Props. */}
+      {showFeed && (
+        <>
+          {/* Loading state — initial load */}
+          {feedIsLoading && <CardGridSkeleton count={8} />}
+
+          {/* Error state */}
+          {feedIsError && (
+            <p className="text-sm" style={{ color: 'var(--color-error)' }}>
+              {t('common.error')}: {feedError?.message}
+            </p>
+          )}
+
+          {/* Empty state — no markets at all */}
+          {!feedIsLoading && !feedIsError && feedItems.length === 0 && (
+            <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+              {savedOnly
+                ? t('markets.noSaved')
+                : myBetsOnly
+                  ? hasBets
+                    ? t('markets.noMyBetsForStatus')
+                    : t('markets.noMyBets')
+                  : debouncedSearch
+                    ? t('markets.noResults')
+                    : t('markets.noMarkets')}
+            </p>
+          )}
+
+          {/* Feed grid: events grouped + standalone markets */}
+          {!feedIsLoading && !feedIsError && feedItems.length > 0 && (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {feedItems.map((item, index) => {
+                const card =
+                  item.type === 'event' ? (
+                    <EventCard
+                      event={item.event}
+                      markets={item.markets}
+                      bets={bets ?? []}
+                      mode={item.event.status === 'archived' ? 'readonly' : 'interactive'}
+                      onOutcomeClick={handleOutcomeClick}
+                      // In "my bets" mode only the user's wagered markets are passed;
+                      // force multi-row so a truly multi-market event doesn't collapse
+                      // into the single-market visual just because siblings were filtered out.
+                      forceMultiRow={myBetsOnly}
+                      totalMarketsCount={eventMarketCounts?.[item.event.id]}
+                    />
+                  ) : (
+                    <MarketCard
+                      market={item.market}
+                      userBet={userBetForMarket(item.market.id)}
+                      betCount={betCountForMarket(item.market.id)}
+                      mode={
+                        item.market.status === 'open' || item.market.status === 'closed'
+                          ? 'interactive'
+                          : 'readonly'
+                      }
+                      showRefreshAction={false}
+                      showCloseDate={false}
+                      onOutcomeClick={handleOutcomeClick}
+                    />
+                  );
+                return (
+                  <div
+                    key={item.key}
+                    className="card-enter"
+                    style={{
+                      contentVisibility: 'auto',
+                      containIntrinsicSize: 'auto 260px',
+                      // Staggered cascade for a diagonal top-to-bottom reveal.
+                      // Capped so infinite-scroll cards never accrue an unbounded
+                      // delay — the cascade runs across the first ~15 cards, the
+                      // rest fade in together a beat later. The animation fires once
+                      // on mount (stable key), so polling/refetch never replays it.
+                      animationDelay: `${Math.min(index, 14) * 35}ms`,
+                    }}
+                  >
+                    {card}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Infinite scroll sentinel — disabled in fixed-result-set views (my-bets, saved). */}
+          {!myBetsOnly && !savedOnly && <div ref={sentinelRef} className="h-4" />}
+
+          {/* Loading next page */}
+          {!myBetsOnly && !savedOnly && isFetchingNextPage && (
+            <div className="mt-4 flex justify-center">
+              <Spinner size="sm" />
+            </div>
+          )}
+
+          {/* All pages loaded */}
+          {!myBetsOnly && !savedOnly && !hasNextPage && markets.length > 0 && !isLoading && (
+            <p
+              className="mt-4 text-center text-sm"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
+              {t('markets.allLoaded')}
+            </p>
+          )}
+        </>
       )}
 
       {/* BetSlip side panel. Keyed on market+outcome so picking a different

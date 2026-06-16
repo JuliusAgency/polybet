@@ -246,7 +246,12 @@
   },
   "worldCup": {
     "heroTitle": "גביע העולם",
-    "heroSubtitle": "תחזיות ויחסים חיים לגביע העולם"
+    "heroSubtitle": "תחזיות ויחסים חיים לגביע העולם",
+    "tabGames": "משחקים",
+    "tabProps": "הימורי צד",
+    "tabMap": "מפה",
+    "gamesPlaceholder": "המשחקים יגיעו בקרוב.",
+    "mapPlaceholder": "המפה תגיע בקרוב."
   },
   "markets": {
     "title": "שווקים",

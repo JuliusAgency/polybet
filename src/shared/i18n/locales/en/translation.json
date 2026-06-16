@@ -246,7 +246,12 @@
   },
   "worldCup": {
     "heroTitle": "World Cup",
-    "heroSubtitle": "Live world cup predictions & odds"
+    "heroSubtitle": "Live world cup predictions & odds",
+    "tabGames": "Games",
+    "tabProps": "Props",
+    "tabMap": "Map",
+    "gamesPlaceholder": "Games are coming soon.",
+    "mapPlaceholder": "The map is coming soon."
   },
   "markets": {
     "title": "Markets",
