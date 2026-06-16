@@ -244,6 +244,10 @@
     "maxButton": "Max",
     "exceedsAvailable": "Amount exceeds available balance ({{amount}})"
   },
+  "worldCup": {
+    "heroTitle": "World Cup",
+    "heroSubtitle": "Live world cup predictions & odds"
+  },
   "markets": {
     "title": "Markets",
     "noMarkets": "No markets available",

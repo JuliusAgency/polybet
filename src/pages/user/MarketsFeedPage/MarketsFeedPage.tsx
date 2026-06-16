@@ -22,6 +22,7 @@ import { BetSlip } from '@/widgets/BetSlip';
 import { MarketCard } from '@/widgets/MarketCard';
 import { EventCard } from '@/widgets/EventCard';
 import { StatusFilter } from '@/widgets/StatusFilter';
+import { WorldCupHero } from '@/widgets/WorldCupHero';
 import { TagFilter } from './components/TagFilter';
 
 interface SelectedBet {
@@ -225,10 +226,15 @@ const MarketsFeedPage = () => {
 
   return (
     <div>
-      {/* Header */}
-      <h1 className="mb-6 text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-        {t('markets.title')}
-      </h1>
+      {/* Header — the World Cup tab gets the animated flag-wheel hero in place
+          of the plain page title; every other tab keeps the simple heading. */}
+      {tagSlug === 'world-cup' ? (
+        <WorldCupHero />
+      ) : (
+        <h1 className="mb-6 text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
+          {t('markets.title')}
+        </h1>
+      )}
 
       {/* Category bar — Polymarket-style sub-bar directly under the top nav:
           scrollable category chips (incl. Saved + My bets) on the start side,

@@ -1,0 +1,140 @@
+/*
+ * World Cup hero — a rotating wheel of country flags, mirroring Polymarket's
+ * /sports/world-cup hero. The circle is large and pushed below the visible band
+ * so only the top arc shows through `overflow: hidden`, with the title pinned to
+ * the bottom. Rotation is driven imperatively from JS (the wheel node's inline
+ * `transform`), so there is no CSS keyframe animation here — interaction follows
+ * the user's drag direction.
+ */
+
+.wc-hero {
+  position: relative;
+  width: 100%;
+  height: clamp(200px, 26vw, 260px);
+  margin-bottom: 1rem;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  border-radius: 0.75rem;
+  /* Subtle field so the clipped arc reads as an intentional band. */
+  background:
+    radial-gradient(
+      120% 80% at 50% 120%,
+      color-mix(in srgb, var(--color-accent) 7%, transparent),
+      transparent 70%
+    );
+  isolation: isolate;
+  user-select: none;
+}
+
+/* Rotation centre lives ~40px below the hero's bottom edge regardless of the
+   clamped height, so the radius (341px) puts the top arc into view. */
+.wc-hero__wheel-layer {
+  position: absolute;
+  left: 50%;
+  bottom: -470px;
+  width: 740px;
+  height: 740px;
+  transform: translateX(-50%);
+  perspective: 9000px;
+  touch-action: pan-y; /* keep vertical page scroll; we only spin on drag */
+  cursor: grab;
+  z-index: 1;
+}
+
+.wc-hero__wheel-layer:active {
+  cursor: grabbing;
+}
+
+.wc-wheel {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+
+/* Zero-size pivot at the wheel centre; rotate then push outward along radius. */
+.wc-flag {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  transform-origin: 0 0;
+}
+
+/* Column (flag + percentage) centred on the radial point; tilts with the wheel. */
+.wc-flag__inner {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.wc-flag__card {
+  width: 64px;
+  height: 64px;
+  border-radius: 12%;
+  overflow: hidden;
+  box-shadow:
+    0 6px 16px -6px rgba(0, 0, 0, 0.45),
+    0 0 0 1px color-mix(in srgb, var(--color-border) 60%, transparent);
+}
+
+/* flag-icons square variant already covers the box; just stretch it. */
+.wc-flag__card .fi {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background-size: cover;
+}
+
+.wc-flag__pct {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+/* Title sits above the wheel with a bottom scrim for legibility over flags. */
+.wc-hero__title-layer {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  padding: 1rem 1.25rem 1.1rem;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in srgb, var(--color-bg-base) 70%, transparent) 55%,
+    var(--color-bg-base)
+  );
+  text-align: start;
+  pointer-events: none; /* let drags pass through to the wheel */
+}
+
+.wc-hero__title {
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: -1px;
+  line-height: 1.1;
+  font-size: clamp(2rem, 5vw, 2.75rem);
+  color: var(--color-text-primary);
+}
+
+.wc-hero__subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 14px;
+  line-height: 1.3;
+  color: var(--color-text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Auto-rotation is suppressed in JS; nothing else animates. */
+  .wc-wheel {
+    will-change: auto;
+  }
+}

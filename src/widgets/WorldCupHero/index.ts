@@ -1,0 +1,1 @@
+export { WorldCupHero } from './WorldCupHero';
