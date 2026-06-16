@@ -1,8 +1,10 @@
 /*
  * World Cup hero — a rotating wheel of country flags, mirroring Polymarket's
  * /sports/world-cup hero. The circle is large and pushed below the visible band
- * so only the top arc shows through `overflow: hidden`, with the title pinned to
- * the bottom. Rotation is driven imperatively from JS (the wheel node's inline
+ * so only the top arc shows through `overflow: hidden`. The title sits on the
+ * opposite side from the wheel: text is pinned to the start edge (left in LTR,
+ * right in RTL) and vertically centred, while the wheel arc is anchored to the
+ * end side. Rotation is driven imperatively from JS (the wheel node's inline
  * `transform`), so there is no CSS keyframe animation here — interaction follows
  * the user's drag direction.
  */
@@ -10,29 +12,38 @@
 .wc-hero {
   position: relative;
   width: 100%;
-  height: clamp(200px, 26vw, 260px);
+  height: clamp(240px, 30vw, 320px);
   margin-bottom: 1rem;
   overflow: hidden;
   display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
+  align-items: center; /* vertically centre the title block */
   border-radius: 0.75rem;
-  /* Subtle field so the clipped arc reads as an intentional band. */
+  /* Subtle field, focused under the wheel on the end side. */
   background:
     radial-gradient(
-      120% 80% at 50% 120%,
-      color-mix(in srgb, var(--color-accent) 7%, transparent),
+      110% 90% at 80% 120%,
+      color-mix(in srgb, var(--color-accent) 8%, transparent),
       transparent 70%
     );
   isolation: isolate;
   user-select: none;
 }
 
-/* Rotation centre lives ~40px below the hero's bottom edge regardless of the
-   clamped height, so the radius (341px) puts the top arc into view. */
+[dir='rtl'] .wc-hero {
+  background:
+    radial-gradient(
+      110% 90% at 20% 120%,
+      color-mix(in srgb, var(--color-accent) 8%, transparent),
+      transparent 70%
+    );
+}
+
+/* Rotation centre lives below the hero's bottom edge so the radius (341px) puts
+   the top arc into view; horizontally it sits on the end side (right in LTR) so
+   the flags and the title occupy opposite halves of the band. */
 .wc-hero__wheel-layer {
   position: absolute;
-  left: 50%;
+  left: 78%;
   bottom: -470px;
   width: 740px;
   height: 740px;
@@ -41,6 +52,11 @@
   touch-action: pan-y; /* keep vertical page scroll; we only spin on drag */
   cursor: grab;
   z-index: 1;
+}
+
+/* RTL: mirror the wheel to the left so it stays opposite the (now right-aligned) title. */
+[dir='rtl'] .wc-hero__wheel-layer {
+  left: 22%;
 }
 
 .wc-hero__wheel-layer:active {
@@ -100,34 +116,29 @@
   white-space: nowrap;
 }
 
-/* Title sits above the wheel with a bottom scrim for legibility over flags. */
+/* Title block occupies the start half, vertically centred and opposite the wheel. */
 .wc-hero__title-layer {
   position: relative;
   z-index: 2;
-  width: 100%;
-  padding: 1rem 1.25rem 1.1rem;
-  background: linear-gradient(
-    to bottom,
-    transparent,
-    color-mix(in srgb, var(--color-bg-base) 70%, transparent) 55%,
-    var(--color-bg-base)
-  );
+  flex: 0 1 auto;
+  max-width: min(55%, 32rem);
+  padding-inline: 1.5rem 1rem;
   text-align: start;
   pointer-events: none; /* let drags pass through to the wheel */
 }
 
 .wc-hero__title {
   margin: 0;
-  font-weight: 600;
-  letter-spacing: -1px;
-  line-height: 1.1;
-  font-size: clamp(2rem, 5vw, 2.75rem);
+  font-weight: 700;
+  letter-spacing: -2px;
+  line-height: 1.02;
+  font-size: clamp(2.75rem, 7vw, 4.75rem);
   color: var(--color-text-primary);
 }
 
 .wc-hero__subtitle {
-  margin: 0.25rem 0 0;
-  font-size: 14px;
+  margin: 0.5rem 0 0;
+  font-size: clamp(14px, 1.4vw, 16px);
   line-height: 1.3;
   color: var(--color-text-muted);
 }
