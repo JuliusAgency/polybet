@@ -348,7 +348,7 @@ const MarketsFeedPage = () => {
       {/* Feed grid: events grouped + standalone markets */}
       {!feedIsLoading && !feedIsError && feedItems.length > 0 && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {feedItems.map((item) => {
+          {feedItems.map((item, index) => {
             const card =
               item.type === 'event' ? (
                 <EventCard
@@ -381,9 +381,16 @@ const MarketsFeedPage = () => {
             return (
               <div
                 key={item.key}
+                className="card-enter"
                 style={{
                   contentVisibility: 'auto',
                   containIntrinsicSize: 'auto 260px',
+                  // Staggered cascade for a diagonal top-to-bottom reveal.
+                  // Capped so infinite-scroll cards never accrue an unbounded
+                  // delay — the cascade runs across the first ~15 cards, the
+                  // rest fade in together a beat later. The animation fires once
+                  // on mount (stable key), so polling/refetch never replays it.
+                  animationDelay: `${Math.min(index, 14) * 35}ms`,
                 }}
               >
                 {card}

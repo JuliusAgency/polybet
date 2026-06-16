@@ -74,6 +74,28 @@ input, textarea, select {
   to { transform: rotate(360deg); }
 }
 
+/* Feed card entrance — compositor-only (opacity + translateY), runs once when
+   the card first mounts. Because the feed keys cards by stable event/market id,
+   React reuses the DOM node across the 30s poll / refetch, so the animation does
+   NOT replay on data updates — only on first load, pagination, or tab switch.
+   `both` fill-mode holds opacity:0 through the staggered delay (backwards) and
+   the settled state after (forwards). Neutralized by the global
+   prefers-reduced-motion rule below. */
+@keyframes card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.card-enter {
+  animation: card-enter var(--duration-slow) var(--ease-out-expo) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
