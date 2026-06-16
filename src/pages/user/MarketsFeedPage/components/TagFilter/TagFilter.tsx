@@ -1,5 +1,7 @@
+import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CLOSING_TODAY_TAG_SLUG } from '@/entities/market';
+import { useHorizontalScroll } from '@/shared/hooks/useHorizontalScroll';
 import type { AllowedCategoryTag } from '@/features/bet';
 import './trendingChip.css';
 import './worldCupChip.css';
@@ -42,6 +44,8 @@ export function TagFilter({
   savedCount,
 }: TagFilterProps) {
   const { t } = useTranslation();
+  const rowRef = useRef<HTMLDivElement | null>(null);
+  useHorizontalScroll(rowRef);
 
   if (tags.length === 0) return null;
 
@@ -57,7 +61,10 @@ export function TagFilter({
   const restTags = tags.filter((tag) => tag.slug !== 'trending' && tag.slug !== WORLD_CUP_TAG_SLUG);
 
   return (
-    <div className="tag-filter-row flex items-center gap-1.5 overflow-x-auto whitespace-nowrap">
+    <div
+      ref={rowRef}
+      className="tag-filter-row flex items-center gap-1.5 overflow-x-auto whitespace-nowrap"
+    >
       {trendingTag &&
         (() => {
           const isActive = effectiveValue === trendingTag.slug;
