@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { supabase } from '@/shared/api/supabase';
 
 // Returns a map of eventId → total markets count for the given event ids.
@@ -15,6 +15,14 @@ export function useEventMarketCounts(eventIds: string[]) {
     queryKey: ['event-market-counts', sortedKey],
     enabled: eventIds.length > 0,
     staleTime: 60_000,
+    // The key is derived from the full set of event ids currently in the feed,
+    // so it churns every time the feed paginates (infinite scroll) or the 30s
+    // market poll changes the visible set. Without keepPreviousData each churn
+    // resets `data` to undefined for one tick, which makes EventCard's
+    // "+N closed markets" hint disappear and reappear on every refresh — a
+    // visible grid-reflow flicker. Retaining the previous map keeps every
+    // already-known count stable while the new key's query resolves.
+    placeholderData: keepPreviousData,
     queryFn: async (): Promise<Record<string, number>> => {
       const { data, error } = await supabase.rpc('event_market_counts', {
         p_event_ids: eventIds,

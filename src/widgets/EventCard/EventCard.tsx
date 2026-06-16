@@ -226,11 +226,20 @@ export const EventCard = ({
               onOutcomeClick={onOutcomeClick}
             />
           ))}
-          {hiddenClosedCount > 0 && (
-            <span className="mt-1 text-xs" style={{ color: 'var(--color-text-muted)' }}>
-              {t('events.closedMarkets', { count: hiddenClosedCount })}
-            </span>
-          )}
+          {/* Reserve a fixed-height line for the "+N closed markets" hint.
+              The count comes from a separate async RPC (useEventMarketCounts)
+              that resolves a tick after the card first paints. Rendering the
+              hint only when it's > 0 would grow the card height the moment the
+              count lands, reflowing the whole grid (the visible flicker on
+              load). Always reserving one line keeps every multi-row card a
+              stable height regardless of when — or whether — the count arrives.
+              `block min-h-[1rem]` holds the line height even when empty. */}
+          <span
+            className="mt-1 block min-h-[1rem] text-xs leading-4"
+            style={{ color: 'var(--color-text-muted)' }}
+          >
+            {hiddenClosedCount > 0 ? t('events.closedMarkets', { count: hiddenClosedCount }) : ' '}
+          </span>
         </div>
       )}
 
