@@ -119,7 +119,7 @@ const SavedMarketsPage = () => {
         clickableCount={feedItems.length}
       />
 
-      {isLoading && <CardGridSkeleton count={6} />}
+      {isLoading && <CardGridSkeleton count={8} />}
 
       {isError && (
         <p className="text-sm" style={{ color: 'var(--color-error)' }}>

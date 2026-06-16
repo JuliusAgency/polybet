@@ -321,7 +321,7 @@ const MarketsFeedPage = () => {
       </div>
 
       {/* Loading state — initial load */}
-      {feedIsLoading && <CardGridSkeleton count={6} />}
+      {feedIsLoading && <CardGridSkeleton count={8} />}
 
       {/* Error state */}
       {feedIsError && (
