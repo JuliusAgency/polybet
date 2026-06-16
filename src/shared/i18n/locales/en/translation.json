@@ -259,7 +259,15 @@
     "draw": "Draw",
     "spread": "Spread",
     "total": "Total",
-    "noLine": "—"
+    "noLine": "—",
+    "map": {
+      "title": "Odds & predictions",
+      "updated": "Updated {{date}}",
+      "searchPlaceholder": "Search",
+      "empty": "World Cup odds aren't available yet.",
+      "loadError": "Couldn't load the World Cup map.",
+      "noResults": "No countries match your search."
+    }
   },
   "markets": {
     "title": "Markets",

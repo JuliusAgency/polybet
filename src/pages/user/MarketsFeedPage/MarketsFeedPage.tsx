@@ -25,6 +25,7 @@ import { EventCard } from '@/widgets/EventCard';
 import { StatusFilter } from '@/widgets/StatusFilter';
 import { WorldCupHero } from '@/widgets/WorldCupHero';
 import { GamesList } from '@/widgets/GamesList';
+import { WorldCupMap } from '@/widgets/WorldCupMap';
 import { WORLD_CUP_TAG_SLUG } from '@/shared/config/worldCup';
 import { TagFilter } from './components/TagFilter';
 import { WorldCupSubTabs, type WorldCupTab } from './components/WorldCupSubTabs';
@@ -385,12 +386,11 @@ const MarketsFeedPage = () => {
         />
       )}
 
-      {/* Map sub-tab is a placeholder for now. */}
+      {/* Map sub-tab — interactive dotted globe + ranked country roster wired to
+          the "World Cup Winner" event. */}
       {isWorldCup && worldCupTab === 'map' && (
-        <div className="flex min-h-[40vh] items-center justify-center">
-          <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-            {t('worldCup.mapPlaceholder')}
-          </p>
+        <div className="mb-4">
+          <WorldCupMap />
         </div>
       )}
 
