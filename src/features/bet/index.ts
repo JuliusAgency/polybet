@@ -43,6 +43,12 @@ export { useMarketRefresh } from './useMarketRefresh';
 export { useEventById } from './useEventById';
 export type { EventWithMarkets } from './useEventById';
 
+export { useWorldCupWinner } from './useWorldCupWinner';
+export type { WorldCupWinnerData } from './useWorldCupWinner';
+export { useWorldCupWinnerEventId } from './useWorldCupWinnerEventId';
+export { marketsToWorldCupCountries, deriveCountryName } from './worldCupCountries';
+export type { WorldCupCountry } from './worldCupCountries';
+
 export { usePriceHistory } from './usePriceHistory';
 export type { PriceHistoryPoint } from './usePriceHistory';
 

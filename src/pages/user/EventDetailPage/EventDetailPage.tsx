@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { ROUTES } from '@/app/router/routes';
 import { useTranslation } from 'react-i18next';
 import {
@@ -14,7 +14,7 @@ import { useArchiveMarket } from '@/features/admin/markets/useArchiveMarket';
 import { useAuth } from '@/shared/hooks/useAuth';
 import type { Role } from '@/shared/types';
 import type { Market, MarketOutcome } from '@/entities/market';
-import { sortMarketsByYesDesc } from '@/entities/market';
+import { sortMarketsByYesDesc, getYesOutcome } from '@/entities/market';
 import { BetSlip } from '@/widgets/BetSlip';
 import { MarketThumbnail } from '@/shared/ui/MarketThumbnail';
 import { Spinner } from '@/shared/ui/Spinner';
@@ -68,6 +68,27 @@ const EventDetailPage = ({ readonly = false }: EventDetailPageProps = {}) => {
     },
     [setSelectedBet]
   );
+
+  // Deep-link pre-selection: the World Cup map opens this page with
+  // `?market=<id>` to auto-open the BetSlip on that country's sub-market (Yes
+  // outcome = "buy win"; the user can switch to No or Sell inside the slip).
+  // Resolved during render (React's recommended alternative to a setState
+  // effect — same pattern as MarketsFeedPage's tab-transition state) and tracked
+  // by `appliedMarketId` so it fires once per param: closing the slip doesn't
+  // reopen it, but navigating to a different ?market= does.
+  const [searchParams] = useSearchParams();
+  const presetMarketId = searchParams.get('market');
+  const [appliedMarketId, setAppliedMarketId] = useState<string | null>(null);
+  if (!readonly && presetMarketId && eventData && appliedMarketId !== presetMarketId) {
+    const market = eventData.markets.find((m) => m.id === presetMarketId);
+    const yes = market ? getYesOutcome(market) : null;
+    const outcome =
+      yes?.polymarket_token_id != null
+        ? yes
+        : (market?.market_outcomes.find((o) => o.polymarket_token_id != null) ?? null);
+    setAppliedMarketId(presetMarketId);
+    if (market && outcome) setSelectedBet({ market, outcome });
+  }
 
   // Archive is an admin-only action available on the read-only detail view for
   // resolved markets. Managers do not archive (mirrors the manager Markets page,

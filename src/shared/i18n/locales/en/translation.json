@@ -251,7 +251,15 @@
     "tabProps": "Props",
     "tabMap": "Map",
     "gamesPlaceholder": "Games are coming soon.",
-    "mapPlaceholder": "The map is coming soon."
+    "mapPlaceholder": "The map is coming soon.",
+    "map": {
+      "title": "Odds & predictions",
+      "updated": "Updated {{date}}",
+      "searchPlaceholder": "Search",
+      "empty": "World Cup odds aren't available yet.",
+      "loadError": "Couldn't load the World Cup map.",
+      "noResults": "No countries match your search."
+    }
   },
   "markets": {
     "title": "Markets",

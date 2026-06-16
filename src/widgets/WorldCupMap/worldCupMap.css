@@ -1,0 +1,246 @@
+/* World Cup map widget — dotted globe + ranked country list. All colours come
+   from theme tokens so it tracks light/dark. */
+
+.wc-map {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.wc-map__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.wc-map__title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.wc-map__updated {
+  margin-top: 0.125rem;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.wc-map__search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 9999px;
+  background-color: var(--color-bg-elevated);
+  color: var(--color-text-muted);
+}
+
+.wc-map__search input {
+  width: 11rem;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 0.875rem;
+  color: var(--color-text-primary);
+}
+
+/* Two columns from lg up: globe on the start side, list on the end side. */
+.wc-map__body {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+@media (min-width: 1024px) {
+  .wc-map__body {
+    grid-template-columns: minmax(0, 1fr) 22rem;
+  }
+}
+
+/* ---- Globe ---- */
+.wc-map__globe {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 320px;
+}
+
+.wc-map__globe-container {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wc-map__globe-stage {
+  position: relative;
+}
+
+.wc-map__globe-canvas {
+  display: block;
+  user-select: none;
+}
+
+.wc-map__globe-canvas:active {
+  cursor: grabbing;
+}
+
+/* Flag markers layer — sits above the canvas, only the chips are interactive. */
+.wc-map__markers {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.wc-map__marker {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  will-change: transform, opacity;
+  transition: filter var(--duration-fast) var(--ease-out-expo);
+}
+
+.wc-map__marker .fi {
+  width: 26px;
+  height: 18px;
+  border-radius: 3px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  background-size: cover;
+}
+
+.wc-map__marker-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 9999px;
+  background-color: var(--color-accent);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-accent) 30%, transparent);
+}
+
+.wc-map__marker-pct {
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--color-text-secondary);
+  text-shadow: 0 1px 2px var(--color-bg-base);
+}
+
+.wc-map__marker:hover,
+.wc-map__marker--active {
+  filter: drop-shadow(0 0 6px color-mix(in oklch, var(--color-accent) 70%, transparent));
+}
+
+.wc-map__marker--active {
+  z-index: 200 !important;
+}
+
+/* ---- Country list ---- */
+.wc-map__list-wrap {
+  max-height: 460px;
+  overflow-y: auto;
+}
+
+.wc-map__list {
+  display: flex;
+  flex-direction: column;
+}
+
+.wc-map__row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.6rem 0.5rem;
+  border: none;
+  background: transparent;
+  border-bottom: 1px solid var(--color-border-subtle);
+  cursor: pointer;
+  text-align: start;
+  transition: background-color var(--duration-fast) var(--ease-out-expo);
+}
+
+.wc-map__row:hover,
+.wc-map__row--active {
+  background-color: var(--color-bg-elevated);
+}
+
+.wc-map__row-flag .fi {
+  width: 24px;
+  height: 18px;
+  border-radius: 3px;
+  background-size: cover;
+}
+
+.wc-map__row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.wc-map__row-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wc-map__row-bar {
+  position: relative;
+  height: 3px;
+  border-radius: 9999px;
+  background-color: var(--color-border-subtle);
+  overflow: hidden;
+}
+
+.wc-map__row-bar-fill {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  border-radius: 9999px;
+  background-color: var(--color-accent);
+}
+
+.wc-map__row-pct {
+  flex-shrink: 0;
+  min-width: 3rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-accent);
+  background-color: color-mix(in oklch, var(--color-accent) 14%, transparent);
+}
+
+.wc-map__no-results {
+  padding: 1rem 0.5rem;
+}
+
+/* ---- States ---- */
+.wc-map__state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40vh;
+}
