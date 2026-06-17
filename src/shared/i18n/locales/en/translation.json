@@ -412,7 +412,8 @@
     "potentialPayout": "Potential payout",
     "showMoreMarkets": "Show {{count}} more",
     "showLessMarkets": "Show less",
-    "rules": "Rules"
+    "rules": "Rules",
+    "tradePlaceholder": "Select an outcome to start trading"
   },
   "priceHistory": {
     "empty": "No price history yet"

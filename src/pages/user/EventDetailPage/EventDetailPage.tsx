@@ -15,9 +15,10 @@ import { useAuth } from '@/shared/hooks/useAuth';
 import type { Role } from '@/shared/types';
 import type { Market, MarketOutcome } from '@/entities/market';
 import { sortMarketsByYesDesc, getYesOutcome } from '@/entities/market';
-import { BetSlip } from '@/widgets/BetSlip';
+import { BetSlip, BETSLIP_DOCK_QUERY } from '@/widgets/BetSlip';
 import { MarketThumbnail } from '@/shared/ui/MarketThumbnail';
 import { Spinner } from '@/shared/ui/Spinner';
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { formatVolume } from '@/shared/utils';
 import { SimilarEventsList } from './components/SimilarEventsList';
 import { EventUserActivity } from './components/EventUserActivity';
@@ -28,6 +29,14 @@ import { EventPriceHistoryChart } from './components/EventPriceHistoryChart';
 interface SelectedBet {
   market: Market;
   outcome: MarketOutcome;
+}
+
+// Prefer the Yes outcome (buy-win); fall back to the first outcome carrying a
+// Polymarket token so the slip can always fetch a live quote.
+function pickBettableOutcome(market: Market): MarketOutcome | null {
+  const yes = getYesOutcome(market);
+  if (yes?.polymarket_token_id != null) return yes;
+  return market.market_outcomes.find((o) => o.polymarket_token_id != null) ?? null;
 }
 
 interface EventDetailPageProps {
@@ -61,6 +70,9 @@ const EventDetailPage = ({ readonly = false }: EventDetailPageProps = {}) => {
   });
 
   const [selectedBet, setSelectedBet] = useState<SelectedBet | null>(null);
+  // Desktop (>= lg) docks the slip as a sticky sidebar column; narrower
+  // viewports keep the floating overlay / bottom-sheet.
+  const isDesktop = useMediaQuery(BETSLIP_DOCK_QUERY);
 
   const handleOutcomeClick = useCallback(
     (market: Market, outcome: MarketOutcome) => {
@@ -81,13 +93,28 @@ const EventDetailPage = ({ readonly = false }: EventDetailPageProps = {}) => {
   const [appliedMarketId, setAppliedMarketId] = useState<string | null>(null);
   if (!readonly && presetMarketId && eventData && appliedMarketId !== presetMarketId) {
     const market = eventData.markets.find((m) => m.id === presetMarketId);
-    const yes = market ? getYesOutcome(market) : null;
-    const outcome =
-      yes?.polymarket_token_id != null
-        ? yes
-        : (market?.market_outcomes.find((o) => o.polymarket_token_id != null) ?? null);
+    const outcome = market ? pickBettableOutcome(market) : null;
     setAppliedMarketId(presetMarketId);
     if (market && outcome) setSelectedBet({ market, outcome });
+  }
+
+  // Desktop docked column: pre-select a default so the trade column is ALWAYS
+  // populated (Polymarket-style) and never empty. Prefers the top OPEN market's
+  // Yes outcome, but falls back to the top market regardless of status so the
+  // slip always renders — if that market isn't tradable the slip disables its
+  // own CTA (stale book → "quote unavailable"). Fires once on load; the column
+  // is never cleared afterwards. Skipped when a ?market= deep-link drives it.
+  const [appliedDefault, setAppliedDefault] = useState(false);
+  // Bumped after a successful trade so the always-on slip remounts with a
+  // cleared amount while keeping the same selection (it never closes).
+  const [slipNonce, setSlipNonce] = useState(0);
+  if (!readonly && isDesktop && !presetMarketId && !selectedBet && !appliedDefault && eventData) {
+    const sorted =
+      eventData.markets.length > 1 ? sortMarketsByYesDesc(eventData.markets) : eventData.markets;
+    const top = sorted.find((m) => m.status === 'open') ?? sorted[0] ?? null;
+    const outcome = top ? (pickBettableOutcome(top) ?? top.market_outcomes[0] ?? null) : null;
+    setAppliedDefault(true);
+    if (top && outcome) setSelectedBet({ market: top, outcome });
   }
 
   // Archive is an admin-only action available on the read-only detail view for
@@ -156,6 +183,9 @@ const EventDetailPage = ({ readonly = false }: EventDetailPageProps = {}) => {
 
   const isSingleMarket = markets.length === 1;
   const isHebrew = i18n.language === 'he';
+  // On desktop the slip lives in a sticky sidebar column; on narrower viewports
+  // it falls back to the floating overlay opened on outcome click.
+  const dockColumn = !readonly && isDesktop;
 
   return (
     <div className={rootClass}>
@@ -193,92 +223,115 @@ const EventDetailPage = ({ readonly = false }: EventDetailPageProps = {}) => {
         </div>
       </header>
 
-      <div className="mt-6 flex flex-col gap-4">
-        {markets.length === 0 ? (
-          <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-            {t('eventDetail.noMarkets')}
-          </p>
-        ) : isSingleMarket ? (
-          <SingleMarketView
-            market={markets[0]}
-            userBet={betByMarketId.get(markets[0].id)}
-            description={event.description}
-            onOutcomeClick={outcomeClickHandler}
-            readonly={readonly}
-            onArchive={canArchive ? handleArchive : undefined}
-            isArchiving={
-              archiveMarket.isPending && archiveMarket.variables?.marketId === markets[0].id
-            }
-          />
-        ) : (
-          <>
-            <EventPriceHistoryChart markets={markets} />
-            {event.description && (
-              <section
-                className="flex flex-col gap-2 p-4"
-                style={{
-                  backgroundColor: 'var(--color-bg-surface)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-lg)',
-                }}
-              >
-                <h3
-                  className="text-sm font-semibold"
-                  style={{ color: 'var(--color-text-primary)' }}
-                >
-                  {t('eventDetail.rules')}
-                </h3>
-                <p
-                  className="whitespace-pre-line text-sm leading-relaxed"
+      <div className={dockColumn ? 'flex gap-6' : undefined}>
+        <div className={dockColumn ? 'min-w-0 flex-1' : undefined}>
+          <div className="mt-6 flex flex-col gap-4">
+            {markets.length === 0 ? (
+              <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                {t('eventDetail.noMarkets')}
+              </p>
+            ) : isSingleMarket ? (
+              <SingleMarketView
+                market={markets[0]}
+                userBet={betByMarketId.get(markets[0].id)}
+                description={event.description}
+                onOutcomeClick={outcomeClickHandler}
+                readonly={readonly}
+                onArchive={canArchive ? handleArchive : undefined}
+                isArchiving={
+                  archiveMarket.isPending && archiveMarket.variables?.marketId === markets[0].id
+                }
+              />
+            ) : (
+              <>
+                <EventPriceHistoryChart markets={markets} />
+                {event.description && (
+                  <section
+                    className="flex flex-col gap-2 p-4"
+                    style={{
+                      backgroundColor: 'var(--color-bg-surface)',
+                      border: '1px solid var(--color-border)',
+                      borderRadius: 'var(--radius-lg)',
+                    }}
+                  >
+                    <h3
+                      className="text-sm font-semibold"
+                      style={{ color: 'var(--color-text-primary)' }}
+                    >
+                      {t('eventDetail.rules')}
+                    </h3>
+                    <p
+                      className="whitespace-pre-line text-sm leading-relaxed"
+                      style={{
+                        color: 'var(--color-text-secondary)',
+                        // Polymarket rules text is English; LTR flow + end-aligned
+                        // keeps punctuation correct inside the RTL layout.
+                        ...(isHebrew && { direction: 'ltr' as const, textAlign: 'right' as const }),
+                      }}
+                    >
+                      {event.description}
+                    </p>
+                  </section>
+                )}
+                <section
+                  className="flex flex-col"
                   style={{
-                    color: 'var(--color-text-secondary)',
-                    // Polymarket rules text is English; LTR flow + end-aligned
-                    // keeps punctuation correct inside the RTL layout.
-                    ...(isHebrew && { direction: 'ltr' as const, textAlign: 'right' as const }),
+                    backgroundColor: 'var(--color-bg-surface)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: 'var(--radius-lg)',
+                    overflow: 'hidden',
                   }}
                 >
-                  {event.description}
-                </p>
-              </section>
+                  {markets.map((market, idx) => (
+                    <EventMarketRow
+                      key={market.id}
+                      market={market}
+                      userBet={betByMarketId.get(market.id)}
+                      mode={!readonly && market.status === 'open' ? 'interactive' : 'readonly'}
+                      outcomeAppearance={cardAppearance}
+                      onOutcomeClick={outcomeClickHandler}
+                      onArchive={canArchive ? handleArchive : undefined}
+                      isArchiving={
+                        archiveMarket.isPending && archiveMarket.variables?.marketId === market.id
+                      }
+                      isFirst={idx === 0}
+                    />
+                  ))}
+                </section>
+              </>
             )}
-            <section
-              className="flex flex-col"
-              style={{
-                backgroundColor: 'var(--color-bg-surface)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 'var(--radius-lg)',
-                overflow: 'hidden',
-              }}
-            >
-              {markets.map((market, idx) => (
-                <EventMarketRow
-                  key={market.id}
-                  market={market}
-                  userBet={betByMarketId.get(market.id)}
-                  mode={!readonly && market.status === 'open' ? 'interactive' : 'readonly'}
-                  outcomeAppearance={cardAppearance}
-                  onOutcomeClick={outcomeClickHandler}
-                  onArchive={canArchive ? handleArchive : undefined}
-                  isArchiving={
-                    archiveMarket.isPending && archiveMarket.variables?.marketId === market.id
-                  }
-                  isFirst={idx === 0}
-                />
-              ))}
-            </section>
-          </>
+
+            {!readonly && <EventUserActivity markets={markets} bets={bets} />}
+          </div>
+
+          <div className="mt-10">
+            <SimilarEventsList events={similar} isLoading={isSimilarLoading} />
+          </div>
+        </div>
+
+        {/* Desktop docked trade column — always present and never closes; it
+            sticks below the header while the left column scrolls. Keyed on
+            market+outcome (+nonce) so switching outcome or finishing a trade
+            remounts the slip with a fresh amount. */}
+        {dockColumn && selectedBet && (
+          <aside className="mt-6 w-[360px] shrink-0">
+            <BetSlip
+              key={`${selectedBet.market.id}:${selectedBet.outcome.id}:${slipNonce}`}
+              market={selectedBet.market}
+              outcome={selectedBet.outcome}
+              availableBalance={balance?.available ?? 0}
+              docked
+              showClose={false}
+              onClose={() => {}}
+              onSuccess={() => setSlipNonce((n) => n + 1)}
+            />
+          </aside>
         )}
-
-        {!readonly && <EventUserActivity markets={markets} bets={bets} />}
       </div>
 
-      <div className="mt-10">
-        <SimilarEventsList events={similar} isLoading={isSimilarLoading} />
-      </div>
-
-      {/* Keyed on market+outcome so switching outcome while the panel is open
-          remounts it with fresh state (no backdrop — page stays interactive). */}
-      {!readonly && selectedBet && (
+      {/* Mobile / non-desktop: floating overlay opened on outcome click (no
+          backdrop — the page stays interactive). */}
+      {!dockColumn && !readonly && selectedBet && (
         <BetSlip
           key={`${selectedBet.market.id}:${selectedBet.outcome.id}`}
           market={selectedBet.market}

@@ -13,9 +13,22 @@
   max-height: calc(100vh - 7rem);
 }
 
-/* Mobile: full-width bottom sheet. */
+/* Docked: in-flow sticky column. The parent layout column owns the width;
+ * the panel sticks below the app header as the page scrolls. Overrides the
+ * fixed geometry above without touching the overlay variant. */
+.side-panel--docked {
+  position: sticky;
+  inset-block-start: 5rem; /* sticks below the app header */
+  inset-inline-end: auto;
+  width: 100%;
+  max-width: 100%;
+  max-height: calc(100vh - 6rem);
+}
+
+/* Mobile: full-width bottom sheet. Excludes the docked variant, which is only
+ * ever mounted at desktop widths but stays in-flow if that ever changes. */
 @media (max-width: 767px) {
-  .side-panel {
+  .side-panel:not(.side-panel--docked) {
     inset-block-start: auto;
     inset-block-end: 0;
     inset-inline: 0;

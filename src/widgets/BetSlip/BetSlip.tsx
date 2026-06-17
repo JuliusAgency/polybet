@@ -30,6 +30,10 @@ export interface BetSlipProps {
   availableBalance: number;
   onClose: () => void;
   onSuccess: () => void;
+  /** Render as an in-flow sticky column instead of a floating overlay. */
+  docked?: boolean;
+  /** Hide the close (×) — used when the slip is a permanent page column. */
+  showClose?: boolean;
 }
 
 // Match place_bet's c_odds_drift_tolerance (2%). Constants live in sync; if
@@ -50,6 +54,8 @@ export const BetSlip = ({
   availableBalance,
   onClose,
   onSuccess,
+  docked = false,
+  showClose = true,
 }: BetSlipProps) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -314,7 +320,7 @@ export const BetSlip = ({
   } as const;
 
   return (
-    <SidePanel isOpen onClose={onClose}>
+    <SidePanel isOpen onClose={onClose} docked={docked} showClose={showClose}>
       <div className="flex flex-col gap-4">
         {/* Header — event thumbnail + event title + "Market · Outcome" */}
         <div className="flex items-center gap-3 pe-6">

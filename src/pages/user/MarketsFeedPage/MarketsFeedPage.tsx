@@ -19,7 +19,8 @@ import { useDebounce } from '@/shared/hooks/useDebounce';
 import { useIntersectionObserver } from '@/shared/hooks/useIntersectionObserver';
 import { Spinner } from '@/shared/ui/Spinner';
 import { CardGridSkeleton } from '@/shared/ui/CardGridSkeleton';
-import { BetSlip } from '@/widgets/BetSlip';
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
+import { BetSlip, BETSLIP_DOCK_QUERY } from '@/widgets/BetSlip';
 import { MarketCard } from '@/widgets/MarketCard';
 import { EventCard } from '@/widgets/EventCard';
 import { StatusFilter } from '@/widgets/StatusFilter';
@@ -154,6 +155,18 @@ const MarketsFeedPage = () => {
   const isErrorSaved = isErrorSavedMarkets || isErrorSavedEvents;
   const errorSaved = errorSavedMarkets ?? errorSavedEvents;
   const [selectedBet, setSelectedBet] = useState<SelectedBet | null>(null);
+  // On desktop a selected bet docks into a sticky sidebar column instead of
+  // floating over the feed; narrower viewports keep the overlay / bottom-sheet.
+  const isDesktop = useMediaQuery(BETSLIP_DOCK_QUERY);
+  const dockSlip = isDesktop && !!selectedBet;
+  // Bumped after a successful trade so the docked slip remounts with a cleared
+  // amount while staying open (it does not auto-close on the docked column).
+  const [slipNonce, setSlipNonce] = useState(0);
+  // Drop one feed column while the docked slip steals horizontal space so cards
+  // don't get squeezed thin.
+  const feedGridClass = dockSlip
+    ? 'grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3'
+    : 'grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
@@ -247,262 +260,280 @@ const MarketsFeedPage = () => {
   const showFeed = !isWorldCup || worldCupTab === 'props';
 
   return (
-    <div>
-      {/* Header — every tab except World Cup keeps the plain page title. On
+    <div className={dockSlip ? 'flex gap-6' : undefined}>
+      <div className={dockSlip ? 'min-w-0 flex-1' : undefined}>
+        {/* Header — every tab except World Cup keeps the plain page title. On
           World Cup the page title is omitted: the animated flag-wheel hero
           (which carries its own heading) renders below the tag bar instead. */}
-      {!isWorldCup && (
-        <h1 className="mb-6 text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-          {t('markets.title')}
-        </h1>
-      )}
+        {!isWorldCup && (
+          <h1 className="mb-6 text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
+            {t('markets.title')}
+          </h1>
+        )}
 
-      {/* Category bar — Polymarket-style sub-bar directly under the top nav:
+        {/* Category bar — Polymarket-style sub-bar directly under the top nav:
           scrollable category chips (incl. Saved + My bets) on the start side,
           search on the end side. */}
-      <div className="mb-4">
-        <div className="flex items-center gap-2">
-          {/* Tag filter — curated popular categories from Polymarket.
+        <div className="mb-4">
+          <div className="flex items-center gap-2">
+            {/* Tag filter — curated popular categories from Polymarket.
               My-bets, Saved and tag selection are mutually exclusive: turning
               one on clears the others so the feed has a single intent. */}
-          <div className="min-w-0 flex-1">
-            <TagFilter
-              value={tagSlug}
-              onChange={(next) => {
-                setTagSlug(next);
-                if (myBetsOnly) setMyBetsOnly(false);
-                if (savedOnly) setSavedOnly(false);
-              }}
-              tags={allowedTags}
-              showMyBets={hasBets}
-              myBetsActive={myBetsOnly}
-              savedActive={savedOnly}
-              onSavedToggle={handleSavedToggle}
-              savedCount={savedFeedCount}
-              onMyBetsToggle={() => {
-                setMyBetsOnly((v) => {
-                  const nextValue = !v;
-                  if (nextValue) {
-                    setTagSlug(null);
-                    setSavedOnly(false);
-                  }
-                  return nextValue;
-                });
-              }}
-            />
-          </div>
+            <div className="min-w-0 flex-1">
+              <TagFilter
+                value={tagSlug}
+                onChange={(next) => {
+                  setTagSlug(next);
+                  if (myBetsOnly) setMyBetsOnly(false);
+                  if (savedOnly) setSavedOnly(false);
+                }}
+                tags={allowedTags}
+                showMyBets={hasBets}
+                myBetsActive={myBetsOnly}
+                savedActive={savedOnly}
+                onSavedToggle={handleSavedToggle}
+                savedCount={savedFeedCount}
+                onMyBetsToggle={() => {
+                  setMyBetsOnly((v) => {
+                    const nextValue = !v;
+                    if (nextValue) {
+                      setTagSlug(null);
+                      setSavedOnly(false);
+                    }
+                    return nextValue;
+                  });
+                }}
+              />
+            </div>
 
-          {/* Divider + Search — pinned to the end of the bar. The hairline
+            {/* Divider + Search — pinned to the end of the bar. The hairline
               fades to transparent at both ends so it reads as a soft seam
               between the scrollable chip row and the search, not a hard rule.
               Theme-tokened, so it tracks light/dark; as a plain flex child it
               auto-positions on the correct side in RTL. */}
-          {!myBetsOnly && (
-            <>
-              <div
-                aria-hidden
-                className="shrink-0"
-                style={{
-                  width: '1px',
-                  height: '1.75rem',
-                  marginInline: '0.375rem',
-                  borderRadius: '1px',
-                  // Solid in the middle, feathered to transparent at both ends —
-                  // reads as a deliberate seam, not a hard rule. Token-driven so
-                  // it tracks light/dark.
-                  background:
-                    'linear-gradient(to bottom, transparent, var(--color-border-strong) 28%, var(--color-border-strong) 72%, transparent)',
-                }}
-              />
-              <div className="relative flex shrink-0 items-center">
+            {!myBetsOnly && (
+              <>
                 <div
-                  className="pointer-events-none absolute inset-y-0 flex items-center"
-                  style={{ insetInlineStart: '10px' }}
-                >
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    style={{ color: 'var(--color-text-muted)' }}
-                  >
-                    <circle cx="11" cy="11" r="8" />
-                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                  </svg>
-                </div>
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={t('markets.searchPlaceholder')}
-                  className="w-40 rounded-full border py-1 text-sm outline-none sm:w-52"
+                  aria-hidden
+                  className="shrink-0"
                   style={{
-                    backgroundColor: 'var(--color-bg-elevated)',
-                    borderColor: 'var(--color-border)',
-                    color: 'var(--color-text-primary)',
-                    paddingInlineStart: '2rem',
-                    paddingInlineEnd: '0.75rem',
+                    width: '1px',
+                    height: '1.75rem',
+                    marginInline: '0.375rem',
+                    borderRadius: '1px',
+                    // Solid in the middle, feathered to transparent at both ends —
+                    // reads as a deliberate seam, not a hard rule. Token-driven so
+                    // it tracks light/dark.
+                    background:
+                      'linear-gradient(to bottom, transparent, var(--color-border-strong) 28%, var(--color-border-strong) 72%, transparent)',
                   }}
                 />
-              </div>
-            </>
+                <div className="relative flex shrink-0 items-center">
+                  <div
+                    className="pointer-events-none absolute inset-y-0 flex items-center"
+                    style={{ insetInlineStart: '10px' }}
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      style={{ color: 'var(--color-text-muted)' }}
+                    >
+                      <circle cx="11" cy="11" r="8" />
+                      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                  </div>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder={t('markets.searchPlaceholder')}
+                    className="w-40 rounded-full border py-1 text-sm outline-none sm:w-52"
+                    style={{
+                      backgroundColor: 'var(--color-bg-elevated)',
+                      borderColor: 'var(--color-border)',
+                      color: 'var(--color-text-primary)',
+                      paddingInlineStart: '2rem',
+                      paddingInlineEnd: '0.75rem',
+                    }}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Status pills — only relevant when browsing "All categories" with no
+            category / Saved / My bets intent. Hidden otherwise (Polymarket UX). */}
+          {tagSlug === null && !savedOnly && !myBetsOnly && (
+            <div className="mt-3">
+              <StatusFilter value={statusFilter} onChange={setStatusFilter} />
+            </div>
           )}
         </div>
 
-        {/* Status pills — only relevant when browsing "All categories" with no
-            category / Saved / My bets intent. Hidden otherwise (Polymarket UX). */}
-        {tagSlug === null && !savedOnly && !myBetsOnly && (
-          <div className="mt-3">
-            <StatusFilter value={statusFilter} onChange={setStatusFilter} />
+        {/* World Cup: the animated hero and its Games/Props/Map sub-tabs render
+          below the tag bar. Props shows the market feed; Games/Map are stubs. */}
+        {isWorldCup && (
+          <div className="mb-4">
+            <WorldCupHero />
+            <WorldCupSubTabs value={worldCupTab} onChange={setWorldCupTab} />
           </div>
+        )}
+
+        {/* World Cup Games sub-tab: match cards grouped by day. */}
+        {isWorldCup && worldCupTab === 'games' && (
+          <GamesList
+            games={worldCupGames}
+            isLoading={isLoadingGames}
+            isError={isErrorGames}
+            onOutcomeClick={handleOutcomeClick}
+            selected={
+              selectedBet
+                ? { marketId: selectedBet.market.id, outcomeId: selectedBet.outcome.id }
+                : null
+            }
+          />
+        )}
+
+        {/* Map sub-tab — interactive dotted globe + ranked country roster wired to
+          the "World Cup Winner" event. */}
+        {isWorldCup && worldCupTab === 'map' && (
+          <div className="mb-4">
+            <WorldCupMap />
+          </div>
+        )}
+
+        {/* Market feed — shown on every tab, and on World Cup only under Props. */}
+        {showFeed && (
+          <>
+            {/* Loading state — initial load */}
+            {feedIsLoading && <CardGridSkeleton count={8} />}
+
+            {/* Error state */}
+            {feedIsError && (
+              <p className="text-sm" style={{ color: 'var(--color-error)' }}>
+                {t('common.error')}: {feedError?.message}
+              </p>
+            )}
+
+            {/* Empty state — no markets at all */}
+            {!feedIsLoading && !feedIsError && feedItems.length === 0 && (
+              <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                {savedOnly
+                  ? t('markets.noSaved')
+                  : myBetsOnly
+                    ? hasBets
+                      ? t('markets.noMyBetsForStatus')
+                      : t('markets.noMyBets')
+                    : debouncedSearch
+                      ? t('markets.noResults')
+                      : t('markets.noMarkets')}
+              </p>
+            )}
+
+            {/* Feed grid: events grouped + standalone markets */}
+            {!feedIsLoading && !feedIsError && feedItems.length > 0 && (
+              <div className={feedGridClass}>
+                {feedItems.map((item, index) => {
+                  const card =
+                    item.type === 'event' ? (
+                      <EventCard
+                        event={item.event}
+                        markets={item.markets}
+                        bets={bets ?? []}
+                        mode={item.event.status === 'archived' ? 'readonly' : 'interactive'}
+                        onOutcomeClick={handleOutcomeClick}
+                        // In "my bets" mode only the user's wagered markets are passed;
+                        // force multi-row so a truly multi-market event doesn't collapse
+                        // into the single-market visual just because siblings were filtered out.
+                        forceMultiRow={myBetsOnly}
+                        totalMarketsCount={eventMarketCounts?.[item.event.id]}
+                      />
+                    ) : (
+                      <MarketCard
+                        market={item.market}
+                        userBet={userBetForMarket(item.market.id)}
+                        betCount={betCountForMarket(item.market.id)}
+                        mode={
+                          item.market.status === 'open' || item.market.status === 'closed'
+                            ? 'interactive'
+                            : 'readonly'
+                        }
+                        showRefreshAction={false}
+                        showCloseDate={false}
+                        onOutcomeClick={handleOutcomeClick}
+                      />
+                    );
+                  return (
+                    <div
+                      key={item.key}
+                      className="card-enter"
+                      style={{
+                        contentVisibility: 'auto',
+                        containIntrinsicSize: 'auto 260px',
+                        // Staggered cascade for a diagonal top-to-bottom reveal.
+                        // Capped so infinite-scroll cards never accrue an unbounded
+                        // delay — the cascade runs across the first ~15 cards, the
+                        // rest fade in together a beat later. The animation fires once
+                        // on mount (stable key), so polling/refetch never replays it.
+                        animationDelay: `${Math.min(index, 14) * 35}ms`,
+                      }}
+                    >
+                      {card}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Infinite scroll sentinel — disabled in fixed-result-set views (my-bets, saved). */}
+            {!myBetsOnly && !savedOnly && <div ref={sentinelRef} className="h-4" />}
+
+            {/* Loading next page */}
+            {!myBetsOnly && !savedOnly && isFetchingNextPage && (
+              <div className="mt-4 flex justify-center">
+                <Spinner size="sm" />
+              </div>
+            )}
+
+            {/* All pages loaded */}
+            {!myBetsOnly && !savedOnly && !hasNextPage && markets.length > 0 && !isLoading && (
+              <p
+                className="mt-4 text-center text-sm"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                {t('markets.allLoaded')}
+              </p>
+            )}
+          </>
         )}
       </div>
 
-      {/* World Cup: the animated hero and its Games/Props/Map sub-tabs render
-          below the tag bar. Props shows the market feed; Games/Map are stubs. */}
-      {isWorldCup && (
-        <div className="mb-4">
-          <WorldCupHero />
-          <WorldCupSubTabs value={worldCupTab} onChange={setWorldCupTab} />
-        </div>
+      {/* Desktop: docked sticky trade column beside the feed. Keyed on
+          market+outcome so picking a different outcome remounts it fresh. */}
+      {dockSlip && (
+        <aside className="w-[360px] shrink-0">
+          <BetSlip
+            key={`${selectedBet.market.id}:${selectedBet.outcome.id}:${slipNonce}`}
+            market={selectedBet.market}
+            outcome={selectedBet.outcome}
+            availableBalance={availableBalance}
+            docked
+            showClose={false}
+            onClose={() => {}}
+            onSuccess={() => setSlipNonce((n) => n + 1)}
+          />
+        </aside>
       )}
 
-      {/* World Cup Games sub-tab: match cards grouped by day. */}
-      {isWorldCup && worldCupTab === 'games' && (
-        <GamesList
-          games={worldCupGames}
-          isLoading={isLoadingGames}
-          isError={isErrorGames}
-          onOutcomeClick={handleOutcomeClick}
-          selected={
-            selectedBet
-              ? { marketId: selectedBet.market.id, outcomeId: selectedBet.outcome.id }
-              : null
-          }
-        />
-      )}
-
-      {/* Map sub-tab — interactive dotted globe + ranked country roster wired to
-          the "World Cup Winner" event. */}
-      {isWorldCup && worldCupTab === 'map' && (
-        <div className="mb-4">
-          <WorldCupMap />
-        </div>
-      )}
-
-      {/* Market feed — shown on every tab, and on World Cup only under Props. */}
-      {showFeed && (
-        <>
-          {/* Loading state — initial load */}
-          {feedIsLoading && <CardGridSkeleton count={8} />}
-
-          {/* Error state */}
-          {feedIsError && (
-            <p className="text-sm" style={{ color: 'var(--color-error)' }}>
-              {t('common.error')}: {feedError?.message}
-            </p>
-          )}
-
-          {/* Empty state — no markets at all */}
-          {!feedIsLoading && !feedIsError && feedItems.length === 0 && (
-            <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-              {savedOnly
-                ? t('markets.noSaved')
-                : myBetsOnly
-                  ? hasBets
-                    ? t('markets.noMyBetsForStatus')
-                    : t('markets.noMyBets')
-                  : debouncedSearch
-                    ? t('markets.noResults')
-                    : t('markets.noMarkets')}
-            </p>
-          )}
-
-          {/* Feed grid: events grouped + standalone markets */}
-          {!feedIsLoading && !feedIsError && feedItems.length > 0 && (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {feedItems.map((item, index) => {
-                const card =
-                  item.type === 'event' ? (
-                    <EventCard
-                      event={item.event}
-                      markets={item.markets}
-                      bets={bets ?? []}
-                      mode={item.event.status === 'archived' ? 'readonly' : 'interactive'}
-                      onOutcomeClick={handleOutcomeClick}
-                      // In "my bets" mode only the user's wagered markets are passed;
-                      // force multi-row so a truly multi-market event doesn't collapse
-                      // into the single-market visual just because siblings were filtered out.
-                      forceMultiRow={myBetsOnly}
-                      totalMarketsCount={eventMarketCounts?.[item.event.id]}
-                    />
-                  ) : (
-                    <MarketCard
-                      market={item.market}
-                      userBet={userBetForMarket(item.market.id)}
-                      betCount={betCountForMarket(item.market.id)}
-                      mode={
-                        item.market.status === 'open' || item.market.status === 'closed'
-                          ? 'interactive'
-                          : 'readonly'
-                      }
-                      showRefreshAction={false}
-                      showCloseDate={false}
-                      onOutcomeClick={handleOutcomeClick}
-                    />
-                  );
-                return (
-                  <div
-                    key={item.key}
-                    className="card-enter"
-                    style={{
-                      contentVisibility: 'auto',
-                      containIntrinsicSize: 'auto 260px',
-                      // Staggered cascade for a diagonal top-to-bottom reveal.
-                      // Capped so infinite-scroll cards never accrue an unbounded
-                      // delay — the cascade runs across the first ~15 cards, the
-                      // rest fade in together a beat later. The animation fires once
-                      // on mount (stable key), so polling/refetch never replays it.
-                      animationDelay: `${Math.min(index, 14) * 35}ms`,
-                    }}
-                  >
-                    {card}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Infinite scroll sentinel — disabled in fixed-result-set views (my-bets, saved). */}
-          {!myBetsOnly && !savedOnly && <div ref={sentinelRef} className="h-4" />}
-
-          {/* Loading next page */}
-          {!myBetsOnly && !savedOnly && isFetchingNextPage && (
-            <div className="mt-4 flex justify-center">
-              <Spinner size="sm" />
-            </div>
-          )}
-
-          {/* All pages loaded */}
-          {!myBetsOnly && !savedOnly && !hasNextPage && markets.length > 0 && !isLoading && (
-            <p
-              className="mt-4 text-center text-sm"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
-              {t('markets.allLoaded')}
-            </p>
-          )}
-        </>
-      )}
-
-      {/* BetSlip side panel. Keyed on market+outcome so picking a different
-          outcome while the panel is open remounts it with fresh state (the
-          page stays interactive — no backdrop). */}
-      {selectedBet && (
+      {/* Mobile / non-desktop: floating overlay (no backdrop — page stays
+          interactive). */}
+      {!isDesktop && selectedBet && (
         <BetSlip
           key={`${selectedBet.market.id}:${selectedBet.outcome.id}`}
           market={selectedBet.market}

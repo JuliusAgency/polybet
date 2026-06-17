@@ -6,6 +6,14 @@ interface SidePanelProps {
   onClose: () => void;
   title?: string;
   closeDisabled?: boolean;
+  /**
+   * Render in-flow as a sticky column instead of a fixed floating overlay.
+   * The parent must place the panel inside a width-constrained column; the
+   * panel then sticks below the header as the page scrolls (Polymarket-style).
+   */
+  docked?: boolean;
+  /** Hide the close (×) button — used when the panel is a permanent column. */
+  showClose?: boolean;
   children: ReactNode;
 }
 
@@ -14,12 +22,17 @@ interface SidePanelProps {
  * NO backdrop: the page underneath stays visible and fully interactive, so the
  * user can scroll the feed or click another outcome while the panel is open.
  * Geometry / responsive bottom-sheet fallback live in SidePanel.css.
+ *
+ * In `docked` mode the panel is in normal flow (`position: sticky`) so it lives
+ * inside a layout column rather than floating over the page.
  */
 export const SidePanel = ({
   isOpen,
   onClose,
   title,
   closeDisabled = false,
+  docked = false,
+  showClose = true,
   children,
 }: SidePanelProps) => {
   const titleId = useId();
@@ -44,7 +57,7 @@ export const SidePanel = ({
       // Not modal: the rest of the page remains interactive behind the panel.
       aria-modal="false"
       aria-labelledby={title ? titleId : undefined}
-      className="side-panel flex flex-col overflow-hidden"
+      className={`side-panel flex flex-col overflow-hidden${docked ? ' side-panel--docked' : ''}`}
       style={{
         backgroundColor: 'var(--color-bg-elevated)',
         border: '1px solid var(--color-border)',
@@ -65,23 +78,25 @@ export const SidePanel = ({
           >
             {title}
           </h2>
-          <button
-            onClick={onClose}
-            disabled={closeDisabled}
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-lg transition-colors"
-            style={{
-              color: 'var(--color-text-secondary)',
-              opacity: closeDisabled ? 0.4 : 1,
-              cursor: closeDisabled ? 'not-allowed' : 'pointer',
-            }}
-            aria-label="Close"
-          >
-            ×
-          </button>
+          {showClose && (
+            <button
+              onClick={onClose}
+              disabled={closeDisabled}
+              className="flex h-7 w-7 items-center justify-center rounded-lg text-lg transition-colors"
+              style={{
+                color: 'var(--color-text-secondary)',
+                opacity: closeDisabled ? 0.4 : 1,
+                cursor: closeDisabled ? 'not-allowed' : 'pointer',
+              }}
+              aria-label="Close"
+            >
+              ×
+            </button>
+          )}
         </div>
       )}
 
-      {!title && (
+      {!title && showClose && (
         <div className="flex justify-end px-5 pt-4">
           <button
             onClick={onClose}

@@ -14,8 +14,9 @@ import { useFavoriteMarkets, useFavoriteEvents } from '@/features/favorites';
 import { ROUTES } from '@/app/router/routes';
 import { CardGridSkeleton } from '@/shared/ui/CardGridSkeleton';
 import { MARKETS_REFRESH_MAX_IDS } from '@/shared/config/markets';
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { BalanceWidget } from '@/widgets/BalanceWidget';
-import { BetSlip } from '@/widgets/BetSlip';
+import { BetSlip, BETSLIP_DOCK_QUERY } from '@/widgets/BetSlip';
 import { MarketCard } from '@/widgets/MarketCard';
 import { EventCard } from '@/widgets/EventCard';
 import { ActiveBetsDrawer } from '@/widgets/ActiveBetsDrawer';
@@ -72,6 +73,16 @@ const SavedMarketsPage = () => {
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedBet, setSelectedBet] = useState<SelectedBet | null>(null);
+  // Desktop docks a selected bet into a sticky sidebar column; narrower
+  // viewports keep the floating overlay / bottom-sheet.
+  const isDesktop = useMediaQuery(BETSLIP_DOCK_QUERY);
+  const dockSlip = isDesktop && !!selectedBet;
+  // Bumped after a successful trade so the docked slip remounts cleared while
+  // staying open (it does not auto-close on the docked column).
+  const [slipNonce, setSlipNonce] = useState(0);
+  const feedGridClass = dockSlip
+    ? 'grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3'
+    : 'grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
 
   const handleOutcomeClick = useCallback(
     (market: Market, outcome: MarketOutcome) => {
@@ -104,79 +115,99 @@ const SavedMarketsPage = () => {
   const errorMessage = errorStandalone?.message ?? errorEventMarkets?.message ?? '';
 
   return (
-    <div>
-      <h1 className="mb-6 text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-        {t('markets.savedTitle')}
-      </h1>
+    <div className={dockSlip ? 'flex gap-6' : undefined}>
+      <div className={dockSlip ? 'min-w-0 flex-1' : undefined}>
+        <h1 className="mb-6 text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
+          {t('markets.savedTitle')}
+        </h1>
 
-      <BalanceWidget
-        available={availableBalance}
-        inPlay={inPlay}
-        openBetsCount={openBetsCount}
-        isLoading={!balance}
-        onOpenDrawer={() => setIsDrawerOpen(true)}
-        onOpenSaved={() => navigate(ROUTES.USER.MARKETS)}
-        clickableCount={feedItems.length}
-      />
+        <BalanceWidget
+          available={availableBalance}
+          inPlay={inPlay}
+          openBetsCount={openBetsCount}
+          isLoading={!balance}
+          onOpenDrawer={() => setIsDrawerOpen(true)}
+          onOpenSaved={() => navigate(ROUTES.USER.MARKETS)}
+          clickableCount={feedItems.length}
+        />
 
-      {isLoading && <CardGridSkeleton count={8} />}
+        {isLoading && <CardGridSkeleton count={8} />}
 
-      {isError && (
-        <p className="text-sm" style={{ color: 'var(--color-error)' }}>
-          {t('common.error')}: {errorMessage}
-        </p>
-      )}
+        {isError && (
+          <p className="text-sm" style={{ color: 'var(--color-error)' }}>
+            {t('common.error')}: {errorMessage}
+          </p>
+        )}
 
-      {!isLoading && !isError && feedItems.length === 0 && (
-        <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-          {t('markets.noSaved')}
-        </p>
-      )}
+        {!isLoading && !isError && feedItems.length === 0 && (
+          <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+            {t('markets.noSaved')}
+          </p>
+        )}
 
-      {!isLoading && !isError && feedItems.length > 0 && (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {feedItems.map((item) => {
-            const card =
-              item.type === 'event' ? (
-                <EventCard
-                  event={item.event}
-                  markets={item.markets}
-                  bets={bets ?? []}
-                  mode={item.event.status === 'archived' ? 'readonly' : 'interactive'}
-                  onOutcomeClick={handleOutcomeClick}
-                />
-              ) : (
-                <MarketCard
-                  market={item.market}
-                  userBet={userBetForMarket(item.market.id)}
-                  betCount={betCountForMarket(item.market.id)}
-                  mode={
-                    item.market.status === 'open' || item.market.status === 'closed'
-                      ? 'interactive'
-                      : 'readonly'
-                  }
-                  showRefreshAction={false}
-                  showCloseDate={false}
-                  onOutcomeClick={handleOutcomeClick}
-                />
+        {!isLoading && !isError && feedItems.length > 0 && (
+          <div className={feedGridClass}>
+            {feedItems.map((item) => {
+              const card =
+                item.type === 'event' ? (
+                  <EventCard
+                    event={item.event}
+                    markets={item.markets}
+                    bets={bets ?? []}
+                    mode={item.event.status === 'archived' ? 'readonly' : 'interactive'}
+                    onOutcomeClick={handleOutcomeClick}
+                  />
+                ) : (
+                  <MarketCard
+                    market={item.market}
+                    userBet={userBetForMarket(item.market.id)}
+                    betCount={betCountForMarket(item.market.id)}
+                    mode={
+                      item.market.status === 'open' || item.market.status === 'closed'
+                        ? 'interactive'
+                        : 'readonly'
+                    }
+                    showRefreshAction={false}
+                    showCloseDate={false}
+                    onOutcomeClick={handleOutcomeClick}
+                  />
+                );
+              return (
+                <div
+                  key={item.key}
+                  style={{
+                    contentVisibility: 'auto',
+                    containIntrinsicSize: 'auto 260px',
+                  }}
+                >
+                  {card}
+                </div>
               );
-            return (
-              <div
-                key={item.key}
-                style={{
-                  contentVisibility: 'auto',
-                  containIntrinsicSize: 'auto 260px',
-                }}
-              >
-                {card}
-              </div>
-            );
-          })}
-        </div>
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Desktop: docked sticky trade column beside the grid. */}
+      {dockSlip && (
+        <aside className="w-[360px] shrink-0">
+          <BetSlip
+            key={`${selectedBet.market.id}:${selectedBet.outcome.id}:${slipNonce}`}
+            market={selectedBet.market}
+            outcome={selectedBet.outcome}
+            availableBalance={availableBalance}
+            docked
+            showClose={false}
+            onClose={() => {}}
+            onSuccess={() => setSlipNonce((n) => n + 1)}
+          />
+        </aside>
       )}
 
-      {selectedBet && (
+      {/* Mobile / non-desktop: floating overlay. */}
+      {!isDesktop && selectedBet && (
         <BetSlip
+          key={`${selectedBet.market.id}:${selectedBet.outcome.id}`}
           market={selectedBet.market}
           outcome={selectedBet.outcome}
           availableBalance={availableBalance}
