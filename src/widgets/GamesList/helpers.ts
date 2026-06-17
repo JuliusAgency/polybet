@@ -29,6 +29,34 @@ export function formatOddCents(price: number | null | undefined): string {
   return `${Math.round(clamped * 100)}¢`;
 }
 
+/**
+ * Pick a readable text token for a team-coloured button background. Parses a
+ * `#rgb`/`#rrggbb` hex, computes perceived luminance and returns dark text on
+ * light backgrounds and light text on dark ones. Falls back to the on-accent
+ * token for missing/invalid colours (the button then uses --color-accent as
+ * its background).
+ */
+export function readableTextColor(hex: string | null | undefined): string {
+  const ON_ACCENT = 'var(--color-bg-base)';
+  if (!hex) return ON_ACCENT;
+
+  let h = hex.trim().replace(/^#/, '');
+  if (h.length === 3) {
+    h = h
+      .split('')
+      .map((c) => c + c)
+      .join('');
+  }
+  if (!/^[0-9a-fA-F]{6}$/.test(h)) return ON_ACCENT;
+
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  // Perceived luminance (ITU-R BT.601). >0.6 => light background -> dark text.
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.6 ? '#0b0b0c' : '#ffffff';
+}
+
 /** The binary "Yes" outcome of a market (falls back to the first outcome). */
 export function yesOutcome(market: Market): MarketOutcome | null {
   if (!market.market_outcomes || market.market_outcomes.length === 0) return null;

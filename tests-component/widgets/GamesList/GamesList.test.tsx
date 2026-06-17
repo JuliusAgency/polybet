@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import type { Market, MarketOutcome } from '@/entities/market';
 import type { MarketEvent } from '@/entities/event';
 import { GamesList } from '@/widgets/GamesList';
+import { readableTextColor } from '@/widgets/GamesList/helpers';
 import { groupGames, type WorldCupGame } from '@/features/bet';
 import { renderWithProviders } from '../../helpers/render';
 
@@ -92,7 +93,7 @@ function buildGame(): WorldCupGame {
 }
 
 describe('GamesList', () => {
-  it('renders team rows with moneyline prices in cents and a draw chip', () => {
+  it('renders team rows with moneyline prices in cents and a draw button', () => {
     renderWithProviders(
       <GamesList games={[buildGame()]} isLoading={false} isError={false} onOutcomeClick={vi.fn()} />
     );
@@ -103,6 +104,19 @@ describe('GamesList', () => {
     expect(screen.getByText('67¢')).toBeInTheDocument();
     expect(screen.getByText('13¢')).toBeInTheDocument();
     expect(screen.getByText('22¢')).toBeInTheDocument();
+  });
+
+  it('renders the three moneyline bet buttons (win / draw / loss)', () => {
+    renderWithProviders(
+      <GamesList games={[buildGame()]} isLoading={false} isError={false} onOutcomeClick={vi.fn()} />
+    );
+
+    const buttons = screen.getAllByRole('button');
+    // FRA win, Draw, SEN win — exactly three bettable outcomes, no spread/total.
+    expect(buttons).toHaveLength(3);
+    expect(screen.getByRole('button', { name: /fra/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /draw/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /sen/i })).toBeInTheDocument();
   });
 
   it('invokes onOutcomeClick with the correct market + Yes outcome', async () => {
@@ -155,7 +169,7 @@ describe('GamesList', () => {
 });
 
 describe('groupGames', () => {
-  it('splits markets by sports_market_type and orders games by kickoff', () => {
+  it('groups moneyline markets per event and orders games by kickoff', () => {
     const later = { ...event, id: 'evt-late', game_start_time: '2026-06-17T19:00:00Z' };
     const lateMarket: Market = {
       ...market('m-late', 'France', 0.5),
@@ -171,9 +185,19 @@ describe('groupGames', () => {
     ]);
 
     expect(games.map((g) => g.event.id)).toEqual(['evt-fra-sen', 'evt-late']);
-    const first = games[0];
-    expect(first.moneyline).toHaveLength(3);
-    expect(first.spread).toHaveLength(0);
-    expect(first.total).toHaveLength(0);
+    expect(games[0].moneyline).toHaveLength(3);
+  });
+});
+
+describe('readableTextColor', () => {
+  it('returns light text on dark backgrounds and dark text on light ones', () => {
+    expect(readableTextColor('#144b8f')).toBe('#ffffff'); // dark navy -> light text
+    expect(readableTextColor('#f5d90a')).toBe('#0b0b0c'); // bright yellow -> dark text
+    expect(readableTextColor('#fff')).toBe('#0b0b0c'); // short hex supported
+  });
+
+  it('falls back to the on-accent token for missing or invalid colours', () => {
+    expect(readableTextColor(null)).toBe('var(--color-bg-base)');
+    expect(readableTextColor('not-a-color')).toBe('var(--color-bg-base)');
   });
 });
