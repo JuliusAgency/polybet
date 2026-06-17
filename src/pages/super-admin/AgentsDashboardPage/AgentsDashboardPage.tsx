@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAgentStats } from '@/features/admin/agent-stats';
-import { useSystemKpis, useSyncHealth, useSyncFreshnessStats } from '@/features/stats';
+import { useSystemKpis, useSyncHealth } from '@/features/stats';
 import type { AgentStatsRow } from '@/features/admin/agent-stats';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
@@ -18,7 +18,6 @@ const selectStyle: React.CSSProperties = {
 };
 
 // Format a "seconds ago" age into the largest sensible unit (s / min / h / d).
-// Sync-freshness averages can span weeks, so days are supported.
 const formatAge = (seconds: number | null, t: TFunction): string => {
   if (seconds === null) return t('agentsDashboard.syncHealthNever');
   if (seconds < 90) return `${seconds} ${t('agentsDashboard.syncUnitSec')}`;
@@ -47,11 +46,6 @@ const AgentsDashboardPage = () => {
     staleSeconds: syncStaleSeconds,
     isStale: syncIsStale,
   } = useSyncHealth();
-  const {
-    stats: freshnessStats,
-    isFetching: freshnessFetching,
-    run: runFreshness,
-  } = useSyncFreshnessStats();
 
   const syncAgeLabel = useMemo(
     () =>
@@ -152,45 +146,6 @@ const AgentsDashboardPage = () => {
             {syncAgeLabel}
           </span>
         </div>
-      </div>
-
-      {/* On-demand average sync freshness — expensive full scans, runs on click */}
-      <div
-        className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border p-3"
-        style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-surface)' }}
-      >
-        <Button variant="secondary" onClick={runFreshness} disabled={freshnessFetching}>
-          {freshnessFetching
-            ? t('agentsDashboard.syncStatsComputing')
-            : t('agentsDashboard.syncStatsRun')}
-        </Button>
-        {freshnessStats && (
-          <>
-            <span className="text-xs font-mono" style={{ color: 'var(--color-text-primary)' }}>
-              {t('agentsDashboard.syncStatsMarkets', {
-                age: formatAge(freshnessStats.markets_price_avg_seconds, t),
-                count: freshnessStats.markets_open,
-              })}
-            </span>
-            <span className="text-xs font-mono" style={{ color: 'var(--color-text-primary)' }}>
-              {t('agentsDashboard.syncStatsEvents', {
-                age: formatAge(freshnessStats.events_sync_avg_seconds, t),
-                count: freshnessStats.events_open,
-              })}
-            </span>
-            <span
-              className="ms-auto inline-flex h-5 w-5 cursor-help items-center justify-center rounded-full border text-[11px] font-semibold"
-              style={{
-                color: 'var(--color-text-secondary)',
-                borderColor: 'var(--color-border)',
-                backgroundColor: 'var(--color-bg-elevated)',
-              }}
-              title={t('agentsDashboard.syncStatsHint')}
-            >
-              ?
-            </span>
-          </>
-        )}
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
