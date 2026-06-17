@@ -31,7 +31,10 @@ export function projectMarker(
   phi: number,
   theta: number,
   size: number,
-  radiusScale = 1
+  radiusScale = 1,
+  /** cobe `scale` (zoom). The globe radius — and thus marker placement — grows
+   *  linearly with it, so flags stay locked to the continents at any zoom. */
+  scale = 1
 ): ProjectedMarker {
   const latRad = lat * DEG;
   const lngRad = lng * DEG;
@@ -53,7 +56,7 @@ export function projectMarker(
   const sy = cosT * ey + sinT * b; // (L·e).y
   const sz = sinT * ey - cosT * b; // (L·e).z
 
-  const r = (size / 2) * radiusScale;
+  const r = (size / 2) * radiusScale * scale;
   const c = size / 2;
 
   return {

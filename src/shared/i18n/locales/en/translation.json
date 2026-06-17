@@ -264,7 +264,10 @@
       "searchPlaceholder": "Search",
       "empty": "World Cup odds aren't available yet.",
       "loadError": "Couldn't load the World Cup map.",
-      "noResults": "No countries match your search."
+      "noResults": "No countries match your search.",
+      "zoom": "Zoom",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out"
     }
   },
   "markets": {
