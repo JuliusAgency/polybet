@@ -43,9 +43,11 @@ export const AUTO_SPIN_PER_FRAME = 0.0022;
 export const DRAG_PHI_PER_PX = 0.006;
 export const DRAG_THETA_PER_PX = 0.006;
 
-/** Viewer tilt clamp (radians) so the poles never swing fully into view. */
-export const THETA_MIN = -0.5;
-export const THETA_MAX = 0.5;
+/** Viewer tilt clamp (radians). Wide enough (~±80°) to bring even high-latitude
+ *  clusters (e.g. Europe ~46°N, Norway ~62°N) down to the canvas centre, which
+ *  is required for centre-zoom to actually magnify them. */
+export const THETA_MIN = -1.4;
+export const THETA_MAX = 1.4;
 
 /** Initial viewer tilt — looks slightly down onto the northern hemisphere. */
 export const INITIAL_THETA = -0.18;
@@ -55,3 +57,12 @@ export const MARKER_RADIUS_SCALE = 0.92;
 
 /** Max globe canvas side in CSS px (square). */
 export const MAX_GLOBE_SIZE = 620;
+
+/** Zoom (cobe `scale`) bounds + step. Zoom is toward the globe centre, so a
+ *  dense region is first dragged to the centre and then magnified to declutter
+ *  the overlapping flag chips. */
+export const ZOOM_MIN = 1;
+export const ZOOM_MAX = 5;
+export const ZOOM_STEP = 0.5;
+/** Wheel delta → zoom factor sensitivity (per wheel notch). */
+export const ZOOM_WHEEL_SENSITIVITY = 0.0015;
