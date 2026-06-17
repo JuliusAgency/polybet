@@ -29,10 +29,14 @@ export function projectMarker(
   const latRad = (lat * Math.PI) / 180;
   const lngRad = (lng * Math.PI) / 180;
 
+  // Longitude rotation must match cobe's canvas, which rotates the globe by
+  // Ry(+phi) (its shader matrix is Rx(theta)·Ry(phi)). Using `lng + phi` keeps
+  // the flags locked to the dotted continents as the globe spins or is dragged;
+  // the opposite sign drifts them the wrong way.
   const cosLat = Math.cos(latRad);
-  const x0 = cosLat * Math.sin(lngRad - phi);
+  const x0 = cosLat * Math.sin(lngRad + phi);
   const y0 = Math.sin(latRad);
-  const z0 = cosLat * Math.cos(lngRad - phi);
+  const z0 = cosLat * Math.cos(lngRad + phi);
 
   // Tilt around the X axis. Negative theta leans the north pole toward the
   // viewer (matches cobe's default downward-looking tilt).

@@ -71,7 +71,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 320px;
+  min-height: 480px;
 }
 
 .wc-map__globe-container {
@@ -152,7 +152,7 @@
 
 /* ---- Country list ---- */
 .wc-map__list-wrap {
-  max-height: 460px;
+  max-height: 540px;
   overflow-y: auto;
 }
 

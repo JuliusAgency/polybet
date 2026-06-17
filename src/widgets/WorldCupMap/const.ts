@@ -54,4 +54,4 @@ export const INITIAL_THETA = -0.18;
 export const MARKER_RADIUS_SCALE = 0.92;
 
 /** Max globe canvas side in CSS px (square). */
-export const MAX_GLOBE_SIZE = 460;
+export const MAX_GLOBE_SIZE = 620;
