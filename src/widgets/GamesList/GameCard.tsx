@@ -5,7 +5,7 @@ import type { GameTeam } from '@/entities/event';
 import { ROUTES, buildPath } from '@/app/router/routes';
 import { formatVolume } from '@/shared/utils';
 import type { WorldCupGame } from '@/features/bet';
-import { toGameView, formatOddCents, type MoneylineSlot } from './helpers';
+import { toGameView, formatOddCents, readableTextColor, type MoneylineSlot } from './helpers';
 
 export interface GameCardProps {
   game: WorldCupGame;
@@ -24,17 +24,24 @@ function formatKickoff(iso: string | null | undefined, lang: string): string {
   return new Intl.DateTimeFormat(localeOf(lang), { hour: 'numeric', minute: '2-digit' }).format(d);
 }
 
-// A single price chip (team / draw / spread / total). Reserves a fixed slot so
-// the price never reflows; highlights when its BetSlip is open.
-function OddChip({
+// A single moneyline bet button (win / draw / loss). Takes the full button
+// width with the outcome label and price side by side; reserves a fixed slot
+// for the price so it never reflows on a refetch. `backgroundColor` is the team
+// colour for win buttons (draw is neutral); selected buttons get an accent ring
+// instead of a background swap since the background is already coloured.
+function MoneylineButton({
   label,
   price,
+  backgroundColor,
+  color,
   active,
   disabled,
   onClick,
 }: {
   label: string;
   price: number | null;
+  backgroundColor: string;
+  color: string;
   active: boolean;
   disabled: boolean;
   onClick: () => void;
@@ -44,11 +51,13 @@ function OddChip({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className="flex min-w-[5.5rem] items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+      className="flex flex-1 items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50"
       style={{
-        backgroundColor: active ? 'var(--color-accent)' : 'var(--color-bg-elevated)',
-        color: active ? 'var(--color-bg-base)' : 'var(--color-text-primary)',
+        backgroundColor,
+        color,
         border: '1px solid var(--color-border)',
+        outline: active ? '2px solid var(--color-text-primary)' : 'none',
+        outlineOffset: active ? '1px' : undefined,
       }}
     >
       <span className="truncate">{label}</span>
@@ -57,7 +66,7 @@ function OddChip({
   );
 }
 
-function TeamCell({ team }: { team: GameTeam }) {
+function TeamRow({ team }: { team: GameTeam }) {
   return (
     <div className="flex min-w-0 items-center gap-2">
       {team.logo ? (
@@ -105,27 +114,39 @@ export function GameCard({ game, onOutcomeClick, selected }: GameCardProps) {
     selected.marketId === market.id &&
     selected.outcomeId === outcome.id;
 
-  const renderSlot = (slot: MoneylineSlot) => (
-    <div
-      key={slot.team.name ?? slot.team.abbreviation}
-      className="flex items-center justify-between gap-3"
-    >
-      <TeamCell team={slot.team} />
-      {slot.market && slot.outcome ? (
-        <OddChip
-          label={(slot.team.abbreviation ?? slot.team.name ?? '').toUpperCase()}
-          price={slot.outcome.price}
-          active={isActive(slot.market, slot.outcome)}
-          disabled={false}
-          onClick={() => onOutcomeClick(slot.market as Market, slot.outcome as MarketOutcome)}
+  // One win button per team, coloured with the team colour (accent fallback).
+  const renderTeamButton = (slot: MoneylineSlot) => {
+    const label = (slot.team.abbreviation ?? slot.team.name ?? '').toUpperCase();
+    const key = slot.team.name ?? slot.team.abbreviation ?? label;
+    if (!slot.market || !slot.outcome) {
+      return (
+        <MoneylineButton
+          key={key}
+          label={label || t('worldCup.noLine')}
+          price={null}
+          backgroundColor="var(--color-bg-elevated)"
+          color="var(--color-text-muted)"
+          active={false}
+          disabled
+          onClick={() => {}}
         />
-      ) : (
-        <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-          {t('worldCup.noLine')}
-        </span>
-      )}
-    </div>
-  );
+      );
+    }
+    const market = slot.market;
+    const outcome = slot.outcome;
+    return (
+      <MoneylineButton
+        key={key}
+        label={label}
+        price={outcome.price}
+        backgroundColor={slot.team.color || 'var(--color-accent)'}
+        color={readableTextColor(slot.team.color)}
+        active={isActive(market, outcome)}
+        disabled={false}
+        onClick={() => onOutcomeClick(market, outcome)}
+      />
+    );
+  };
 
   return (
     <div
@@ -155,97 +176,28 @@ export function GameCard({ game, onOutcomeClick, selected }: GameCardProps) {
         </Link>
       </div>
 
-      {/* Moneyline: team rows with a draw chip between them (3-way games). */}
-      <div className="flex flex-col gap-2">
-        {view.teamSlots[0] && renderSlot(view.teamSlots[0])}
-        {view.draw && (
-          <div className="flex items-center justify-end">
-            <OddChip
-              label={t('worldCup.draw')}
-              price={view.draw.outcome.price}
-              active={isActive(view.draw.market, view.draw.outcome)}
-              disabled={false}
-              onClick={() => onOutcomeClick(view.draw!.market, view.draw!.outcome)}
-            />
-          </div>
-        )}
-        {view.teamSlots[1] && renderSlot(view.teamSlots[1])}
+      {/* Team rows: flag + name + record, no price (prices live in the button row). */}
+      <div className="mb-3 flex flex-col gap-2">
+        {view.teams.map((team) => (
+          <TeamRow key={team.name ?? team.abbreviation} team={team} />
+        ))}
       </div>
 
-      {/* Spread / Total — rendered only when upstream provides them (other
-          sports). Football World Cup ships moneyline only today. */}
-      {(game.spread.length > 0 || game.total.length > 0) && (
-        <div
-          className="mt-3 flex flex-col gap-3 border-t pt-3"
-          style={{ borderColor: 'var(--color-border)' }}
-        >
-          {game.spread.length > 0 && (
-            <MarketTypeRow
-              title={t('worldCup.spread')}
-              markets={game.spread}
-              onOutcomeClick={onOutcomeClick}
-              selected={selected}
-            />
-          )}
-          {game.total.length > 0 && (
-            <MarketTypeRow
-              title={t('worldCup.total')}
-              markets={game.total}
-              onOutcomeClick={onOutcomeClick}
-              selected={selected}
-            />
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Generic row for spread / total markets: one chip per market (group_label +
-// line) bound to its Yes outcome. Kept generic since exact home/away pairing
-// varies by sport.
-function MarketTypeRow({
-  title,
-  markets,
-  onOutcomeClick,
-  selected,
-}: {
-  title: string;
-  markets: Market[];
-  onOutcomeClick: (market: Market, outcome: MarketOutcome) => void;
-  selected?: { marketId: string; outcomeId: string } | null;
-}) {
-  return (
-    <div>
-      <p
-        className="mb-1 text-[11px] font-semibold uppercase tracking-wide"
-        style={{ color: 'var(--color-text-muted)' }}
-      >
-        {title}
-      </p>
-      <div className="flex flex-wrap gap-2">
-        {markets.map((market) => {
-          const outcome =
-            market.market_outcomes?.find((o) => o.name.trim().toLowerCase() === 'yes') ??
-            market.market_outcomes?.[0] ??
-            null;
-          if (!outcome) return null;
-          const label = [market.group_label, market.line != null ? market.line : null]
-            .filter((v) => v != null && v !== '')
-            .join(' ');
-          const active =
-            !!selected && selected.marketId === market.id && selected.outcomeId === outcome.id;
-          return (
-            <OddChip
-              key={market.id}
-              label={label || market.question}
-              price={outcome.price}
-              active={active}
-              disabled={false}
-              onClick={() => onOutcomeClick(market, outcome)}
-            />
-          );
-        })}
+      {/* Moneyline bet row: win / draw / loss. Home -> Draw -> Away (Polymarket). */}
+      <div className="flex items-stretch gap-2">
+        {view.teamSlots[0] && renderTeamButton(view.teamSlots[0])}
+        {view.draw && (
+          <MoneylineButton
+            label={t('worldCup.draw')}
+            price={view.draw.outcome.price}
+            backgroundColor="var(--color-bg-elevated)"
+            color="var(--color-text-primary)"
+            active={isActive(view.draw.market, view.draw.outcome)}
+            disabled={false}
+            onClick={() => onOutcomeClick(view.draw!.market, view.draw!.outcome)}
+          />
+        )}
+        {view.teamSlots[1] && renderTeamButton(view.teamSlots[1])}
       </div>
     </div>
   );
