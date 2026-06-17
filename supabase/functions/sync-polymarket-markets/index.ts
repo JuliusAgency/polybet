@@ -312,6 +312,36 @@ Deno.serve(async (req: Request) => {
     errors: [] as string[],
   };
 
+  // ── Skip-if-running guard (anti pile-up) ──────────────────────────────────
+  // hot_set runs on a tight cron (every 5 min — migration 20260617131411) but a
+  // single run takes 2-4 min. Without this guard a slow run lets the next tick
+  // start concurrently, and overlapping runs upsert the same markets/outcomes/
+  // events rows in different orders → AB-BA deadlocks + statement timeouts on
+  // the feed read path. Only hot_set is gated: backfill/full/manual runs are
+  // infrequent and must never be skipped. The 10-minute window means a crashed
+  // run (status stuck 'running', never finalized) blocks at most ~2 ticks
+  // before it ages out and a fresh run proceeds.
+  if (mode === 'hot_set') {
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const { data: activeRuns, error: activeErr } = await supabase
+      .from('sync_runs')
+      .select('id, started_at')
+      .eq('status', 'running')
+      .gt('started_at', tenMinutesAgo)
+      .limit(1);
+
+    if (activeErr) {
+      // Fail open: if the guard query errors, run normally rather than
+      // silently skipping syncs.
+      console.error('hot_set guard query failed; proceeding:', activeErr.message);
+    } else if (activeRuns && activeRuns.length > 0) {
+      return jsonWithCors(
+        { skipped: true, reason: 'sync already running', running_run_id: activeRuns[0].id },
+        200
+      );
+    }
+  }
+
   const { error: insertRunErr } = await supabase.from('sync_runs').upsert(
     {
       id: runId,
