@@ -60,5 +60,7 @@ export { useSimilarEvents } from './useSimilarEvents';
 export { useWorldCupGames, groupGames } from './useWorldCupGames';
 export type { WorldCupGame } from './useWorldCupGames';
 
+export { useWorldCupProps, nextEventCursor, orderMarketsByEvents } from './useWorldCupProps';
+
 export { getPriceHistoryRange, PRICE_HISTORY_WINDOWS } from './priceHistoryBucket';
 export type { PriceHistoryWindow, PriceHistoryRange } from './priceHistoryBucket';

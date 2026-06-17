@@ -9,6 +9,7 @@ import {
   useAllowedCategoryTags,
   useEventMarketCounts,
   useWorldCupGames,
+  useWorldCupProps,
   groupMarketsByEvent,
 } from '@/features/bet';
 import { useFavoriteMarkets, useFavoriteEvents } from '@/features/favorites';
@@ -72,6 +73,34 @@ const MarketsFeedPage = () => {
     isError: isErrorGames,
   } = useWorldCupGames(worldCupGamesEnabled);
 
+  // World Cup Props sub-tab: every world-cup-tagged open event (tournament props
+  // AND individual matches) rendered one card per event, ordered by event volume.
+  // Paginated BY EVENT so a single mega-event ("World Cup Winner" has ~48 open
+  // markets) can't swamp the volume-sorted generic feed and collapse the tab to
+  // 2 cards. Only fetched while the Props sub-tab is active.
+  const worldCupPropsEnabled = tagSlug === WORLD_CUP_TAG_SLUG && worldCupTab === 'props';
+  const {
+    markets: worldCupPropsMarkets,
+    isLoading: isLoadingProps,
+    isFetching: isFetchingProps,
+    isError: isErrorProps,
+    error: errorProps,
+    fetchNextPage: fetchNextPropsPage,
+    hasNextPage: hasNextPropsPage,
+    isFetchingNextPage: isFetchingNextPropsPage,
+  } = useWorldCupProps(worldCupPropsEnabled);
+
+  // The Props sub-tab drives its feed + infinite scroll from the dedicated
+  // event-paginated hook; every other view uses the generic markets feed. These
+  // "active" handles route the shared paging/transition logic to whichever
+  // source is on screen.
+  const activeFetchNextPage = worldCupPropsEnabled ? fetchNextPropsPage : fetchNextPage;
+  const activeHasNextPage = worldCupPropsEnabled ? hasNextPropsPage : hasNextPage;
+  const activeIsFetchingNextPage = worldCupPropsEnabled
+    ? isFetchingNextPropsPage
+    : isFetchingNextPage;
+  const activeIsFetching = worldCupPropsEnabled ? isFetchingProps : isFetching;
+
   // Tab-transition skeleton (Bug 1): TanStack Query keeps cached data per
   // (tagSlug) — switching back to a previously-loaded tag is instant, so
   // `isLoading` stays false and the skeleton never shows. Force a brief
@@ -97,11 +126,11 @@ const MarketsFeedPage = () => {
   // fetching — so when data arrives faster than the timeout, we don't keep an
   // empty skeleton on screen.
   useEffect(() => {
-    if (!isFetching && isTabTransitioning) {
+    if (!activeIsFetching && isTabTransitioning) {
       const id = window.setTimeout(() => setIsTabTransitioning(false), 80);
       return () => window.clearTimeout(id);
     }
-  }, [isFetching, isTabTransitioning]);
+  }, [activeIsFetching, isTabTransitioning]);
 
   const { data: balance } = useUserBalance();
   const { data: bets } = useMyBets();
@@ -171,10 +200,14 @@ const MarketsFeedPage = () => {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const handleLoadMore = useCallback(() => {
-    void fetchNextPage();
-  }, [fetchNextPage]);
+    void activeFetchNextPage();
+  }, [activeFetchNextPage]);
 
-  useIntersectionObserver(sentinelRef, handleLoadMore, !!hasNextPage && !isFetchingNextPage);
+  useIntersectionObserver(
+    sentinelRef,
+    handleLoadMore,
+    !!activeHasNextPage && !activeIsFetchingNextPage
+  );
 
   const handleOutcomeClick = useCallback(
     (market: Market, outcome: MarketOutcome) => {
@@ -214,7 +247,13 @@ const MarketsFeedPage = () => {
   const betCountForMarket = (marketId: string) =>
     openBets.filter((b) => b.market_id === marketId).length;
 
-  const sourceMarkets = savedOnly ? savedMarkets : myBetsOnly ? (myBetsMarkets ?? []) : markets;
+  const sourceMarkets = savedOnly
+    ? savedMarkets
+    : myBetsOnly
+      ? (myBetsMarkets ?? [])
+      : worldCupPropsEnabled
+        ? worldCupPropsMarkets
+        : markets;
 
   // Mirror UI's effectiveStatus rule (see MarketCard/EventCard): a record counts
   // as "open" only if its own status is open, its close_at is in the future, and —
@@ -250,9 +289,28 @@ const MarketsFeedPage = () => {
   const savedFeedCount = groupMarketsByEvent(savedVisibleMarkets).length;
 
   const feedIsLoading =
-    isTabTransitioning || (savedOnly ? isLoadingSaved : myBetsOnly ? isLoadingMyBets : isLoading);
-  const feedIsError = savedOnly ? isErrorSaved : myBetsOnly ? isErrorMyBets : isError;
-  const feedError = savedOnly ? errorSaved : myBetsOnly ? errorMyBets : error;
+    isTabTransitioning ||
+    (savedOnly
+      ? isLoadingSaved
+      : myBetsOnly
+        ? isLoadingMyBets
+        : worldCupPropsEnabled
+          ? isLoadingProps
+          : isLoading);
+  const feedIsError = savedOnly
+    ? isErrorSaved
+    : myBetsOnly
+      ? isErrorMyBets
+      : worldCupPropsEnabled
+        ? isErrorProps
+        : isError;
+  const feedError = savedOnly
+    ? errorSaved
+    : myBetsOnly
+      ? errorMyBets
+      : worldCupPropsEnabled
+        ? errorProps
+        : error;
 
   // World Cup tab: the hero + sub-tabs render below the tag bar, and the market
   // feed is shown only on the Props sub-tab (Games/Map are placeholders).
@@ -479,21 +537,25 @@ const MarketsFeedPage = () => {
             {!myBetsOnly && !savedOnly && <div ref={sentinelRef} className="h-4" />}
 
             {/* Loading next page */}
-            {!myBetsOnly && !savedOnly && isFetchingNextPage && (
+            {!myBetsOnly && !savedOnly && activeIsFetchingNextPage && (
               <div className="mt-4 flex justify-center">
                 <Spinner size="sm" />
               </div>
             )}
 
             {/* All pages loaded */}
-            {!myBetsOnly && !savedOnly && !hasNextPage && markets.length > 0 && !isLoading && (
-              <p
-                className="mt-4 text-center text-sm"
-                style={{ color: 'var(--color-text-secondary)' }}
-              >
-                {t('markets.allLoaded')}
-              </p>
-            )}
+            {!myBetsOnly &&
+              !savedOnly &&
+              !activeHasNextPage &&
+              sourceMarkets.length > 0 &&
+              !feedIsLoading && (
+                <p
+                  className="mt-4 text-center text-sm"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
+                  {t('markets.allLoaded')}
+                </p>
+              )}
           </>
         )}
       </div>
