@@ -52,7 +52,7 @@ export const UserLayout = () => {
           borderBottom: '1px solid var(--color-border)',
         }}
       >
-        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+        <div className="max-w-[90rem] mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <span className="text-lg font-bold" style={{ color: 'var(--color-text-primary)' }}>
               PolyBet
@@ -181,7 +181,7 @@ export const UserLayout = () => {
         </div>
       </header>
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6">
+      <main className="flex-1 max-w-[90rem] w-full mx-auto px-4 py-6">
         <Outlet />
       </main>
 
