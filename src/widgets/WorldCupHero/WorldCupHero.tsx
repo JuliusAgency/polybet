@@ -39,7 +39,11 @@ function shortestDelta(deg: number): number {
  * until that event loads.
  */
 export function WorldCupHero() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  // In RTL the wheel is mirrored via scaleX(-1) (see worldCupHero.css), which
+  // visually inverts rotation. The drag handler negates its delta to compensate
+  // so dragging the wheel still follows the pointer.
+  const isRTL = i18n.language === 'he';
 
   // Live win probabilities from the "World Cup Winner" event (same source as the
   // Map tab globe/list). Take the leading countries that resolve to a flag and
@@ -47,14 +51,22 @@ export function WorldCupHero() {
   // until the event has loaded (or if it isn't synced yet).
   const { countries } = useWorldCupWinner();
   const flags = useMemo<HeroFlag[]>(() => {
-    const live = countries
-      .filter((c) => c.iso2)
-      .slice(0, MAX_HERO_FLAGS)
-      .map<HeroFlag>((c) => ({
+    // De-duplicate by flag code: the live event can carry two sub-markets that
+    // resolve to the same country (e.g. "USA" and "United States" → `us`).
+    // `countries` is sorted by probability DESC, so the first hit is the one we
+    // keep — this also guards the React key (flag.country) against collisions.
+    const seen = new Set<string>();
+    const live: HeroFlag[] = [];
+    for (const c of countries) {
+      if (!c.iso2 || seen.has(c.iso2)) continue;
+      seen.add(c.iso2);
+      live.push({
         country: c.name,
-        iso2: c.iso2 as string,
+        iso2: c.iso2,
         pct: formatProbability(c.probability, 0),
-      }));
+      });
+      if (live.length >= MAX_HERO_FLAGS) break;
+    }
     if (live.length >= MIN_HERO_FLAGS) return live;
     return WORLD_CUP_FLAGS.map<HeroFlag>((f) => ({
       country: f.country,
@@ -123,9 +135,9 @@ export function WorldCupHero() {
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!draggingRef.current) return;
     const current = centreAngle(e);
-    // The wheel is positioned (not mirrored) in RTL, so the screen-space pointer
-    // angle maps directly to the rotation in both directions.
-    const delta = shortestDelta(current - pointerAngleRef.current);
+    const raw = shortestDelta(current - pointerAngleRef.current);
+    // RTL wheel is mirrored (scaleX(-1)), so invert the drag delta.
+    const delta = isRTL ? -raw : raw;
     pointerAngleRef.current = current;
     angleRef.current += delta;
     if (delta !== 0) dirRef.current = delta > 0 ? 1 : -1;
