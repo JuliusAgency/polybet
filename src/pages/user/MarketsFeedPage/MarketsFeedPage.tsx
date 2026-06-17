@@ -248,18 +248,58 @@ const MarketsFeedPage = () => {
 
   return (
     <div>
-      {/* Header — every tab except World Cup keeps the plain page title. On
-          World Cup the page title is omitted: the animated flag-wheel hero
-          (which carries its own heading) renders below the tag bar instead. */}
-      {!isWorldCup && (
-        <h1 className="mb-6 text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
+      {/* Header — page title on the start side, search pinned to the end of the
+          same row. Shown on every tab (including World Cup): the title sits
+          above the tag bar, and the World Cup flag-wheel hero (with its own big
+          heading) still renders below the tag bar. As a flex row with
+          justify-between, the title and search auto-swap sides in RTL. */}
+      <div className="mb-6 flex items-center justify-between gap-2">
+        <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
           {t('markets.title')}
         </h1>
-      )}
+
+        {/* Search — hidden in the My bets view (same as before the relocation). */}
+        {!myBetsOnly && (
+          <div className="relative flex shrink-0 items-center">
+            <div
+              className="pointer-events-none absolute inset-y-0 flex items-center"
+              style={{ insetInlineStart: '10px' }}
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{ color: 'var(--color-text-muted)' }}
+              >
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={t('markets.searchPlaceholder')}
+              className="w-40 rounded-full border py-1 text-sm outline-none sm:w-52"
+              style={{
+                backgroundColor: 'var(--color-bg-elevated)',
+                borderColor: 'var(--color-border)',
+                color: 'var(--color-text-primary)',
+                paddingInlineStart: '2rem',
+                paddingInlineEnd: '0.75rem',
+              }}
+            />
+          </div>
+        )}
+      </div>
 
       {/* Category bar — Polymarket-style sub-bar directly under the top nav:
-          scrollable category chips (incl. Saved + My bets) on the start side,
-          search on the end side. */}
+          scrollable category chips (incl. Saved + My bets). */}
       <div className="mb-4">
         <div className="flex items-center gap-2">
           {/* Tag filter — curated popular categories from Polymarket.
@@ -291,66 +331,6 @@ const MarketsFeedPage = () => {
               }}
             />
           </div>
-
-          {/* Divider + Search — pinned to the end of the bar. The hairline
-              fades to transparent at both ends so it reads as a soft seam
-              between the scrollable chip row and the search, not a hard rule.
-              Theme-tokened, so it tracks light/dark; as a plain flex child it
-              auto-positions on the correct side in RTL. */}
-          {!myBetsOnly && (
-            <>
-              <div
-                aria-hidden
-                className="shrink-0"
-                style={{
-                  width: '1px',
-                  height: '1.75rem',
-                  marginInline: '0.375rem',
-                  borderRadius: '1px',
-                  // Solid in the middle, feathered to transparent at both ends —
-                  // reads as a deliberate seam, not a hard rule. Token-driven so
-                  // it tracks light/dark.
-                  background:
-                    'linear-gradient(to bottom, transparent, var(--color-border-strong) 28%, var(--color-border-strong) 72%, transparent)',
-                }}
-              />
-              <div className="relative flex shrink-0 items-center">
-                <div
-                  className="pointer-events-none absolute inset-y-0 flex items-center"
-                  style={{ insetInlineStart: '10px' }}
-                >
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    style={{ color: 'var(--color-text-muted)' }}
-                  >
-                    <circle cx="11" cy="11" r="8" />
-                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                  </svg>
-                </div>
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={t('markets.searchPlaceholder')}
-                  className="w-40 rounded-full border py-1 text-sm outline-none sm:w-52"
-                  style={{
-                    backgroundColor: 'var(--color-bg-elevated)',
-                    borderColor: 'var(--color-border)',
-                    color: 'var(--color-text-primary)',
-                    paddingInlineStart: '2rem',
-                    paddingInlineEnd: '0.75rem',
-                  }}
-                />
-              </div>
-            </>
-          )}
         </div>
 
         {/* Status pills — only relevant when browsing "All categories" with no
