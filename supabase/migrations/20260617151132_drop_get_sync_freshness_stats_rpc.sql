@@ -1,0 +1,15 @@
+-- Drop get_sync_freshness_stats() — the metric it powered was misleading.
+--
+-- It returned the average age of market_outcomes.updated_at over open markets,
+-- intended as a "data freshness" signal. But updated_at only advances when a
+-- price actually CHANGES, and the vast majority of open markets are illiquid
+-- (only ~11 of ~4.7k live books moved in the last hour). So the average just
+-- measured market quietness, not staleness — a quiet market's stored price is
+-- still the correct current price. The number (~weeks) read as "broken" when
+-- nothing was wrong.
+--
+-- Liveness monitoring stays with get_sync_health().books_stale_seconds
+-- (market_outcome_books max freshness), which correctly caught the real failure
+-- mode (the 12h market-tracker outage on 2026-06-17). Added in migration
+-- 20260617143916; removed here.
+drop function if exists public.get_sync_freshness_stats();
