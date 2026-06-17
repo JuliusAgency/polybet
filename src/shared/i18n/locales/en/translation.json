@@ -257,8 +257,6 @@
     "gamesScheduled": "Scheduled",
     "orderBook": "Order Book",
     "draw": "Draw",
-    "spread": "Spread",
-    "total": "Total",
     "noLine": "—",
     "map": {
       "title": "Odds & predictions",
@@ -266,7 +264,10 @@
       "searchPlaceholder": "Search",
       "empty": "World Cup odds aren't available yet.",
       "loadError": "Couldn't load the World Cup map.",
-      "noResults": "No countries match your search."
+      "noResults": "No countries match your search.",
+      "zoom": "Zoom",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out"
     }
   },
   "markets": {
@@ -596,6 +597,16 @@
   },
   "agentsDashboard": {
     "title": "Dashboard",
+    "syncHealthOk": "Sync OK",
+    "syncHealthStale": "Sync stale",
+    "syncHealthUnknown": "Sync status unknown",
+    "syncHealthUpdated": "updated {{age}} ago",
+    "syncHealthNever": "no data yet",
+    "syncHealthAria": "Polymarket sync freshness",
+    "syncUnitSec": "s",
+    "syncUnitMin": "min",
+    "syncUnitHr": "h",
+    "syncUnitDay": "d",
     "agentCol": "Agent",
     "monthlyDeposits": "Monthly Deposits",
     "monthlyWithdrawals": "Monthly Withdrawals",

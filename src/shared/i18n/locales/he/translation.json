@@ -257,8 +257,6 @@
     "gamesScheduled": "מתוזמן",
     "orderBook": "ספר פקודות",
     "draw": "תיקו",
-    "spread": "מפתח",
-    "total": "סך הכל",
     "noLine": "—",
     "map": {
       "title": "יחסים ותחזיות",
@@ -266,7 +264,10 @@
       "searchPlaceholder": "חיפוש",
       "empty": "יחסי גביע העולם עדיין אינם זמינים.",
       "loadError": "לא ניתן לטעון את מפת גביע העולם.",
-      "noResults": "אין מדינות התואמות את החיפוש."
+      "noResults": "אין מדינות התואמות את החיפוש.",
+      "zoom": "זום",
+      "zoomIn": "הגדל",
+      "zoomOut": "הקטן"
     }
   },
   "markets": {
@@ -596,6 +597,16 @@
   },
   "agentsDashboard": {
     "title": "לוח בקרה",
+    "syncHealthOk": "סנכרון תקין",
+    "syncHealthStale": "סנכרון לא עדכני",
+    "syncHealthUnknown": "סטטוס סנכרון לא ידוע",
+    "syncHealthUpdated": "עודכן לפני {{age}}",
+    "syncHealthNever": "אין נתונים עדיין",
+    "syncHealthAria": "עדכניות סנכרון Polymarket",
+    "syncUnitSec": "שנ׳",
+    "syncUnitMin": "דק׳",
+    "syncUnitHr": "שע׳",
+    "syncUnitDay": "ימ׳",
     "agentCol": "סוכן",
     "monthlyDeposits": "הפקדות חודשיות",
     "monthlyWithdrawals": "משיכות חודשיות",

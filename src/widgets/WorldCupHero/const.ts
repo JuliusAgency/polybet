@@ -38,11 +38,18 @@ export const WORLD_CUP_FLAGS: readonly WorldCupFlag[] = [
   { country: "Côte d'Ivoire", iso2: 'ci' },
 ];
 
-/** Placeholder probability shown under every flag until real odds are wired. */
+/** Placeholder probability shown under every flag before live odds load. */
 export const PLACEHOLDER_PERCENT = '50%';
 
-/** Angular gap between adjacent flags on the circle, in degrees. */
-export const FLAG_STEP_DEG = 360 / WORLD_CUP_FLAGS.length;
+/** Max number of live countries placed on the wheel (top by win probability). */
+export const MAX_HERO_FLAGS = 20;
+
+/**
+ * Minimum live countries required to render the wheel from real data. Below
+ * this the hero falls back to the static roster so a partially-synced event
+ * never produces a near-empty wheel.
+ */
+export const MIN_HERO_FLAGS = 6;
 
 /**
  * Wheel geometry. The circle is large and pushed below the visible band so only

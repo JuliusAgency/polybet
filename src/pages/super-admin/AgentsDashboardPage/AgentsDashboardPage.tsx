@@ -1,8 +1,9 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAgentStats } from '@/features/admin/agent-stats';
-import { useSystemKpis } from '@/features/stats';
+import { useSystemKpis, useSyncHealth } from '@/features/stats';
 import type { AgentStatsRow } from '@/features/admin/agent-stats';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
@@ -14,6 +15,15 @@ const selectStyle: React.CSSProperties = {
   backgroundColor: 'var(--color-bg-elevated)',
   color: 'var(--color-text-primary)',
   borderColor: 'var(--color-border)',
+};
+
+// Format a "seconds ago" age into the largest sensible unit (s / min / h / d).
+const formatAge = (seconds: number | null, t: TFunction): string => {
+  if (seconds === null) return t('agentsDashboard.syncHealthNever');
+  if (seconds < 90) return `${seconds} ${t('agentsDashboard.syncUnitSec')}`;
+  if (seconds < 5400) return `${Math.round(seconds / 60)} ${t('agentsDashboard.syncUnitMin')}`;
+  if (seconds < 172800) return `${Math.round(seconds / 3600)} ${t('agentsDashboard.syncUnitHr')}`;
+  return `${Math.round(seconds / 86400)} ${t('agentsDashboard.syncUnitDay')}`;
 };
 
 const currentYear = new Date().getFullYear();
@@ -31,6 +41,33 @@ const AgentsDashboardPage = () => {
 
   const { agents, isLoading } = useAgentStats({ month, year });
   const { kpis } = useSystemKpis();
+  const {
+    health: syncHealth,
+    staleSeconds: syncStaleSeconds,
+    isStale: syncIsStale,
+  } = useSyncHealth();
+
+  const syncAgeLabel = useMemo(
+    () =>
+      syncStaleSeconds === null
+        ? t('agentsDashboard.syncHealthNever')
+        : t('agentsDashboard.syncHealthUpdated', { age: formatAge(syncStaleSeconds, t) }),
+    [syncStaleSeconds, t]
+  );
+
+  const syncLabel =
+    syncHealth === null
+      ? t('agentsDashboard.syncHealthUnknown')
+      : syncIsStale
+        ? t('agentsDashboard.syncHealthStale')
+        : t('agentsDashboard.syncHealthOk');
+
+  const syncColor =
+    syncHealth === null
+      ? 'var(--color-text-secondary)'
+      : syncIsStale
+        ? 'var(--color-error)'
+        : 'var(--color-win)';
 
   const rawMonths = t('globalLog.months', { returnObjects: true });
   const months: string[] = Array.isArray(rawMonths) ? rawMonths : [];
@@ -84,11 +121,31 @@ const AgentsDashboardPage = () => {
 
   return (
     <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--color-bg-base)' }}>
-      {/* Page title */}
-      <div className="mb-6">
+      {/* Page title + sync-freshness badge */}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
           {t('agentsDashboard.title')}
         </h1>
+        <div
+          className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5"
+          style={{
+            borderColor: 'var(--color-border)',
+            backgroundColor: 'var(--color-bg-surface)',
+          }}
+          title={syncHealth?.books_latest_at ?? undefined}
+          aria-label={t('agentsDashboard.syncHealthAria')}
+        >
+          <span
+            className="inline-block h-2 w-2 rounded-full"
+            style={{ backgroundColor: syncColor }}
+          />
+          <span className="text-xs font-medium" style={{ color: 'var(--color-text-primary)' }}>
+            {syncLabel}
+          </span>
+          <span className="text-xs font-mono" style={{ color: 'var(--color-text-secondary)' }}>
+            {syncAgeLabel}
+          </span>
+        </div>
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">

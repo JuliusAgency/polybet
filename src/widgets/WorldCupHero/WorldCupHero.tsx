@@ -1,10 +1,13 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import 'flag-icons/css/flag-icons.min.css';
+import { useWorldCupWinner } from '@/features/bet';
+import { formatProbability } from '@/shared/utils';
 import {
   WORLD_CUP_FLAGS,
   PLACEHOLDER_PERCENT,
-  FLAG_STEP_DEG,
+  MAX_HERO_FLAGS,
+  MIN_HERO_FLAGS,
   WHEEL_RADIUS,
   AUTO_SPIN_DEG_PER_SEC,
   INERTIA_DECAY_PER_SEC,
@@ -12,6 +15,13 @@ import {
   MAX_FLING_DEG_PER_SEC,
 } from './const';
 import './worldCupHero.css';
+
+interface HeroFlag {
+  country: string;
+  iso2: string;
+  /** Formatted win probability, e.g. "18%" (or the static placeholder). */
+  pct: string;
+}
 
 /** Normalise an angle delta to the shortest signed value in (-180, 180]. */
 function shortestDelta(deg: number): number {
@@ -24,14 +34,36 @@ function shortestDelta(deg: number): number {
 /**
  * Animated World Cup hero. A wheel of country flags auto-rotates and follows the
  * user's drag direction — after a fling it keeps spinning the way the user
- * pushed it. Percentages are a placeholder (50%) until real odds are wired.
+ * pushed it. Each flag is labelled with the country's live win probability from
+ * the "World Cup Winner" event, falling back to a static roster + placeholder
+ * until that event loads.
  */
 export function WorldCupHero() {
-  const { t, i18n } = useTranslation();
-  // In RTL the wheel is mirrored via scaleX(-1) (see worldCupHero.css), which
-  // visually inverts rotation. The drag handler negates its delta to compensate
-  // so dragging the wheel still follows the pointer.
-  const isRTL = i18n.language === 'he';
+  const { t } = useTranslation();
+
+  // Live win probabilities from the "World Cup Winner" event (same source as the
+  // Map tab globe/list). Take the leading countries that resolve to a flag and
+  // label each with its real odds; fall back to the static roster + placeholder
+  // until the event has loaded (or if it isn't synced yet).
+  const { countries } = useWorldCupWinner();
+  const flags = useMemo<HeroFlag[]>(() => {
+    const live = countries
+      .filter((c) => c.iso2)
+      .slice(0, MAX_HERO_FLAGS)
+      .map<HeroFlag>((c) => ({
+        country: c.name,
+        iso2: c.iso2 as string,
+        pct: formatProbability(c.probability, 0),
+      }));
+    if (live.length >= MIN_HERO_FLAGS) return live;
+    return WORLD_CUP_FLAGS.map<HeroFlag>((f) => ({
+      country: f.country,
+      iso2: f.iso2,
+      pct: PLACEHOLDER_PERCENT,
+    }));
+  }, [countries]);
+  // Angular gap between adjacent flags depends on how many we actually render.
+  const stepDeg = 360 / flags.length;
 
   const layerRef = useRef<HTMLDivElement>(null);
   const wheelRef = useRef<HTMLDivElement>(null);
@@ -91,9 +123,9 @@ export function WorldCupHero() {
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!draggingRef.current) return;
     const current = centreAngle(e);
-    const raw = shortestDelta(current - pointerAngleRef.current);
-    // RTL wheel is mirrored (scaleX(-1)), so invert the drag delta.
-    const delta = isRTL ? -raw : raw;
+    // The wheel is positioned (not mirrored) in RTL, so the screen-space pointer
+    // angle maps directly to the rotation in both directions.
+    const delta = shortestDelta(current - pointerAngleRef.current);
     pointerAngleRef.current = current;
     angleRef.current += delta;
     if (delta !== 0) dirRef.current = delta > 0 ? 1 : -1;
@@ -128,19 +160,19 @@ export function WorldCupHero() {
         onPointerCancel={endDrag}
       >
         <div ref={wheelRef} className="wc-wheel" aria-hidden="true">
-          {WORLD_CUP_FLAGS.map((flag, i) => (
+          {flags.map((flag, i) => (
             <div
               key={flag.country}
               className="wc-flag"
               style={{
-                transform: `rotate(${i * FLAG_STEP_DEG}deg) translate(0, ${-WHEEL_RADIUS}px)`,
+                transform: `rotate(${i * stepDeg}deg) translate(0, ${-WHEEL_RADIUS}px)`,
               }}
             >
               <div className="wc-flag__inner">
                 <div className="wc-flag__card" title={flag.country}>
                   <span className={`fi fis fi-${flag.iso2}`} />
                 </div>
-                <span className="wc-flag__pct">{PLACEHOLDER_PERCENT}</span>
+                <span className="wc-flag__pct">{flag.pct}</span>
               </div>
             </div>
           ))}
