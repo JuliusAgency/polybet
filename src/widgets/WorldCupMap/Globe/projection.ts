@@ -9,14 +9,21 @@ export interface ProjectedMarker {
   opacity: number;
 }
 
+const DEG = Math.PI / 180;
+
 /**
- * Project a lat/lng point on a globe rotated by `phi` (longitude, radians) and
- * tilted by `theta` (viewer latitude, radians) onto a square of side `size`.
- * Mirrors cobe's phi/theta semantics so HTML flag markers track the rendered
- * canvas exactly (both read the same phi/theta each frame).
+ * Project a lat/lng point to screen so the HTML flag markers land exactly on
+ * cobe's dotted continents at any rotation. Both the base vector and the screen
+ * projection are taken from cobe's own shader/source, so flags == cobe markers
+ * == continents:
  *
- * At phi=0, theta=0 a point at (0,0) sits dead-centre facing the viewer; east
- * longitudes fall to the right. Increasing phi spins the globe eastward.
+ *  - Base vector (cobe `x()`): e = (cos(lat)·cos(λ), sin(lat), −cos(lat)·sin(λ)),
+ *    λ = lng·π/180.
+ *  - cobe's fragment shader builds the view ray `l = (screenXY, +z)` and compares
+ *    `l·L` (= Lᵀ·l) to each marker e, where L = J(theta,phi) = Rx(theta)·Ry(phi).
+ *    A marker shows where Lᵀ·l = e, i.e. l = L·e — so the screen position is
+ *    (L·e).xy and it is front-facing when (L·e).z > 0. (GL's y is up; CSS y is
+ *    down, hence the y flip.)
  */
 export function projectMarker(
   lat: number,
@@ -26,32 +33,33 @@ export function projectMarker(
   size: number,
   radiusScale = 1
 ): ProjectedMarker {
-  const latRad = (lat * Math.PI) / 180;
-  const lngRad = (lng * Math.PI) / 180;
-
-  // Longitude rotation must match cobe's canvas, which rotates the globe by
-  // Ry(+phi) (its shader matrix is Rx(theta)·Ry(phi)). Using `lng + phi` keeps
-  // the flags locked to the dotted continents as the globe spins or is dragged;
-  // the opposite sign drifts them the wrong way.
+  const latRad = lat * DEG;
+  const lngRad = lng * DEG;
   const cosLat = Math.cos(latRad);
-  const x0 = cosLat * Math.sin(lngRad + phi);
-  const y0 = Math.sin(latRad);
-  const z0 = cosLat * Math.cos(lngRad + phi);
 
-  // Tilt around the X axis. Negative theta leans the north pole toward the
-  // viewer (matches cobe's default downward-looking tilt).
+  // cobe marker base vector (globe-local frame).
+  const ex = cosLat * Math.cos(lngRad);
+  const ey = Math.sin(latRad);
+  const ez = -cosLat * Math.sin(lngRad);
+
+  // screen = L·e, L = Rx(theta)·Ry(phi).
+  const cosP = Math.cos(phi);
+  const sinP = Math.sin(phi);
   const cosT = Math.cos(theta);
   const sinT = Math.sin(theta);
-  const y1 = y0 * cosT - z0 * sinT;
-  const z1 = y0 * sinT + z0 * cosT;
+
+  const sx = cosP * ex + sinP * ez; // (L·e).x
+  const b = sinP * ex - cosP * ez; // helper: sinφ·ex − cosφ·ez
+  const sy = cosT * ey + sinT * b; // (L·e).y
+  const sz = sinT * ey - cosT * b; // (L·e).z
 
   const r = (size / 2) * radiusScale;
   const c = size / 2;
 
   return {
-    x: c + x0 * r,
-    y: c - y1 * r,
-    visible: z1 > 0,
-    opacity: Math.max(0, Math.min(1, z1 * 6)),
+    x: c + sx * r,
+    y: c - sy * r,
+    visible: sz > 0,
+    opacity: Math.max(0, Math.min(1, sz * 6)),
   };
 }
