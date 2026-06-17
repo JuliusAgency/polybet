@@ -24,13 +24,22 @@
     color-mix(in srgb, var(--color-accent) 8%, transparent),
     transparent 70%
   );
-  /* Dissolve the bottom edge (glow + lowest flags) into the flat page background
-     instead of cutting off on a hard line. Alpha mask: opaque to 74% of the
-     height, then fades to nothing — clearing the vertically-centred title/
-     subtitle (which bottoms out around ~67% across the height clamp). Applies in
-     LTR and RTL (the [dir='rtl'] rule only overrides `background`). */
-  -webkit-mask-image: linear-gradient(to bottom, #000 74%, transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 74%, transparent 100%);
+  /* Dissolve the bottom edge AND the wheel-side edge into the page background so
+     flags fade out instead of cutting off on a hard line (the rightmost flags
+     used to clip against the container edge). Two alpha-mask layers, intersected:
+       1. bottom: opaque to 74% of the height, clearing the vertically-centred
+          title/subtitle (which bottoms out around ~67%).
+       2. inline-end: opaque to 80% of the width, then fades — dissolving the
+          far flags on the wheel side (right in LTR). The title sits on the
+          opposite (start) half, so it stays fully crisp.
+     RTL flips the horizontal layer to `to left` (the wheel sits on the start
+     side there); the [dir='rtl'] rule overrides both background and mask. */
+  -webkit-mask-image: linear-gradient(to bottom, #000 74%, transparent 100%),
+    linear-gradient(to right, #000 80%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 74%, transparent 100%),
+    linear-gradient(to right, #000 80%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
   isolation: isolate;
   user-select: none;
 }
@@ -41,6 +50,12 @@
     color-mix(in srgb, var(--color-accent) 8%, transparent),
     transparent 70%
   );
+  -webkit-mask-image: linear-gradient(to bottom, #000 74%, transparent 100%),
+    linear-gradient(to left, #000 80%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 74%, transparent 100%),
+    linear-gradient(to left, #000 80%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
 }
 
 /* Rotation centre lives below the hero's bottom edge so the radius (341px) puts
@@ -59,21 +74,14 @@
   z-index: 1;
 }
 
-/* RTL: a true horizontal mirror of the wheel (not just a reposition) so the arc
-   handedness, flag tilt, and spin all mirror the LTR hero. scaleX(-1) flips the
-   whole wheel; the flag content is counter-flipped below so flags/% stay readable.
-   The pointer-drag delta is negated in JS to keep dragging intuitive. */
+/* RTL: only move the wheel to the start side (left). The wheel is NOT mirrored
+   (scaleX) — mirroring negated each flag's tilt, which read as an unnatural lean
+   versus the LTR hero. Keeping the same un-mirrored geometry means every flag
+   fans with the identical, natural tilt in both directions; the wheel simply
+   sits opposite the title (which is right-aligned in RTL). */
 [dir='rtl'] .wc-hero__wheel-layer {
   left: 22%;
-  transform: translateX(-50%) scaleX(-1);
-}
-
-/* Counter-flip flag content. Math: the layer's scaleX(-1) and this inner
-   scaleX(-1) conjugate the wheel rotations to their inverse (S·R(φ)·S = R(-φ))
-   and cancel the reflection — so each flag mirrors its position/tilt while its
-   image and "50%" label render the right way round. */
-[dir='rtl'] .wc-flag__inner {
-  transform: translate(-50%, -50%) scaleX(-1);
+  transform: translateX(-50%);
 }
 
 .wc-hero__wheel-layer:active {
