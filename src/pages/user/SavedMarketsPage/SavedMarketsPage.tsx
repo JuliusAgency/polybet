@@ -41,7 +41,7 @@ const SavedMarketsPage = () => {
     isLoading: isLoadingStandalone,
     isError: isErrorStandalone,
     error: errorStandalone,
-  } = useMarketsByIds(savedMarketIds, 'all', savedMarketIds.length > 0);
+  } = useMarketsByIds(savedMarketIds, 'all', savedMarketIds.length > 0, true);
 
   // Markets belonging to saved events (rendered as event cards).
   const {
@@ -49,7 +49,7 @@ const SavedMarketsPage = () => {
     isLoading: isLoadingEventMarkets,
     isError: isErrorEventMarkets,
     error: errorEventMarkets,
-  } = useEventsByIds(savedEventIds, 'all', savedEventIds.length > 0);
+  } = useEventsByIds(savedEventIds, 'all', savedEventIds.length > 0, true);
 
   const { data: balance } = useUserBalance();
   const { data: bets } = useMyBets();

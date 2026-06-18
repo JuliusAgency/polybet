@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/shared/api/supabase';
 import { MARKET_SELECT_FULL } from '@/shared/api/supabase/selects';
+import { MARKETS_PRICE_POLL_INTERVAL_MS } from '@/shared/config/markets';
 import type { Market, MarketStatusFilter } from '@/entities/market';
 import { applyMarketStatusFilter } from '@/entities/market';
 
@@ -12,7 +13,8 @@ import { applyMarketStatusFilter } from '@/entities/market';
 export function useEventsByIds(
   eventIds: string[],
   statusFilter: MarketStatusFilter,
-  enabled: boolean
+  enabled: boolean,
+  livePoll = false
 ) {
   const sortedEventIds = [...eventIds].sort();
 
@@ -20,6 +22,9 @@ export function useEventsByIds(
     queryKey: ['markets-by-event-ids', statusFilter, sortedEventIds],
     enabled: enabled && sortedEventIds.length > 0,
     staleTime: 60 * 1000,
+    // Live-poll only while the Saved tab is active (see useMarketsByIds).
+    refetchInterval: livePoll ? MARKETS_PRICE_POLL_INTERVAL_MS : false,
+    refetchIntervalInBackground: false,
     queryFn: async () => {
       let query = supabase
         .from('markets')

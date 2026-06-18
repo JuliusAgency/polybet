@@ -167,24 +167,25 @@ const MarketsFeedPage = () => {
     isLoading: isLoadingMyBets,
     isError: isErrorMyBets,
     error: errorMyBets,
-  } = useMarketsByIds(myBetMarketIds, 'all', myBetsOnly);
+  } = useMarketsByIds(myBetMarketIds, 'all', myBetsOnly, myBetsOnly);
   const savedMarketIds = Array.from(favoriteSet);
   const savedEventIds = Array.from(favoriteEventSet);
-  // Fetched regardless of `savedOnly` so the Saved button badge can always
-  // advertise the count of cards that would appear on the Saved tab — not
-  // only when the tab is active.
+  // Fetched regardless of `savedOnly` so switching to the Saved tab is instant
+  // (prefetched). They live-poll prices at the fast cadence only while the tab is
+  // actually open (the `savedOnly` arg), so browsing other tabs never polls the
+  // saved set in the background.
   const {
     data: savedStandaloneMarkets,
     isLoading: isLoadingSavedMarkets,
     isError: isErrorSavedMarkets,
     error: errorSavedMarkets,
-  } = useMarketsByIds(savedMarketIds, statusFilter, true);
+  } = useMarketsByIds(savedMarketIds, statusFilter, true, savedOnly);
   const {
     data: savedEventMarkets,
     isLoading: isLoadingSavedEvents,
     isError: isErrorSavedEvents,
     error: errorSavedEvents,
-  } = useEventsByIds(savedEventIds, statusFilter, true);
+  } = useEventsByIds(savedEventIds, statusFilter, true, savedOnly);
   // Saved view dedupe (Bug 4):
   //   Drop any standalone-favourited market whose parent event is ALSO
   //   event-favourited — otherwise the same market surfaces twice (as a
