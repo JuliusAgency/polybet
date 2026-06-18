@@ -2,7 +2,8 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { supabase } from '@/shared/api/supabase';
 import { MARKET_SELECT_FULL } from '@/shared/api/supabase/selects';
 import { MARKETS_REFRESH_INTERVAL_MS } from '@/shared/config/markets';
-import type { Market } from '@/entities/market';
+import { applyMarketStatusFilter } from '@/entities/market';
+import type { Market, MarketStatusFilter } from '@/entities/market';
 import { WORLD_CUP_TAG_SLUG } from '@/shared/config/worldCup';
 
 // Events per page. The Props tab paginates by EVENT (not by market) on purpose:
@@ -77,26 +78,26 @@ export function orderMarketsByEvents(markets: Market[], orderedEventIds: string[
  * the same cadence as the rest of the markets feed so prices stay fresh without
  * realtime.
  */
-export function useWorldCupProps(enabled: boolean) {
+export function useWorldCupProps(enabled: boolean, statusFilter: MarketStatusFilter) {
   const result = useInfiniteQuery<
     PropsPage,
     Error,
     { pages: PropsPage[] },
-    readonly ['world-cup-props'],
+    readonly ['world-cup-props', MarketStatusFilter],
     EventCursor | undefined
   >({
-    queryKey: ['world-cup-props'],
+    queryKey: ['world-cup-props', statusFilter],
     enabled,
     initialPageParam: undefined,
     staleTime: MARKETS_REFRESH_INTERVAL_MS,
     refetchInterval: MARKETS_REFRESH_INTERVAL_MS,
     queryFn: async ({ pageParam }): Promise<PropsPage> => {
-      // Phase 1 — a page of world-cup OPEN events ordered by volume DESC, id DESC.
-      let eventQuery = supabase
-        .from('events')
-        .select('id, volume')
-        .contains('tag_slugs', [WORLD_CUP_TAG_SLUG])
-        .eq('status', 'open');
+      // Phase 1 — a page of world-cup events (scoped by the active status filter)
+      // ordered by volume DESC, id DESC.
+      let eventQuery = applyMarketStatusFilter(
+        supabase.from('events').select('id, volume').contains('tag_slugs', [WORLD_CUP_TAG_SLUG]),
+        statusFilter
+      );
 
       if (pageParam) {
         const { lastVolume: v, lastId: i } = pageParam;
@@ -127,17 +128,22 @@ export function useWorldCupProps(enabled: boolean) {
 
       const eventIds = events.map((e) => e.id);
 
-      // Phase 2 — all open, visible markets for those events (mirrors
-      // useEventsByIds). tag_slugs already constrained the events, so the
-      // markets only need the status/visibility gate + the canonical outcome
-      // ordering the cards rely on.
-      const { data: marketRows, error: marketError } = await supabase
-        .from('markets')
-        .select(MARKET_SELECT_FULL)
-        .in('event_id', eventIds)
-        .eq('is_visible', true)
-        .eq('status', 'open')
-        .order('position', { referencedTable: 'market_outcomes', ascending: true });
+      // Phase 2 — visible markets for those events, scoped by the active status
+      // filter (mirrors useEventsByIds). tag_slugs already constrained the events,
+      // so the markets only need the visibility gate + status filter + the
+      // canonical outcome ordering the cards rely on.
+      const marketQuery = applyMarketStatusFilter(
+        supabase
+          .from('markets')
+          .select(MARKET_SELECT_FULL)
+          .in('event_id', eventIds)
+          .eq('is_visible', true),
+        statusFilter
+      );
+      const { data: marketRows, error: marketError } = await marketQuery.order('position', {
+        referencedTable: 'market_outcomes',
+        ascending: true,
+      });
 
       if (marketError) throw new Error(marketError.message);
 

@@ -342,6 +342,7 @@
     "savedTitle": "שווקים שמורים",
     "savedButton": "שמורים",
     "noSaved": "עדיין לא שמרת שווקים",
+    "noSavedForStatus": "אין שווקים שמורים תואמים לסטטוס — נסה לשונית אחרת",
     "closingToday": "נסגר היום",
     "betPlacedMarker": "יש לך הימור כאן",
     "betPlacedMarkerCount_one": "יש לך {{count}} הימור כאן",

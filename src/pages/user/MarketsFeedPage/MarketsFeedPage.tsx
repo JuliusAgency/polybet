@@ -104,7 +104,7 @@ const MarketsFeedPage = () => {
     fetchNextPage: fetchNextPropsPage,
     hasNextPage: hasNextPropsPage,
     isFetchingNextPage: isFetchingNextPropsPage,
-  } = useWorldCupProps(worldCupPropsEnabled);
+  } = useWorldCupProps(worldCupPropsEnabled, statusFilter);
 
   // The Props sub-tab drives its feed + infinite scroll from the dedicated
   // event-paginated hook; every other view uses the generic markets feed. These
@@ -158,16 +158,16 @@ const MarketsFeedPage = () => {
   // the dedicated /my-bets page, not in this feed tab.
   const openBets = (bets ?? []).filter((b) => b.status === 'open');
   const myBetMarketIds = Array.from(new Set(openBets.map((b) => b.market_id)));
-  // Don't apply the status filter to My Bets — an open bet whose market has
-  // since closed/resolved (transient pre-settle window) still locks stake in
-  // In-Play, so it must remain visible. Status pills still scope the main feed
-  // and Saved.
+  // My bets honours the status filter like every other view, but the view
+  // *defaults* to 'all' (set on toggle) so an open bet on a since-closed/resolved
+  // market — whose stake is still locked in In-Play — stays visible until the
+  // user deliberately narrows the filter.
   const {
     data: myBetsMarkets,
     isLoading: isLoadingMyBets,
     isError: isErrorMyBets,
     error: errorMyBets,
-  } = useMarketsByIds(myBetMarketIds, 'all', myBetsOnly, myBetsOnly);
+  } = useMarketsByIds(myBetMarketIds, statusFilter, myBetsOnly, myBetsOnly);
   const savedMarketIds = Array.from(favoriteSet);
   const savedEventIds = Array.from(favoriteEventSet);
   // Fetched regardless of `savedOnly` so switching to the Saved tab is instant
@@ -240,6 +240,7 @@ const MarketsFeedPage = () => {
   const availableBalance = balance?.available ?? 0;
 
   const hasBets = myBetMarketIds.length > 0;
+  const hasSaved = savedMarketIds.length > 0 || savedEventIds.length > 0;
 
   // Saved-only toggle (moved here from the removed BalanceWidget). Saved is
   // mutually exclusive with my-bets and the tag filter, so turning it on clears
@@ -251,8 +252,12 @@ const MarketsFeedPage = () => {
       if (next) {
         setMyBetsOnly(false);
         setTagSlug(null);
+        // Saved is a personal collection — show everything saved by default; the
+        // status filter then refines it. Back to the main-feed default on exit.
+        setStatusFilter('all');
       } else {
         setTagSlug('trending');
+        setStatusFilter('open');
       }
       return next;
     });
@@ -266,6 +271,10 @@ const MarketsFeedPage = () => {
       if (next) {
         setTagSlug(null);
         setSavedOnly(false);
+        // Show all of the user's bets by default; the status filter refines it.
+        setStatusFilter('all');
+      } else {
+        setStatusFilter('open');
       }
       return next;
     });
@@ -297,10 +306,10 @@ const MarketsFeedPage = () => {
   // Mirror UI's effectiveStatus rule (see MarketCard/EventCard): a record counts
   // as "open" only if its own status is open, its close_at is in the future, and —
   // for markets attached to an event — the parent event is also effectively open.
-  // Skip the rule for My Bets — an open bet whose parent event has since closed
-  // still belongs in the user's list (Bug 3).
+  // Applies to every view (incl. My bets) now that the personal views default to
+  // 'all' — the open rule only kicks in when the user explicitly picks "Open".
   const visibleMarkets =
-    statusFilter === 'open' && !myBetsOnly
+    statusFilter === 'open'
       ? searchedMarkets.filter((m) => isMarketEffectivelyOpen(m, m.event))
       : searchedMarkets;
 
@@ -363,6 +372,9 @@ const MarketsFeedPage = () => {
                 value={tagSlug}
                 onChange={(next) => {
                   setTagSlug(next);
+                  // Leaving a personal view (My bets / Saved) for a category
+                  // returns to the main-feed default of 'open'.
+                  if (myBetsOnly || savedOnly) setStatusFilter('open');
                   if (myBetsOnly) setMyBetsOnly(false);
                   if (savedOnly) setSavedOnly(false);
                 }}
@@ -411,8 +423,10 @@ const MarketsFeedPage = () => {
 
         {/* Filter bar — toggled by the Filter (sliders) button in the header row.
           Holds the market status pills (Open / Closed / Archived …) and sits
-          directly under the title + search row, Polymarket-style. */}
-        {filtersOpen && (
+          directly under the title + search row, Polymarket-style. On the World
+          Cup tab it renders under the Games/Props/Map sub-tabs instead, scoped to
+          Props only — see the World Cup section below. */}
+        {filtersOpen && !isWorldCup && (
           <div className="mb-6">
             <StatusFilter value={statusFilter} onChange={setStatusFilter} />
           </div>
@@ -424,6 +438,14 @@ const MarketsFeedPage = () => {
           <div className="mb-4">
             <WorldCupHero />
             <WorldCupSubTabs value={worldCupTab} onChange={setWorldCupTab} />
+            {/* Status filter — under the sub-tabs, and only on Props (the sole
+              sub-tab with a market feed it can scope). Games/Map have nothing to
+              filter, so it stays hidden there. */}
+            {filtersOpen && worldCupTab === 'props' && (
+              <div className="mt-4">
+                <StatusFilter value={statusFilter} onChange={setStatusFilter} />
+              </div>
+            )}
           </div>
         )}
 
@@ -469,7 +491,9 @@ const MarketsFeedPage = () => {
                 {debouncedSearch.trim()
                   ? t('markets.noResults')
                   : savedOnly
-                    ? t('markets.noSaved')
+                    ? hasSaved
+                      ? t('markets.noSavedForStatus')
+                      : t('markets.noSaved')
                     : myBetsOnly
                       ? hasBets
                         ? t('markets.noMyBetsForStatus')

@@ -342,6 +342,7 @@
     "savedTitle": "Saved markets",
     "savedButton": "Saved",
     "noSaved": "You haven't saved any markets yet",
+    "noSavedForStatus": "No saved markets match this status — try another tab",
     "closingToday": "Closing today",
     "betPlacedMarker": "You have a bet on this",
     "betPlacedMarkerCount_one": "{{count}} bet on this",
