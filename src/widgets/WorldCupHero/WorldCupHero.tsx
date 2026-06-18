@@ -110,6 +110,9 @@ export function WorldCupHero() {
 
       if (wheelRef.current) {
         wheelRef.current.style.transform = `rotate(${angleRef.current}deg)`;
+        // Publish the spin angle so each flag column can counter-rotate by it
+        // (see .wc-flag__inner) and stay upright regardless of the wheel angle.
+        wheelRef.current.style.setProperty('--wc-spin', `${angleRef.current}deg`);
       }
       raf = requestAnimationFrame(tick);
     };
@@ -177,6 +180,9 @@ export function WorldCupHero() {
               key={flag.country}
               className="wc-flag"
               style={{
+                // --wc-pos is this flag's static radial angle; .wc-flag__inner
+                // subtracts it (plus the live --wc-spin) to render upright.
+                ['--wc-pos' as string]: `${i * stepDeg}deg`,
                 transform: `rotate(${i * stepDeg}deg) translate(0, ${-WHEEL_RADIUS}px)`,
               }}
             >

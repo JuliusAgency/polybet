@@ -87,10 +87,13 @@
 
 /* Counter-flip flag content. Math: the layer's scaleX(-1) and this inner
    scaleX(-1) conjugate the wheel rotations to their inverse (S·R(φ)·S = R(-φ))
-   and cancel the reflection — so each flag mirrors its position/tilt while its
-   image and "%" label render the right way round. */
+   and cancel the reflection — so each flag mirrors its position while its image
+   and "%" label render the right way round. The counter-rotation calc is the
+   SAME as LTR: under the conjugation it resolves to the correct inverse, so the
+   flag stays upright; the trailing scaleX(-1) un-mirrors the content. */
 [dir='rtl'] .wc-flag__inner {
-  transform: translate(-50%, -50%) scaleX(-1);
+  transform: translate(-50%, -50%)
+    rotate(calc(-1 * var(--wc-spin, 0deg) - var(--wc-pos, 0deg))) scaleX(-1);
 }
 
 .wc-hero__wheel-layer:active {
@@ -102,6 +105,9 @@
   inset: 0;
   transform-origin: 50% 50%;
   will-change: transform;
+  /* Live spin angle, written each rAF frame from JS; flags counter-rotate by it.
+     Default keeps flags upright on the first paint before the loop runs. */
+  --wc-spin: 0deg;
 }
 
 /* Zero-size pivot at the wheel centre; rotate then push outward along radius. */
@@ -114,10 +120,14 @@
   transform-origin: 0 0;
 }
 
-/* Column (flag + percentage) centred on the radial point; tilts with the wheel. */
+/* Column (flag + percentage) centred on the radial point. It counter-rotates by
+   the wheel spin (--wc-spin) plus its own radial position (--wc-pos) so the net
+   rotation is zero — every flag stays upright/level wherever it sits on the arc
+   and however far the wheel has spun (Polymarket "ferris wheel" look). */
 .wc-flag__inner {
   position: absolute;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%)
+    rotate(calc(-1 * var(--wc-spin, 0deg) - var(--wc-pos, 0deg)));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -129,24 +139,11 @@
   height: 64px;
   border-radius: 12%;
   overflow: hidden;
-  /* Orient each flag perpendicular to its radius (tangent to the circle). The
-     wheel already rotates the card by its position angle (radial); this extra
-     fixed 90° makes the card's axis follow the tangent instead — flags lie flat
-     at the top of the arc and stand upright at the sides. The % label is left in
-     the radial column so it stays separate from the rotated card. In RTL the
-     parent .wc-flag__inner is scaleX(-1), which mirrors this rotation — keeping
-     the tangential orientation consistent with the mirrored wheel. */
-  transform: rotate(90deg);
+  /* No tilt here: .wc-flag__inner already counter-rotates the whole column so the
+     card renders upright. */
   box-shadow:
     0 6px 16px -6px rgba(0, 0, 0, 0.45),
     0 0 0 1px color-mix(in srgb, var(--color-border) 60%, transparent);
-}
-
-/* RTL: the mirrored wheel (.wc-flag__inner scaleX(-1)) reflects the card's
-   tangential rotation, which reads as a slight lean the wrong way versus the
-   LTR hero. Nudge the RTL cards a touch clockwise (>90deg) so they sit level. */
-[dir='rtl'] .wc-flag__card {
-  transform: rotate(100deg);
 }
 
 /* flag-icons square variant already covers the box; just stretch it. */
