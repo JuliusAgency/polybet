@@ -1,0 +1,102 @@
+/* Polymarket-style collapsible markets search. Collapsed it reads as a single
+   magnifier tool-icon (matching the adjacent Saved / My bets buttons); when open
+   it becomes a rounded pill with the magnifier, an inline input that animates its
+   width, and a clear (×) button. */
+.feed-search {
+  display: flex;
+  align-items: center;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  background-color: transparent;
+  transition:
+    background-color 150ms,
+    border-color 150ms;
+}
+
+.feed-search--open {
+  border-color: var(--color-border);
+  background-color: var(--color-bg-elevated);
+}
+
+.feed-search--open:focus-within {
+  border-color: var(--color-accent);
+}
+
+.feed-search__icon {
+  display: flex;
+  height: 2rem;
+  width: 2rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  color: var(--color-text-muted);
+  background-color: transparent;
+  cursor: pointer;
+  transition:
+    color 150ms,
+    background-color 150ms;
+}
+
+.feed-search:not(.feed-search--open) .feed-search__icon:hover {
+  color: var(--color-text-primary);
+  background-color: var(--color-hover);
+}
+
+.feed-search--open .feed-search__icon {
+  cursor: text;
+}
+
+.feed-search__input {
+  width: 0;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  outline: none;
+  background-color: transparent;
+  color: var(--color-text-primary);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  opacity: 0;
+  transition:
+    width 200ms ease,
+    opacity 150ms ease;
+}
+
+.feed-search__input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.feed-search--open .feed-search__input {
+  width: 9rem;
+  padding-inline-end: 0.5rem;
+  opacity: 1;
+}
+
+@media (min-width: 640px) {
+  .feed-search--open .feed-search__input {
+    width: 12rem;
+  }
+}
+
+.feed-search__clear {
+  display: flex;
+  height: 1.5rem;
+  width: 1.5rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  margin-inline-end: 0.25rem;
+  border-radius: 9999px;
+  color: var(--color-text-muted);
+  background-color: transparent;
+  cursor: pointer;
+  transition:
+    color 150ms,
+    background-color 150ms;
+}
+
+.feed-search__clear:hover {
+  color: var(--color-text-primary);
+  background-color: var(--color-hover);
+}

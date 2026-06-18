@@ -31,11 +31,23 @@ import { WorldCupMap } from '@/widgets/WorldCupMap';
 import { WORLD_CUP_TAG_SLUG } from '@/shared/config/worldCup';
 import { TagFilter } from './components/TagFilter';
 import { FeedSearchTools } from './components/FeedSearchTools';
+import { CollapsibleSearch } from './components/CollapsibleSearch';
 import { WorldCupSubTabs, type WorldCupTab } from './components/WorldCupSubTabs';
 
 interface SelectedBet {
   market: Market;
   outcome: MarketOutcome;
+}
+
+// Client-side search predicate for the by-id feeds (Saved / My bets), which are
+// fetched without the server's `question` ilike. Mirrors that question match and
+// additionally matches the parent event's title so an event card is findable by
+// its own label, not only its sub-market questions.
+function marketMatchesSearch(market: Market, query: string): boolean {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return true;
+  if (market.question.toLowerCase().includes(needle)) return true;
+  return market.event?.title.toLowerCase().includes(needle) ?? false;
 }
 
 const MarketsFeedPage = () => {
@@ -269,6 +281,15 @@ const MarketsFeedPage = () => {
         ? worldCupPropsMarkets
         : markets;
 
+  // Saved and My bets are fetched by id (no server-side search), so apply the
+  // search term client-side for those views — the main feed already filtered on
+  // the server, so leave it untouched (its server match may span fields the
+  // client predicate doesn't).
+  const searchedMarkets =
+    (savedOnly || myBetsOnly) && debouncedSearch.trim()
+      ? sourceMarkets.filter((m) => marketMatchesSearch(m, debouncedSearch))
+      : sourceMarkets;
+
   // Mirror UI's effectiveStatus rule (see MarketCard/EventCard): a record counts
   // as "open" only if its own status is open, its close_at is in the future, and —
   // for markets attached to an event — the parent event is also effectively open.
@@ -276,8 +297,8 @@ const MarketsFeedPage = () => {
   // still belongs in the user's list (Bug 3).
   const visibleMarkets =
     statusFilter === 'open' && !myBetsOnly
-      ? sourceMarkets.filter((m) => isMarketEffectivelyOpen(m, m.event))
-      : sourceMarkets;
+      ? searchedMarkets.filter((m) => isMarketEffectivelyOpen(m, m.event))
+      : searchedMarkets;
 
   const feedItems = groupMarketsByEvent(visibleMarkets);
 
@@ -370,10 +391,11 @@ const MarketsFeedPage = () => {
             <span />
           )}
 
-          {/* Saved + My bets icon toggles, then the search box. The toggles stay
-            visible in the My bets view (so it can be switched off); only the text
-            input is hidden there. */}
-          <div className="flex shrink-0 items-center gap-2">
+          {/* Saved + My bets icon toggles and a Polymarket-style collapsible
+            search — all always visible. The search now filters the My bets and
+            Saved views too (client-side), not just the main feed, so it no longer
+            hides when either is active. */}
+          <div className="flex shrink-0 items-center gap-1">
             <FeedSearchTools
               savedActive={savedOnly}
               onSavedToggle={handleSavedToggle}
@@ -381,43 +403,11 @@ const MarketsFeedPage = () => {
               myBetsActive={myBetsOnly}
               onMyBetsToggle={handleMyBetsToggle}
             />
-            {!myBetsOnly && (
-              <div className="relative flex items-center">
-                <div
-                  className="pointer-events-none absolute inset-y-0 flex items-center"
-                  style={{ insetInlineStart: '10px' }}
-                >
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    style={{ color: 'var(--color-text-muted)' }}
-                  >
-                    <circle cx="11" cy="11" r="8" />
-                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                  </svg>
-                </div>
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={t('markets.searchPlaceholder')}
-                  className="w-40 rounded-full border py-1 text-sm outline-none sm:w-52"
-                  style={{
-                    backgroundColor: 'var(--color-bg-elevated)',
-                    borderColor: 'var(--color-border)',
-                    color: 'var(--color-text-primary)',
-                    paddingInlineStart: '2rem',
-                    paddingInlineEnd: '0.75rem',
-                  }}
-                />
-              </div>
-            )}
+            <CollapsibleSearch
+              value={searchQuery}
+              onChange={setSearchQuery}
+              placeholder={t('markets.searchPlaceholder')}
+            />
           </div>
         </div>
 
@@ -469,14 +459,14 @@ const MarketsFeedPage = () => {
             {/* Empty state — no markets at all */}
             {!feedIsLoading && !feedIsError && feedItems.length === 0 && (
               <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                {savedOnly
-                  ? t('markets.noSaved')
-                  : myBetsOnly
-                    ? hasBets
-                      ? t('markets.noMyBetsForStatus')
-                      : t('markets.noMyBets')
-                    : debouncedSearch
-                      ? t('markets.noResults')
+                {debouncedSearch.trim()
+                  ? t('markets.noResults')
+                  : savedOnly
+                    ? t('markets.noSaved')
+                    : myBetsOnly
+                      ? hasBets
+                        ? t('markets.noMyBetsForStatus')
+                        : t('markets.noMyBets')
                       : t('markets.noMarkets')}
               </p>
             )}

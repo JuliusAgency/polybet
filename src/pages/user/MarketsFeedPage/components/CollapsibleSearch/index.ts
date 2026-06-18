@@ -1,0 +1,1 @@
+export { CollapsibleSearch } from './CollapsibleSearch';
