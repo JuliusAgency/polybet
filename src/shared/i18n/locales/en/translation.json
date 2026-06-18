@@ -333,6 +333,7 @@
     "removeEventConfirm": "Remove all {{count}} saved markets from this event?",
     "searchPlaceholder": "Search markets…",
     "clearSearch": "Clear search",
+    "filters": "Filters",
     "loadingMore": "Loading more markets…",
     "allLoaded": "All markets loaded",
     "noResults": "No markets match your search",

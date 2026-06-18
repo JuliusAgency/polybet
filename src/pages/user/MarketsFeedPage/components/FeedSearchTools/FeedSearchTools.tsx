@@ -2,28 +2,33 @@ import { useTranslation } from 'react-i18next';
 import './feedSearchTools.css';
 
 interface FeedSearchToolsProps {
-  /** Saved-only feed view is active. */
-  savedActive: boolean;
-  onSavedToggle: () => void;
   /** Whether the user has open bets — gates the My bets toggle. */
   showMyBets: boolean;
   myBetsActive: boolean;
   onMyBetsToggle: () => void;
+  /** Saved-only feed view is active. */
+  savedActive: boolean;
+  onSavedToggle: () => void;
+  /** The status-filter bar is open. */
+  filtersActive: boolean;
+  onFiltersToggle: () => void;
 }
 
 /**
  * Icon-only toggles rendered to the start side of the markets search input
- * (Polymarket-style). "My bets" is a filter/sliders glyph, "Saved" is a
- * bookmark. Both moved out of the category chip row so the search area carries
- * the saved/my-bets intent the way Polymarket's header does. Labels live in the
- * tooltip + aria-label since the buttons are intentionally text-free.
+ * (Polymarket-style), text-free with the label in tooltip + aria-label:
+ *   • My bets — bullseye, scopes the feed to the user's open-bet markets.
+ *   • Saved — bookmark, the saved-only view.
+ *   • Filter — sliders, opens the status-filter bar (Open / Closed / Archived …).
  */
 export function FeedSearchTools({
-  savedActive,
-  onSavedToggle,
   showMyBets,
   myBetsActive,
   onMyBetsToggle,
+  savedActive,
+  onSavedToggle,
+  filtersActive,
+  onFiltersToggle,
 }: FeedSearchToolsProps) {
   const { t } = useTranslation();
 
@@ -38,7 +43,7 @@ export function FeedSearchTools({
           title={t('markets.myBets')}
           className={`feed-tool-btn${myBetsActive ? ' feed-tool-btn--active' : ''}`}
         >
-          <SlidersIcon />
+          <TargetIcon />
         </button>
       )}
       <button
@@ -51,7 +56,39 @@ export function FeedSearchTools({
       >
         <BookmarkIcon active={savedActive} />
       </button>
+      <button
+        type="button"
+        onClick={onFiltersToggle}
+        aria-pressed={filtersActive}
+        aria-label={t('markets.filters')}
+        title={t('markets.filters')}
+        className={`feed-tool-btn${filtersActive ? ' feed-tool-btn--active' : ''}`}
+      >
+        <SlidersIcon />
+      </button>
     </div>
+  );
+}
+
+function TargetIcon() {
+  // Bullseye — concentric circles with a filled center dot. Reads as "you aimed,
+  // you placed your bet", matching the My bets semantics.
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <circle cx="12" cy="12" r="6" />
+      <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
+    </svg>
   );
 }
 

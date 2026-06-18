@@ -59,6 +59,9 @@ const MarketsFeedPage = () => {
   const [tagSlug, setTagSlug] = useState<string | null>('trending');
   const [myBetsOnly, setMyBetsOnly] = useState(false);
   const [savedOnly, setSavedOnly] = useState(false);
+  // Status-filter bar (Open / Closed / Archived …), toggled by the Filter
+  // (sliders) button in the header. Hidden by default, Polymarket-style.
+  const [filtersOpen, setFiltersOpen] = useState(false);
   // World Cup tab sub-navigation. Games is the default landing sub-tab; Props
   // holds the actual market feed, Games/Map are placeholders for now.
   const [worldCupTab, setWorldCupTab] = useState<WorldCupTab>('games');
@@ -367,14 +370,6 @@ const MarketsFeedPage = () => {
               />
             </div>
           </div>
-
-          {/* Status pills — only relevant when browsing "All categories" with no
-            category / Saved / My bets intent. Hidden otherwise (Polymarket UX). */}
-          {tagSlug === null && !savedOnly && !myBetsOnly && (
-            <div className="mt-3">
-              <StatusFilter value={statusFilter} onChange={setStatusFilter} />
-            </div>
-          )}
         </div>
 
         {/* Header — page title on the start side; the search tools (Saved + My
@@ -397,11 +392,13 @@ const MarketsFeedPage = () => {
             hides when either is active. */}
           <div className="flex shrink-0 items-center gap-1">
             <FeedSearchTools
-              savedActive={savedOnly}
-              onSavedToggle={handleSavedToggle}
               showMyBets={hasBets}
               myBetsActive={myBetsOnly}
               onMyBetsToggle={handleMyBetsToggle}
+              savedActive={savedOnly}
+              onSavedToggle={handleSavedToggle}
+              filtersActive={filtersOpen}
+              onFiltersToggle={() => setFiltersOpen((v) => !v)}
             />
             <CollapsibleSearch
               value={searchQuery}
@@ -410,6 +407,15 @@ const MarketsFeedPage = () => {
             />
           </div>
         </div>
+
+        {/* Filter bar — toggled by the Filter (sliders) button in the header row.
+          Holds the market status pills (Open / Closed / Archived …) and sits
+          directly under the title + search row, Polymarket-style. */}
+        {filtersOpen && (
+          <div className="mb-6">
+            <StatusFilter value={statusFilter} onChange={setStatusFilter} />
+          </div>
+        )}
 
         {/* World Cup: the animated hero and its Games/Props/Map sub-tabs render
           below the tag bar. Props shows the market feed; Games/Map are stubs. */}

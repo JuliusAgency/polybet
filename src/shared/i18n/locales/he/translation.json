@@ -333,6 +333,7 @@
     "removeEventConfirm": "להסיר את כל {{count}} השווקים השמורים מהאירוע?",
     "searchPlaceholder": "חיפוש שווקים…",
     "clearSearch": "נקה חיפוש",
+    "filters": "מסננים",
     "loadingMore": "טוען עוד שווקים…",
     "allLoaded": "כל השווקים נטענו",
     "noResults": "לא נמצאו שווקים התואמים לחיפוש",
