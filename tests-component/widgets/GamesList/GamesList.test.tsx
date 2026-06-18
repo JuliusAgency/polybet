@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import type { Market, MarketOutcome } from '@/entities/market';
 import type { MarketEvent } from '@/entities/event';
 import { GamesList } from '@/widgets/GamesList';
-import { readableTextColor } from '@/widgets/GamesList/helpers';
+import { readableTextColor, toGameView } from '@/widgets/GamesList/helpers';
 import { groupGames, type WorldCupGame } from '@/features/bet';
 import { renderWithProviders } from '../../helpers/render';
 
@@ -186,6 +186,64 @@ describe('groupGames', () => {
 
     expect(games.map((g) => g.event.id)).toEqual(['evt-fra-sen', 'evt-late']);
     expect(games[0].moneyline).toHaveLength(3);
+  });
+});
+
+describe('toGameView', () => {
+  // Real Polymarket data: the event names the team "Bosnia and Herzegovina"
+  // while its market label is "Bosnia-Herzegovina". The team slot must still
+  // resolve, and the draw chip must show the actual draw market (not Bosnia's).
+  function buildSwissBosniaGame(): WorldCupGame {
+    const swissBosniaEvent: MarketEvent = {
+      ...event,
+      id: 'evt-che-bih',
+      title: 'Switzerland vs. Bosnia-Herzegovina',
+      teams: [
+        {
+          name: 'Switzerland',
+          abbreviation: 'che',
+          logo: null,
+          record: '0-1-0',
+          color: '#c02121',
+          ordering: 'home',
+        },
+        {
+          name: 'Bosnia and Herzegovina',
+          abbreviation: 'bih',
+          logo: null,
+          record: '0-1-0',
+          color: '#1b42c0',
+          ordering: 'away',
+        },
+      ],
+    };
+    const mk = (id: string, groupLabel: string, yesPrice: number): Market => ({
+      ...market(id, groupLabel, yesPrice),
+      event_id: 'evt-che-bih',
+      event: swissBosniaEvent,
+    });
+    return groupGames([
+      mk('m-che', 'Switzerland', 0.625),
+      mk('m-bih', 'Bosnia-Herzegovina', 0.145),
+      mk('m-draw', 'Draw (Switzerland vs. Bosnia-Herzegovina)', 0.235),
+    ])[0];
+  }
+
+  it('matches a team to its market despite "and" vs "-" label differences', () => {
+    const view = toGameView(buildSwissBosniaGame());
+
+    const byTeam = Object.fromEntries(view.teamSlots.map((s) => [s.team.abbreviation, s]));
+    expect(byTeam.che.market?.id).toBe('m-che');
+    expect(byTeam.che.outcome?.price).toBe(0.625);
+    // The bug: Bosnia rendered "—" because its slot found no market.
+    expect(byTeam.bih.market?.id).toBe('m-bih');
+    expect(byTeam.bih.outcome?.price).toBe(0.145);
+  });
+
+  it('binds the draw chip to the labelled draw market, not the unmatched team market', () => {
+    const view = toGameView(buildSwissBosniaGame());
+    expect(view.draw?.market.id).toBe('m-draw');
+    expect(view.draw?.outcome.price).toBe(0.235);
   });
 });
 

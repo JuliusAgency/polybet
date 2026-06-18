@@ -71,6 +71,32 @@ function norm(value: string | null | undefined): string {
 }
 
 /**
+ * Canonical key for matching a team name to a moneyline market's `group_label`.
+ * Polymarket is inconsistent across the two: an event's team can be named
+ * "Bosnia and Herzegovina" while its market label is "Bosnia-Herzegovina". This
+ * collapses the connective word ("and"/"&") and all separators/punctuation so
+ * the two forms compare equal. Word-boundary on "and" keeps names like "Andorra"
+ * intact.
+ */
+function canon(value: string | null | undefined): string {
+  return (value ?? '')
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/\band\b/g, ' ')
+    .replace(/[^a-z0-9]+/g, '');
+}
+
+/**
+ * A moneyline market is the draw leg when its label follows Polymarket's
+ * "Draw (X vs. Y)" convention. Detecting the draw structurally (by label) rather
+ * than as "the market not matched to a team" prevents an unmatched team market
+ * from being mistaken for the draw.
+ */
+function isDrawLabel(value: string | null | undefined): boolean {
+  return /^\s*draw\b/i.test(value ?? '');
+}
+
+/**
  * Order teams home-first (Polymarket convention) and fall back to input order
  * when `ordering` is absent.
  */
@@ -87,16 +113,37 @@ export function orderedTeams(teams: GameTeam[] | null | undefined): GameTeam[] {
  */
 export function toGameView(game: WorldCupGame): GameView {
   const teams = orderedTeams(game.event.teams);
-  const teamNames = new Set(teams.map((t) => norm(t.name)));
 
+  // Team markets are everything except the draw leg; the draw is identified by
+  // its label so an unmatched team market can never be mistaken for it.
+  const teamMarkets = game.moneyline.filter((m) => !isDrawLabel(m.group_label));
+
+  // First pass: match each team to a team market by a punctuation-tolerant key
+  // ("Bosnia and Herzegovina" === "Bosnia-Herzegovina").
+  const claimed = new Set<string>();
   const teamSlots: MoneylineSlot[] = teams.map((team) => {
-    const market = game.moneyline.find((m) => norm(m.group_label) === norm(team.name)) ?? null;
+    const market =
+      teamMarkets.find((m) => !claimed.has(m.id) && canon(m.group_label) === canon(team.name)) ??
+      null;
+    if (market) claimed.add(market.id);
     return { team, market, outcome: market ? yesOutcome(market) : null };
   });
 
-  // The draw market is the moneyline market not matched to a team (label like
-  // "Draw (France vs. Senegal)"). Only meaningful for 3-way (football) games.
-  const drawMarket = game.moneyline.find((m) => !teamNames.has(norm(m.group_label))) ?? null;
+  // Safety net for future label drift: if exactly one team and exactly one team
+  // market are still unmatched, pair them (the lone leftover is unambiguous).
+  const unmatchedSlots = teamSlots.filter((s) => !s.market);
+  const leftoverMarkets = teamMarkets.filter((m) => !claimed.has(m.id));
+  if (unmatchedSlots.length === 1 && leftoverMarkets.length === 1) {
+    const slot = unmatchedSlots[0];
+    const market = leftoverMarkets[0];
+    slot.market = market;
+    slot.outcome = yesOutcome(market);
+    claimed.add(market.id);
+  }
+
+  // The draw market follows Polymarket's "Draw (X vs. Y)" convention. Only
+  // meaningful for 3-way (football) games.
+  const drawMarket = game.moneyline.find((m) => isDrawLabel(m.group_label)) ?? null;
   const drawOutcome = drawMarket ? yesOutcome(drawMarket) : null;
   const draw = drawMarket && drawOutcome ? { market: drawMarket, outcome: drawOutcome } : null;
 
