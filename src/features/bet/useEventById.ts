@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/shared/api/supabase';
 import { EVENT_SELECT, MARKET_SELECT_NO_EVENT } from '@/shared/api/supabase/selects';
-import { MARKETS_REFRESH_INTERVAL_MS } from '@/shared/config/markets';
+import { MARKETS_PRICE_POLL_INTERVAL_MS } from '@/shared/config/markets';
 import type { Market } from '@/entities/market';
 import type { MarketEvent } from '@/entities/event';
 
@@ -14,10 +14,11 @@ export function useEventById(eventId: string | undefined) {
   return useQuery<EventWithMarkets | null, Error>({
     queryKey: ['event', eventId] as const,
     enabled: !!eventId,
-    // Re-pull fresh odds from DB on the same cadence as useMarketRefresh so that
-    // the bet placement page reflects Polymarket prices without realtime.
-    staleTime: MARKETS_REFRESH_INTERVAL_MS,
-    refetchInterval: MARKETS_REFRESH_INTERVAL_MS,
+    // Re-pull fresh odds from the DB every few seconds. The market-tracker keeps
+    // market_outcomes ~1s fresh via the CLOB websocket, so this cheap single-event
+    // read is what gives the bet page near-live prices (no realtime, no Gamma).
+    staleTime: MARKETS_PRICE_POLL_INTERVAL_MS,
+    refetchInterval: MARKETS_PRICE_POLL_INTERVAL_MS,
     refetchIntervalInBackground: false,
     queryFn: async () => {
       if (!eventId) return null;

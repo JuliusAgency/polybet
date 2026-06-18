@@ -3,7 +3,11 @@ import { type InfiniteData, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/shared/api/supabase';
 import { invokeSupabaseFunction } from '@/shared/api/supabase/invokeSupabaseFunction';
 import { MARKET_SELECT_FULL } from '@/shared/api/supabase/selects';
-import { MARKETS_REFRESH_INTERVAL_MS, MARKETS_REFRESH_MAX_IDS } from '@/shared/config/markets';
+import {
+  MARKETS_PRICE_POLL_INTERVAL_MS,
+  MARKETS_REFRESH_INTERVAL_MS,
+  MARKETS_REFRESH_MAX_IDS,
+} from '@/shared/config/markets';
 import type { Market } from '@/entities/market';
 
 interface RefreshMarketsResponse {
@@ -54,6 +58,40 @@ export function useMarketRefresh(
   eventIdRef.current = eventId;
   const hasIds = slicedIds.length > 0;
 
+  // Cheap DB read of fresh prices for the on-screen markets, patched into the
+  // ['markets'] cache in place (cursor preserved). market_outcomes is kept ~1s
+  // fresh by the market-tracker (CLOB websocket), so this indexed `IN (…)` read —
+  // not the edge Gamma fetch — is what drives the feed's fast price updates.
+  const patchVisibleFromDb = async () => {
+    const ids = activeIdsRef.current;
+    if (ids.length === 0) return;
+
+    const { data: freshMarkets } = await supabase
+      .from('markets')
+      .select(MARKET_SELECT_FULL)
+      .in('polymarket_id', ids)
+      .order('position', { referencedTable: 'market_outcomes', ascending: true });
+
+    if (freshMarkets && freshMarkets.length > 0) {
+      const freshById = Object.fromEntries(freshMarkets.map((m) => [m.id, m]));
+      queryClient.setQueriesData<InfiniteData<Market[]>>({ queryKey: ['markets'] }, (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page) => page.map((market) => freshById[market.id] ?? market)),
+        };
+      });
+    }
+
+    // On the bet page, nudge the exact EventDetail query so it reflects the fresh
+    // book right after the edge safety refresh commits. The 3s feed poll never
+    // sets eventId, so this is a no-op there (useEventById polls on its own).
+    const currentEventId = eventIdRef.current;
+    if (currentEventId) {
+      void queryClient.invalidateQueries({ queryKey: ['event', currentEventId] });
+    }
+  };
+
   const refresh = async () => {
     const ids = activeIdsRef.current;
     if (ids.length === 0 || refreshingRef.current) return;
@@ -80,35 +118,11 @@ export function useMarketRefresh(
         });
       }
 
-      // Fetch fresh data only for the refreshed market IDs and patch cache in-place.
-      // Avoids invalidating all pages so the cursor stays intact during infinite scroll.
+      // Reflect the edge's writes in the feed cache. The 3s price poll does the
+      // same read continuously; this just surfaces the 30s safety refresh's
+      // result immediately when it actually changed something.
       if (data && data.updated > 0) {
-        const { data: freshMarkets } = await supabase
-          .from('markets')
-          .select(MARKET_SELECT_FULL)
-          .in('polymarket_id', ids)
-          .order('position', { referencedTable: 'market_outcomes', ascending: true });
-
-        if (freshMarkets && freshMarkets.length > 0) {
-          const freshById = Object.fromEntries(freshMarkets.map((m) => [m.id, m]));
-          queryClient.setQueriesData<InfiniteData<Market[]>>({ queryKey: ['markets'] }, (old) => {
-            if (!old) return old;
-            return {
-              ...old,
-              pages: old.pages.map((page) => page.map((market) => freshById[market.id] ?? market)),
-            };
-          });
-        }
-
-        // Invalidate the specific EventDetail cache so useEventById refetches
-        // fresh odds right after the edge function commits — otherwise its
-        // refetchInterval can race the edge call and cache stale prices. We
-        // narrow to the exact eventId so warm-but-background event queries
-        // are not refetched on every cycle.
-        const currentEventId = eventIdRef.current;
-        if (currentEventId) {
-          void queryClient.invalidateQueries({ queryKey: ['event', currentEventId] });
-        }
+        await patchVisibleFromDb();
       }
 
       // Consider it a failure only when there's an error; updated=0 just means
@@ -148,6 +162,22 @@ export function useMarketRefresh(
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoRefresh, hasIds]);
+
+  // Fast price poll: the market-tracker keeps market_outcomes ~1s fresh via the
+  // CLOB websocket, so the feed only needs to re-read the on-screen markets from
+  // the DB every few seconds and patch the cache in place — far cheaper than the
+  // edge Gamma fetch, with no upstream load. Skipped on the bet page (eventId
+  // set): useEventById owns that refetch cadence on its own 3s interval.
+  useEffect(() => {
+    if (!autoRefresh || !hasIds || eventId) return;
+
+    const pollTimer = setInterval(() => {
+      void patchVisibleFromDb();
+    }, MARKETS_PRICE_POLL_INTERVAL_MS);
+
+    return () => clearInterval(pollTimer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoRefresh, hasIds, eventId]);
 
   return { isRefreshing, lastResult, refresh };
 }
