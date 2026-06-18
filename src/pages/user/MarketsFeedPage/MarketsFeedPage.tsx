@@ -320,6 +320,51 @@ const MarketsFeedPage = () => {
   return (
     <div className={dockSlip ? 'flex gap-6' : undefined}>
       <div className={dockSlip ? 'min-w-0 flex-1' : undefined}>
+        {/* Category bar — Polymarket-style sub-bar sitting directly under the top
+          nav (above the page title + search row below): scrollable category chips
+          (incl. Saved + My bets). Search lives in the header row below. */}
+        <div className="mb-4">
+          <div className="flex items-center gap-2">
+            {/* Tag filter — curated popular categories from Polymarket.
+              My-bets, Saved and tag selection are mutually exclusive: turning
+              one on clears the others so the feed has a single intent. */}
+            <div className="min-w-0 flex-1">
+              <TagFilter
+                value={tagSlug}
+                onChange={(next) => {
+                  setTagSlug(next);
+                  if (myBetsOnly) setMyBetsOnly(false);
+                  if (savedOnly) setSavedOnly(false);
+                }}
+                tags={allowedTags}
+                showMyBets={hasBets}
+                myBetsActive={myBetsOnly}
+                savedActive={savedOnly}
+                onSavedToggle={handleSavedToggle}
+                savedCount={savedFeedCount}
+                onMyBetsToggle={() => {
+                  setMyBetsOnly((v) => {
+                    const nextValue = !v;
+                    if (nextValue) {
+                      setTagSlug(null);
+                      setSavedOnly(false);
+                    }
+                    return nextValue;
+                  });
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Status pills — only relevant when browsing "All categories" with no
+            category / Saved / My bets intent. Hidden otherwise (Polymarket UX). */}
+          {tagSlug === null && !savedOnly && !myBetsOnly && (
+            <div className="mt-3">
+              <StatusFilter value={statusFilter} onChange={setStatusFilter} />
+            </div>
+          )}
+        </div>
+
         {/* Header — page title on the start side, search pinned to the end of the
           same row. On World Cup the title is omitted (the flag-wheel hero below
           carries its own heading); a spacer keeps the search end-aligned. As a
@@ -369,51 +414,6 @@ const MarketsFeedPage = () => {
                   paddingInlineEnd: '0.75rem',
                 }}
               />
-            </div>
-          )}
-        </div>
-
-        {/* Category bar — Polymarket-style sub-bar directly under the top nav:
-          scrollable category chips (incl. Saved + My bets). Search lives in the
-          header row above. */}
-        <div className="mb-4">
-          <div className="flex items-center gap-2">
-            {/* Tag filter — curated popular categories from Polymarket.
-              My-bets, Saved and tag selection are mutually exclusive: turning
-              one on clears the others so the feed has a single intent. */}
-            <div className="min-w-0 flex-1">
-              <TagFilter
-                value={tagSlug}
-                onChange={(next) => {
-                  setTagSlug(next);
-                  if (myBetsOnly) setMyBetsOnly(false);
-                  if (savedOnly) setSavedOnly(false);
-                }}
-                tags={allowedTags}
-                showMyBets={hasBets}
-                myBetsActive={myBetsOnly}
-                savedActive={savedOnly}
-                onSavedToggle={handleSavedToggle}
-                savedCount={savedFeedCount}
-                onMyBetsToggle={() => {
-                  setMyBetsOnly((v) => {
-                    const nextValue = !v;
-                    if (nextValue) {
-                      setTagSlug(null);
-                      setSavedOnly(false);
-                    }
-                    return nextValue;
-                  });
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Status pills — only relevant when browsing "All categories" with no
-            category / Saved / My bets intent. Hidden otherwise (Polymarket UX). */}
-          {tagSlug === null && !savedOnly && !myBetsOnly && (
-            <div className="mt-3">
-              <StatusFilter value={statusFilter} onChange={setStatusFilter} />
             </div>
           )}
         </div>
