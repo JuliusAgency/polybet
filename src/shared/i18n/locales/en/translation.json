@@ -41,6 +41,7 @@
     "reports": "Reports",
     "activity": "Activity",
     "markets": "Markets",
+    "allMarkets": "All markets",
     "myBets": "Portfolio",
     "wallet": "Wallet",
     "stats": "Stats",
@@ -272,6 +273,7 @@
   },
   "markets": {
     "title": "Markets",
+    "allTitle": "All markets",
     "noMarkets": "No markets available",
     "betSlipTitle": "Place a Bet",
     "buyTab": "Buy",

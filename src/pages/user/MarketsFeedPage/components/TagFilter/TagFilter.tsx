@@ -11,15 +11,10 @@ interface TagFilterProps {
   value: string | null;
   onChange: (value: string | null) => void;
   tags: AllowedCategoryTag[];
-  myBetsActive?: boolean;
-  onMyBetsToggle?: () => void;
-  showMyBets?: boolean;
-  savedActive?: boolean;
-  /** When provided, a Saved chip is rendered inside the category row (next to
-   *  My bets). Toggles the saved-only feed view. */
-  onSavedToggle?: () => void;
-  /** Count of cards on the Saved tab, shown as a badge on the Saved chip. */
-  savedCount?: number;
+  /** When Saved or My bets owns the feed intent (both clear the tag), no
+   *  category chip — including the "All categories" fallback — should read as
+   *  active. Saved + My bets themselves now live next to the search input. */
+  suppressActiveChip?: boolean;
 }
 
 /**
@@ -31,25 +26,15 @@ interface TagFilterProps {
  * cyan hue-shift, a small flame glyph, and a slow ambient pulse so it reads
  * as "alive" without breaking the dark/blue palette.
  */
-export function TagFilter({
-  value,
-  onChange,
-  tags,
-  myBetsActive = false,
-  onMyBetsToggle,
-  showMyBets = false,
-  savedActive = false,
-  onSavedToggle,
-  savedCount,
-}: TagFilterProps) {
+export function TagFilter({ value, onChange, tags, suppressActiveChip = false }: TagFilterProps) {
   const { t } = useTranslation();
   const setRowRef = useHorizontalScroll<HTMLDivElement>();
 
   if (tags.length === 0) return null;
 
-  // My bets and Saved both own the feed intent — when either is on, no tag
-  // chip (including the "All categories" fallback) should look active.
-  const effectiveValue = myBetsActive || savedActive ? undefined : value;
+  // When Saved or My bets owns the feed intent, no tag chip (including the
+  // "All categories" fallback) should look active.
+  const effectiveValue = suppressActiveChip ? undefined : value;
 
   // Pull Trending and World Cup out so we can render them as signature chips
   // (cyan flame / gold trophy) and slot "Closing today" right after them; the
@@ -164,80 +149,7 @@ export function TagFilter({
           </button>
         );
       })()}
-      {onSavedToggle && (
-        <button
-          onClick={onSavedToggle}
-          aria-pressed={savedActive}
-          className="flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors"
-          style={{
-            backgroundColor: savedActive
-              ? 'var(--color-accent)'
-              : 'color-mix(in srgb, var(--color-accent) 3%, var(--color-bg-elevated))',
-            color: savedActive
-              ? 'var(--color-bg-base)'
-              : 'color-mix(in srgb, var(--color-accent) 25%, var(--color-text-secondary))',
-            border: `1px solid ${savedActive ? 'var(--color-accent)' : 'color-mix(in srgb, var(--color-accent) 12%, var(--color-border))'}`,
-          }}
-        >
-          <BookmarkIcon active={savedActive} />
-          <span>{t('markets.savedButton')}</span>
-          {typeof savedCount === 'number' && (
-            <span
-              className="rounded-full px-1.5 py-0.5 text-[0.625rem] font-semibold leading-none"
-              style={{
-                backgroundColor: savedActive ? 'var(--color-bg-base)' : 'var(--color-accent)',
-                color: savedActive ? 'var(--color-accent)' : 'var(--color-bg-base)',
-              }}
-            >
-              {savedCount}
-            </span>
-          )}
-        </button>
-      )}
-      {showMyBets && onMyBetsToggle && (
-        <button
-          onClick={onMyBetsToggle}
-          aria-pressed={myBetsActive}
-          className="flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors"
-          style={{
-            backgroundColor: myBetsActive
-              ? 'var(--color-accent)'
-              : 'color-mix(in srgb, var(--color-accent) 3%, var(--color-bg-elevated))',
-            color: myBetsActive
-              ? 'var(--color-bg-base)'
-              : 'color-mix(in srgb, var(--color-accent) 25%, var(--color-text-secondary))',
-            border: `1px solid ${myBetsActive ? 'var(--color-accent)' : 'color-mix(in srgb, var(--color-accent) 12%, var(--color-border))'}`,
-          }}
-        >
-          <TargetIcon />
-          <span>{t('markets.myBets')}</span>
-        </button>
-      )}
     </div>
-  );
-}
-
-function TargetIcon() {
-  // Bullseye — three concentric circles, center dot filled. Not used elsewhere
-  // in the app (bookmark is taken by Saved/BookmarkButton, check by BetMarker,
-  // flame by Trending, clock by Closing today). Reads as "you aimed, you
-  // placed your bet" which matches the My bets semantics.
-  return (
-    <svg
-      width="11"
-      height="11"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="10" />
-      <circle cx="12" cy="12" r="6" />
-      <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
-    </svg>
   );
 }
 
@@ -263,30 +175,6 @@ function TrophyIcon() {
       <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
       <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
       <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
-    </svg>
-  );
-}
-
-interface BookmarkIconProps {
-  active: boolean;
-}
-
-function BookmarkIcon({ active }: BookmarkIconProps) {
-  // Bookmark — matches the Saved/BookmarkButton semantics elsewhere in the app.
-  // Filled when the saved-only view is active, outline otherwise.
-  return (
-    <svg
-      width="11"
-      height="11"
-      viewBox="0 0 24 24"
-      fill={active ? 'currentColor' : 'none'}
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
     </svg>
   );
 }

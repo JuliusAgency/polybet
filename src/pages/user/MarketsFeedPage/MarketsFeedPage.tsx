@@ -30,6 +30,7 @@ import { GamesList } from '@/widgets/GamesList';
 import { WorldCupMap } from '@/widgets/WorldCupMap';
 import { WORLD_CUP_TAG_SLUG } from '@/shared/config/worldCup';
 import { TagFilter } from './components/TagFilter';
+import { FeedSearchTools } from './components/FeedSearchTools';
 import { WorldCupSubTabs, type WorldCupTab } from './components/WorldCupSubTabs';
 
 interface SelectedBet {
@@ -241,6 +242,19 @@ const MarketsFeedPage = () => {
     });
   };
 
+  // My bets owns the feed intent too — turning it on clears the tag filter and
+  // Saved so the feed shows exactly the user's open-bet markets.
+  const handleMyBetsToggle = () => {
+    setMyBetsOnly((current) => {
+      const next = !current;
+      if (next) {
+        setTagSlug(null);
+        setSavedOnly(false);
+      }
+      return next;
+    });
+  };
+
   // Lookups operate on open bets only — settled bets must not surface in the
   // feed UI (badges, "your stake" lines). They live in the My Bets history page.
   const userBetForMarket = (marketId: string) => openBets.find((b) => b.market_id === marketId);
@@ -279,15 +293,6 @@ const MarketsFeedPage = () => {
   );
   const { data: eventMarketCounts } = useEventMarketCounts(eventIdsInFeed);
 
-  // Grouped saved cards count for the Saved button badge — applies the same
-  // open-event visibility rule as the main feed so the number matches what
-  // the user will actually see after clicking Saved.
-  const savedVisibleMarkets =
-    statusFilter === 'open'
-      ? savedMarkets.filter((m) => isMarketEffectivelyOpen(m, m.event))
-      : savedMarkets;
-  const savedFeedCount = groupMarketsByEvent(savedVisibleMarkets).length;
-
   const feedIsLoading =
     isTabTransitioning ||
     (savedOnly
@@ -321,8 +326,8 @@ const MarketsFeedPage = () => {
     <div className={dockSlip ? 'flex gap-6' : undefined}>
       <div className={dockSlip ? 'min-w-0 flex-1' : undefined}>
         {/* Category bar — Polymarket-style sub-bar sitting directly under the top
-          nav (above the page title + search row below): scrollable category chips
-          (incl. Saved + My bets). Search lives in the header row below. */}
+          nav (above the page title + search row below): scrollable category
+          chips. Saved + My bets toggles and search live in the header row below. */}
         <div className="mb-4">
           <div className="flex items-center gap-2">
             {/* Tag filter — curated popular categories from Polymarket.
@@ -337,21 +342,7 @@ const MarketsFeedPage = () => {
                   if (savedOnly) setSavedOnly(false);
                 }}
                 tags={allowedTags}
-                showMyBets={hasBets}
-                myBetsActive={myBetsOnly}
-                savedActive={savedOnly}
-                onSavedToggle={handleSavedToggle}
-                savedCount={savedFeedCount}
-                onMyBetsToggle={() => {
-                  setMyBetsOnly((v) => {
-                    const nextValue = !v;
-                    if (nextValue) {
-                      setTagSlug(null);
-                      setSavedOnly(false);
-                    }
-                    return nextValue;
-                  });
-                }}
+                suppressActiveChip={savedOnly || myBetsOnly}
               />
             </div>
           </div>
@@ -365,57 +356,69 @@ const MarketsFeedPage = () => {
           )}
         </div>
 
-        {/* Header — page title on the start side, search pinned to the end of the
-          same row. On World Cup the title is omitted (the flag-wheel hero below
-          carries its own heading); a spacer keeps the search end-aligned. As a
-          flex row with justify-between, title and search auto-swap sides in RTL. */}
+        {/* Header — page title on the start side; the search tools (Saved + My
+          bets icon toggles) and the search input sit at the end of the same row.
+          On World Cup the title is omitted (the flag-wheel hero below carries its
+          own heading); a spacer keeps the group end-aligned. As a flex row with
+          justify-between, title and tools auto-swap sides in RTL. */}
         <div className="mb-6 flex items-center justify-between gap-2">
           {!isWorldCup ? (
             <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-              {t('markets.title')}
+              {t('markets.allTitle')}
             </h1>
           ) : (
             <span />
           )}
 
-          {/* Search — hidden in the My bets view. */}
-          {!myBetsOnly && (
-            <div className="relative flex shrink-0 items-center">
-              <div
-                className="pointer-events-none absolute inset-y-0 flex items-center"
-                style={{ insetInlineStart: '10px' }}
-              >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={{ color: 'var(--color-text-muted)' }}
+          {/* Saved + My bets icon toggles, then the search box. The toggles stay
+            visible in the My bets view (so it can be switched off); only the text
+            input is hidden there. */}
+          <div className="flex shrink-0 items-center gap-2">
+            <FeedSearchTools
+              savedActive={savedOnly}
+              onSavedToggle={handleSavedToggle}
+              showMyBets={hasBets}
+              myBetsActive={myBetsOnly}
+              onMyBetsToggle={handleMyBetsToggle}
+            />
+            {!myBetsOnly && (
+              <div className="relative flex items-center">
+                <div
+                  className="pointer-events-none absolute inset-y-0 flex items-center"
+                  style={{ insetInlineStart: '10px' }}
                 >
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{ color: 'var(--color-text-muted)' }}
+                  >
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={t('markets.searchPlaceholder')}
+                  className="w-40 rounded-full border py-1 text-sm outline-none sm:w-52"
+                  style={{
+                    backgroundColor: 'var(--color-bg-elevated)',
+                    borderColor: 'var(--color-border)',
+                    color: 'var(--color-text-primary)',
+                    paddingInlineStart: '2rem',
+                    paddingInlineEnd: '0.75rem',
+                  }}
+                />
               </div>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={t('markets.searchPlaceholder')}
-                className="w-40 rounded-full border py-1 text-sm outline-none sm:w-52"
-                style={{
-                  backgroundColor: 'var(--color-bg-elevated)',
-                  borderColor: 'var(--color-border)',
-                  color: 'var(--color-text-primary)',
-                  paddingInlineStart: '2rem',
-                  paddingInlineEnd: '0.75rem',
-                }}
-              />
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* World Cup: the animated hero and its Games/Props/Map sub-tabs render

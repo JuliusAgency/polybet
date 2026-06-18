@@ -59,7 +59,7 @@ export const UserLayout = () => {
             </span>
             <nav className="flex items-center gap-1">
               <NavLink to={ROUTES.USER.MARKETS} className={navLinkClass}>
-                {t('nav.markets')}
+                {t('nav.allMarkets')}
               </NavLink>
               <NavLink to={ROUTES.USER.MY_BETS} className={navLinkClass}>
                 {t('nav.myBets')}

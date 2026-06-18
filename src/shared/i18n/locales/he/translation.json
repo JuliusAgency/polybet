@@ -41,6 +41,7 @@
     "reports": "דוחות",
     "activity": "פעילות",
     "markets": "שווקים",
+    "allMarkets": "כל השווקים",
     "myBets": "תיק",
     "wallet": "ארנק",
     "stats": "סטטיסטיקה",
@@ -272,6 +273,7 @@
   },
   "markets": {
     "title": "שווקים",
+    "allTitle": "כל השווקים",
     "noMarkets": "אין שווקים זמינים",
     "betSlipTitle": "הנח הימור",
     "buyTab": "קנייה",
