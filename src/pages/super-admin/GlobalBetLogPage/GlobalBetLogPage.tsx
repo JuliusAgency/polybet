@@ -9,8 +9,6 @@ import { useBetLog } from '@/features/admin/bet-log';
 import type { BetStatus } from '@/features/admin/bet-log';
 import { FinancialTransactionsTable } from '@/widgets/FinancialTransactionsTable';
 import { formatSharePrice, polymarketMarketUrl } from '@/shared/utils';
-import type { DbSyncRun } from '@/shared/types/database';
-import { SyncMarketsModal } from './components/SyncMarketsModal';
 
 type Tab = 'bet-log' | 'financial-log';
 
@@ -24,8 +22,6 @@ const GlobalBetLogPage = () => {
   const { t, i18n } = useTranslation();
   const months = t('globalLog.months', { returnObjects: true }) as string[];
   const [activeTab, setActiveTab] = useState<Tab>('bet-log');
-  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
-  const [lastSyncRun, setLastSyncRun] = useState<DbSyncRun | null>(null);
 
   // Filters for financial tab
   const [managerId, setManagerId] = useState<string>('');
@@ -95,34 +91,11 @@ const GlobalBetLogPage = () => {
 
   return (
     <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--color-bg-base)' }}>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6">
         <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
           {t('globalLog.title')}
         </h1>
-        <div className="flex items-center gap-3">
-          {lastSyncRun && (
-            <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-              {t('settlement.syncDone', {
-                synced: lastSyncRun.markets_synced,
-                settled: lastSyncRun.markets_settled,
-              })}
-            </span>
-          )}
-          <Button variant="primary" onClick={() => setIsSyncModalOpen(true)}>
-            {t('settlement.syncMarkets')}
-          </Button>
-        </div>
       </div>
-
-      <SyncMarketsModal
-        isOpen={isSyncModalOpen}
-        onClose={() => setIsSyncModalOpen(false)}
-        onCompleted={(run) => {
-          if (run.status === 'completed' || run.status === 'completed_with_warnings') {
-            setLastSyncRun(run);
-          }
-        }}
-      />
 
       {/* Tabs */}
       <div

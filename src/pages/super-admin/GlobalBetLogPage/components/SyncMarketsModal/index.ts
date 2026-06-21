@@ -1,1 +1,0 @@
-export { SyncMarketsModal } from './SyncMarketsModal';

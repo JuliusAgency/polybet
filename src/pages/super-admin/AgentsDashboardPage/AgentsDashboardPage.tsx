@@ -3,7 +3,13 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAgentStats } from '@/features/admin/agent-stats';
-import { useSystemKpis, useSyncHealth } from '@/features/stats';
+import {
+  useSystemKpis,
+  useSyncHealth,
+  TRACKER_STALE_THRESHOLD_SECONDS,
+  EVENTS_STALE_THRESHOLD_SECONDS,
+  TRENDING_STALE_THRESHOLD_SECONDS,
+} from '@/features/stats';
 import type { AgentStatsRow } from '@/features/admin/agent-stats';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
@@ -24,6 +30,50 @@ const formatAge = (seconds: number | null, t: TFunction): string => {
   if (seconds < 5400) return `${Math.round(seconds / 60)} ${t('agentsDashboard.syncUnitMin')}`;
   if (seconds < 172800) return `${Math.round(seconds / 3600)} ${t('agentsDashboard.syncUnitHr')}`;
   return `${Math.round(seconds / 86400)} ${t('agentsDashboard.syncUnitDay')}`;
+};
+
+// Whole seconds between an ISO timestamp and the server's checked_at reference
+// (avoids client clock skew vs. computing against Date.now()).
+const secondsAgoFrom = (iso: string | null | undefined, referenceIso: string): number | null => {
+  if (!iso) return null;
+  const ms = new Date(referenceIso).getTime() - new Date(iso).getTime();
+  if (Number.isNaN(ms)) return null;
+  return Math.max(0, Math.floor(ms / 1000));
+};
+
+// Map a sync_runs.status into a label + dot colour. `running` pulses (live).
+const runStatusMeta = (
+  status: string | null,
+  t: TFunction
+): { text: string; color: string; live: boolean } => {
+  switch (status) {
+    case 'completed':
+      return {
+        text: t('agentsDashboard.syncRunCompleted'),
+        color: 'var(--color-win)',
+        live: false,
+      };
+    case 'completed_with_warnings':
+      return {
+        text: t('agentsDashboard.syncRunWarnings'),
+        color: 'var(--color-pending)',
+        live: false,
+      };
+    case 'running':
+      return {
+        text: t('agentsDashboard.syncRunRunning'),
+        color: 'var(--color-accent)',
+        live: true,
+      };
+    case 'failed':
+      return { text: t('agentsDashboard.syncRunFailed'), color: 'var(--color-error)', live: false };
+    default:
+      return {
+        text: t('agentsDashboard.syncRunNever'),
+        color: 'var(--color-text-secondary)',
+        live: false,
+      };
+  }
 };
 
 const currentYear = new Date().getFullYear();
@@ -47,27 +97,150 @@ const AgentsDashboardPage = () => {
     isStale: syncIsStale,
   } = useSyncHealth();
 
-  const syncAgeLabel = useMemo(
-    () =>
-      syncStaleSeconds === null
-        ? t('agentsDashboard.syncHealthNever')
-        : t('agentsDashboard.syncHealthUpdated', { age: formatAge(syncStaleSeconds, t) }),
-    [syncStaleSeconds, t]
-  );
+  // One labelled row per sync dimension. Each marks WHAT it describes (label)
+  // and its current state (value + dot colour). All come from get_sync_health()
+  // in a single call — no extra backend round-trips. Price liveness comes from
+  // the market-tracker (books + heartbeat), NOT the edge sync_runs row.
+  const syncDimensions = useMemo(() => {
+    const SECONDARY = 'var(--color-text-secondary)';
+    const WIN = 'var(--color-win)';
+    const ERROR = 'var(--color-error)';
+    const PENDING = 'var(--color-pending)';
+    const unknown = t('agentsDashboard.syncHealthUnknown');
 
-  const syncLabel =
-    syncHealth === null
-      ? t('agentsDashboard.syncHealthUnknown')
-      : syncIsStale
-        ? t('agentsDashboard.syncHealthStale')
-        : t('agentsDashboard.syncHealthOk');
+    // Freshness row (events / trending): green when fresh, amber when stale.
+    const freshness = (stale: number | null | undefined, threshold: number) =>
+      stale === null || stale === undefined
+        ? { value: t('agentsDashboard.syncHealthNever'), color: SECONDARY }
+        : {
+            value: t('agentsDashboard.syncSyncedAgo', { age: formatAge(stale, t) }),
+            color: stale > threshold ? PENDING : WIN,
+          };
 
-  const syncColor =
-    syncHealth === null
-      ? 'var(--color-text-secondary)'
-      : syncIsStale
-        ? 'var(--color-error)'
-        : 'var(--color-win)';
+    // 1) Market prices — realtime writer freshness (market_outcome_books).
+    const pricesColor = syncHealth === null ? SECONDARY : syncIsStale ? ERROR : WIN;
+    const pricesValue =
+      syncHealth === null
+        ? unknown
+        : syncIsStale
+          ? syncStaleSeconds === null
+            ? t('agentsDashboard.syncHealthNever')
+            : t('agentsDashboard.syncHealthLastUpdate', { age: formatAge(syncStaleSeconds, t) })
+          : `${t('agentsDashboard.syncHealthLive')} · ${t('agentsDashboard.syncHealthCadence')}`;
+
+    // 2) Price feed (WS) — CLOB websocket link, via the tracker heartbeat. A
+    //    stale/absent heartbeat means the tracker process itself is down.
+    let wsValue = unknown;
+    let wsColor = SECONDARY;
+    let wsLive = false;
+    if (syncHealth !== null) {
+      const trackerStale = syncHealth.tracker_stale_seconds;
+      if (trackerStale === null || trackerStale > TRACKER_STALE_THRESHOLD_SECONDS) {
+        wsColor = ERROR;
+        wsValue =
+          trackerStale === null
+            ? t('agentsDashboard.syncWsNoHeartbeat')
+            : `${t('agentsDashboard.syncWsNoHeartbeat')} · ${formatAge(trackerStale, t)}`;
+      } else if (syncHealth.ws_connected) {
+        wsColor = WIN;
+        wsLive = true;
+        wsValue = t('agentsDashboard.syncWsConnected', {
+          tokens: syncHealth.subscribed_tokens ?? 0,
+        });
+      } else {
+        wsColor = ERROR;
+        wsValue = t('agentsDashboard.syncWsDisconnected');
+      }
+    }
+
+    // 3) Events catalog — eventCrawl freshness (events.last_synced_at).
+    const events =
+      syncHealth === null
+        ? { value: unknown, color: SECONDARY }
+        : freshness(syncHealth.events_stale_seconds, EVENTS_STALE_THRESHOLD_SECONDS);
+
+    // 4) Trending — last trending-rankings refresh (heartbeat).
+    const trending =
+      syncHealth === null
+        ? { value: unknown, color: SECONDARY }
+        : freshness(syncHealth.trending_stale_seconds, TRENDING_STALE_THRESHOLD_SECONDS);
+
+    // 5) Settlements — resolved markets still holding open positions (backlog).
+    let settleValue = unknown;
+    let settleColor = SECONDARY;
+    if (syncHealth !== null) {
+      const pending = syncHealth.pending_settlements ?? 0;
+      settleColor = pending === 0 ? WIN : PENDING;
+      settleValue =
+        pending === 0
+          ? t('agentsDashboard.syncSettlementsNone')
+          : t('agentsDashboard.syncSettlementsPending', { n: pending });
+    }
+
+    // 6) Last sync run — edge/manual catalog sync (sync_runs latest row).
+    const run = runStatusMeta(syncHealth?.last_run_status ?? null, t);
+    const runAgeSec = syncHealth
+      ? secondsAgoFrom(
+          syncHealth.last_run_finished_at ?? syncHealth.last_run_started_at,
+          syncHealth.checked_at
+        )
+      : null;
+    const runValue =
+      (syncHealth?.last_run_status ?? null) === null || runAgeSec === null
+        ? run.text
+        : `${run.text} · ${formatAge(runAgeSec, t)}`;
+
+    return [
+      {
+        key: 'prices',
+        label: t('agentsDashboard.syncDimPrices'),
+        value: pricesValue,
+        color: pricesColor,
+        live: syncHealth !== null && !syncIsStale,
+        title: syncHealth?.books_latest_at ?? undefined,
+      },
+      {
+        key: 'ws',
+        label: t('agentsDashboard.syncDimWs'),
+        value: wsValue,
+        color: wsColor,
+        live: wsLive,
+        title: syncHealth?.tracker_heartbeat_at ?? undefined,
+      },
+      {
+        key: 'events',
+        label: t('agentsDashboard.syncDimEvents'),
+        value: events.value,
+        color: events.color,
+        live: false,
+        title: syncHealth?.events_latest_at ?? undefined,
+      },
+      {
+        key: 'trending',
+        label: t('agentsDashboard.syncDimTrending'),
+        value: trending.value,
+        color: trending.color,
+        live: false,
+        title: syncHealth?.last_trending_at ?? undefined,
+      },
+      {
+        key: 'settlements',
+        label: t('agentsDashboard.syncDimSettlements'),
+        value: settleValue,
+        color: settleColor,
+        live: false,
+        title: undefined,
+      },
+      {
+        key: 'run',
+        label: t('agentsDashboard.syncDimRun'),
+        value: runValue,
+        color: run.color,
+        live: run.live,
+        title: syncHealth?.last_run_finished_at ?? syncHealth?.last_run_started_at ?? undefined,
+      },
+    ];
+  }, [syncHealth, syncIsStale, syncStaleSeconds, t]);
 
   const rawMonths = t('globalLog.months', { returnObjects: true });
   const months: string[] = Array.isArray(rawMonths) ? rawMonths : [];
@@ -127,24 +300,47 @@ const AgentsDashboardPage = () => {
           {t('agentsDashboard.title')}
         </h1>
         <div
-          className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5"
+          className="flex min-w-[17rem] flex-col gap-1.5 rounded-xl border px-3 py-2"
           style={{
             borderColor: 'var(--color-border)',
             backgroundColor: 'var(--color-bg-surface)',
           }}
-          title={syncHealth?.books_latest_at ?? undefined}
           aria-label={t('agentsDashboard.syncHealthAria')}
         >
           <span
-            className="inline-block h-2 w-2 rounded-full"
-            style={{ backgroundColor: syncColor }}
-          />
-          <span className="text-xs font-medium" style={{ color: 'var(--color-text-primary)' }}>
-            {syncLabel}
+            className="text-[10px] font-semibold uppercase tracking-wide"
+            style={{ color: 'var(--color-text-secondary)' }}
+          >
+            {t('agentsDashboard.syncHealthCaption')}
           </span>
-          <span className="text-xs font-mono" style={{ color: 'var(--color-text-secondary)' }}>
-            {syncAgeLabel}
-          </span>
+          {syncDimensions.map((dim) => (
+            <div key={dim.key} className="flex items-center gap-2" title={dim.title}>
+              <span className="relative inline-flex h-2 w-2 shrink-0">
+                {dim.live && (
+                  <span
+                    className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
+                    style={{ backgroundColor: dim.color }}
+                  />
+                )}
+                <span
+                  className="relative inline-flex h-2 w-2 rounded-full"
+                  style={{ backgroundColor: dim.color }}
+                />
+              </span>
+              <span
+                className="text-xs font-medium"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                {dim.label}
+              </span>
+              <span
+                className="ms-auto text-xs font-medium"
+                style={{ color: 'var(--color-text-primary)' }}
+              >
+                {dim.value}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
 
