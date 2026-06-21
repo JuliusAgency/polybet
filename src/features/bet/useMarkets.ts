@@ -32,9 +32,23 @@ export function useMarkets(
   statusFilter: MarketStatusFilter = 'all',
   searchQuery = '',
   categoryFilter: string | null = null,
-  tagSlugFilter: string | null = null
+  tagSlugFilter: string | null = null,
+  subTagSlugFilter: string | null = null
 ) {
-  const queryKey = ['markets', statusFilter, searchQuery, categoryFilter, tagSlugFilter] as const;
+  const queryKey = [
+    'markets',
+    statusFilter,
+    searchQuery,
+    categoryFilter,
+    tagSlugFilter,
+    subTagSlugFilter,
+  ] as const;
+
+  // Selecting a sub-tag narrows the feed via tag_slugs containment, so the
+  // curated Trending ordering no longer applies — fall back to the default
+  // volume ordering (a sub-tag under Trending = "show me trending-adjacent
+  // markets with this tag, by volume").
+  const useTrending = tagSlugFilter === TRENDING_TAG_SLUG && !subTagSlugFilter;
 
   const result = useInfiniteQuery<
     Market[],
@@ -72,24 +86,26 @@ export function useMarkets(
         query = query.eq('category', categoryFilter);
       }
 
-      const isTrendingFilter = tagSlugFilter === TRENDING_TAG_SLUG;
+      const isTrendingFilter = useTrending;
 
-      if (tagSlugFilter && !isClosingTodayFilter) {
-        if (isTrendingFilter) {
-          // Trending = Polymarket featured first (trending_rank ASC, populated
-          // by `set_events_trending_rankings`, migration 075/076), followed by
-          // the rest of visible markets ordered by sort_volume DESC.
-          // sort_volume is denormalized from events.volume (migration 057) and
-          // is populated for every visible market — unlike events.volume_24hr,
-          // which is only written for events currently in Polymarket's
-          // featured set. The compound ORDER BY + cursor logic below handle
-          // the ranked → unranked transition in a single query.
-        } else {
-          // Array containment on the denormalized markets.tag_slugs column
-          // (migration 069). Hits idx_markets_tag_slugs_visible (GIN) and
-          // avoids the events nested loop that previously timed out under load.
-          query = query.contains('tag_slugs', [tagSlugFilter]);
-        }
+      // Tag containment (markets.tag_slugs, GIN idx_markets_tag_slugs_visible,
+      // migration 069). AND the category tag with the optional sub-tag into a
+      // single `tag_slugs @> {..}` predicate so the planner walks one index and
+      // never nested-loops through events (which timed out in prod).
+      //
+      // Skips:
+      //  - Trending: it is not a containment filter — the whole visible set is
+      //    ordered by trending_rank below (handled when no sub-tag is active).
+      //  - Closing today: a close_at range filter, applied separately.
+      // A sub-tag under Trending DOES filter (useTrending is false then), so it
+      // falls through to the containment path with just the sub-tag.
+      const containsTags: string[] = [];
+      if (tagSlugFilter && !isClosingTodayFilter && tagSlugFilter !== TRENDING_TAG_SLUG) {
+        containsTags.push(tagSlugFilter);
+      }
+      if (subTagSlugFilter) containsTags.push(subTagSlugFilter);
+      if (containsTags.length > 0) {
+        query = query.contains('tag_slugs', containsTags);
       }
 
       if (isClosingTodayFilter) {
@@ -173,7 +189,7 @@ export function useMarkets(
     getNextPageParam: (lastPage): Cursor | undefined => {
       if (lastPage.length < MARKETS_PAGE_LIMIT) return undefined;
       const last = lastPage[lastPage.length - 1];
-      if (tagSlugFilter === TRENDING_TAG_SLUG) {
+      if (useTrending) {
         return {
           kind: 'trending',
           lastTrendingRank: last.trending_rank ?? null,

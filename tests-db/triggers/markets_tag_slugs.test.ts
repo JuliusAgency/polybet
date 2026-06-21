@@ -47,3 +47,32 @@ describe('markets.tag_slugs denormalisation (migration 069)', () => {
     });
   });
 });
+
+// Sub-tag bar filtering: market-tracker now persists granular Polymarket tag
+// slugs (Iran, Trump, …) alongside the category slug in events/markets.tag_slugs
+// (buildTagSlugs). The feed's useMarkets narrows with a single
+// `tag_slugs @> {category, subTag}` predicate hitting idx_markets_tag_slugs_visible.
+// This proves that containment works against the multi-element arrays.
+describe('sub-tag containment filter (feed useMarkets)', () => {
+  it('matches a market by category + granular sub-tag, excludes non-matching', async () => {
+    await withTransaction(async (c) => {
+      const iran = await seedEvent(c, { tag_slugs: ['politics', 'iran', 'geopolitics'] });
+      await seedMarket(c, { event_id: iran.id, polymarket_id: 'pm-sub-iran' });
+
+      const trump = await seedEvent(c, { tag_slugs: ['politics', 'trump'] });
+      await seedMarket(c, { event_id: trump.id, polymarket_id: 'pm-sub-trump' });
+
+      // politics + iran → only the Iran market.
+      const both = await c.query<{ polymarket_id: string }>(
+        "SELECT polymarket_id FROM markets WHERE tag_slugs @> ARRAY['politics','iran'] AND polymarket_id LIKE 'pm-sub-%' ORDER BY polymarket_id"
+      );
+      expect(both.rows.map((r) => r.polymarket_id)).toEqual(['pm-sub-iran']);
+
+      // sub-tag alone (Trending-style) → only the Trump market.
+      const subOnly = await c.query<{ polymarket_id: string }>(
+        "SELECT polymarket_id FROM markets WHERE tag_slugs @> ARRAY['trump'] AND polymarket_id LIKE 'pm-sub-%' ORDER BY polymarket_id"
+      );
+      expect(subOnly.rows.map((r) => r.polymarket_id)).toEqual(['pm-sub-trump']);
+    });
+  });
+});

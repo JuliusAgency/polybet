@@ -11,6 +11,9 @@ export type { FeedItem } from './groupMarketsByEvent';
 export { useAllowedCategoryTags } from './useAllowedCategoryTags';
 export type { AllowedCategoryTag } from './useAllowedCategoryTags';
 
+export { useCategorySubtags, subtagsForCategory, TRENDING_SUBTAGS_KEY } from './useCategorySubtags';
+export type { CategorySubtag, CategorySubtagsMap } from './useCategorySubtags';
+
 export { useUserBalance } from './useUserBalance';
 export type { UserBalance } from './useUserBalance';
 

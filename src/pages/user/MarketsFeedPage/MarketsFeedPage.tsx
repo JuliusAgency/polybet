@@ -7,6 +7,8 @@ import {
   useUserBalance,
   useMyBets,
   useAllowedCategoryTags,
+  useCategorySubtags,
+  subtagsForCategory,
   useEventMarketCounts,
   useWorldCupGames,
   useWorldCupProps,
@@ -29,7 +31,9 @@ import { WorldCupHero } from '@/widgets/WorldCupHero';
 import { GamesList } from '@/widgets/GamesList';
 import { WorldCupMap } from '@/widgets/WorldCupMap';
 import { WORLD_CUP_TAG_SLUG } from '@/shared/config/worldCup';
+import { CLOSING_TODAY_TAG_SLUG } from '@/entities/market';
 import { TagFilter } from './components/TagFilter';
+import { SubTagFilter } from './components/SubTagFilter';
 import { FeedSearchTools } from './components/FeedSearchTools';
 import { CollapsibleSearch } from './components/CollapsibleSearch';
 import { WorldCupSubTabs, type WorldCupTab } from './components/WorldCupSubTabs';
@@ -57,6 +61,9 @@ const MarketsFeedPage = () => {
   const [statusFilter, setStatusFilter] = useState<MarketStatusFilter>('open');
   const [searchQuery, setSearchQuery] = useState('');
   const [tagSlug, setTagSlug] = useState<string | null>('trending');
+  // Secondary tag within the active category (Polymarket related-tags bar).
+  // null = no sub-filter ("All"). Cleared whenever the top category changes.
+  const [subTagSlug, setSubTagSlug] = useState<string | null>(null);
   const [myBetsOnly, setMyBetsOnly] = useState(false);
   const [savedOnly, setSavedOnly] = useState(false);
   // Status-filter bar (Open / Closed / Archived …), toggled by the Filter
@@ -68,6 +75,16 @@ const MarketsFeedPage = () => {
   const debouncedSearch = useDebounce(searchQuery, 300);
 
   const { data: allowedTags = [] } = useAllowedCategoryTags();
+  const { data: subtagsMap = {} } = useCategorySubtags();
+  // Sub-tags for the active category (Trending/All use the aggregated set).
+  // Hidden on World Cup (own sub-tabs), Closing today (virtual), and the
+  // personal Saved / My bets views (no category context).
+  const showSubTags =
+    tagSlug !== WORLD_CUP_TAG_SLUG &&
+    tagSlug !== CLOSING_TODAY_TAG_SLUG &&
+    !savedOnly &&
+    !myBetsOnly;
+  const activeSubtags = showSubTags ? subtagsForCategory(subtagsMap, tagSlug) : [];
 
   const {
     markets,
@@ -78,7 +95,7 @@ const MarketsFeedPage = () => {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useMarkets(statusFilter, debouncedSearch, null, tagSlug);
+  } = useMarkets(statusFilter, debouncedSearch, null, tagSlug, subTagSlug);
 
   // World Cup Games sub-tab: match cards (France vs. Senegal) with their
   // moneyline markets. Only fetched while the Games sub-tab is active.
@@ -124,7 +141,7 @@ const MarketsFeedPage = () => {
   // Cleared when isFetching settles or after TAB_TRANSITION_MS as a safety net.
   const TAB_TRANSITION_MS = 280;
   const [isTabTransitioning, setIsTabTransitioning] = useState(false);
-  const tabKey = `${tagSlug ?? 'all'}|${myBetsOnly ? 'mb' : ''}|${savedOnly ? 'sv' : ''}`;
+  const tabKey = `${tagSlug ?? 'all'}|${subTagSlug ?? ''}|${myBetsOnly ? 'mb' : ''}|${savedOnly ? 'sv' : ''}`;
   const [lastTabKey, setLastTabKey] = useState(tabKey);
   // Adjust state during render when the tab changes (React's recommended
   // pattern over a setState-in-effect): flips the skeleton on immediately.
@@ -252,6 +269,7 @@ const MarketsFeedPage = () => {
       if (next) {
         setMyBetsOnly(false);
         setTagSlug(null);
+        setSubTagSlug(null);
         // Saved is a personal collection — show everything saved by default; the
         // status filter then refines it. Back to the main-feed default on exit.
         setStatusFilter('all');
@@ -270,6 +288,7 @@ const MarketsFeedPage = () => {
       const next = !current;
       if (next) {
         setTagSlug(null);
+        setSubTagSlug(null);
         setSavedOnly(false);
         // Show all of the user's bets by default; the status filter refines it.
         setStatusFilter('all');
@@ -372,6 +391,9 @@ const MarketsFeedPage = () => {
                 value={tagSlug}
                 onChange={(next) => {
                   setTagSlug(next);
+                  // Switching the top category drops any active sub-tag — the
+                  // sub-tag set is per-category and would not apply.
+                  setSubTagSlug(null);
                   // Leaving a personal view (My bets / Saved) for a category
                   // returns to the main-feed default of 'open'.
                   if (myBetsOnly || savedOnly) setStatusFilter('open');
@@ -420,6 +442,15 @@ const MarketsFeedPage = () => {
             />
           </div>
         </div>
+
+        {/* Sub-tag bar — Polymarket's related-tags carousel under the title.
+          Refines the feed within the active category; rendered only when the
+          category actually has sub-tags (see showSubTags / activeSubtags). */}
+        {activeSubtags.length > 0 && (
+          <div className="mb-6 -mt-3">
+            <SubTagFilter subtags={activeSubtags} value={subTagSlug} onChange={setSubTagSlug} />
+          </div>
+        )}
 
         {/* Filter bar — toggled by the Filter (sliders) button in the header row.
           Holds the market status pills (Open / Closed / Archived …) and sits

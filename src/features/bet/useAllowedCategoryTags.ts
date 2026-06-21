@@ -16,7 +16,6 @@ const FALLBACK_TAGS: AllowedCategoryTag[] = [
   { slug: 'politics', label: 'Politics', mode: 'tag' },
   { slug: 'world', label: 'World', mode: 'tag' },
   { slug: 'sports', label: 'Sports', mode: 'tag' },
-  { slug: 'trump', label: 'Trump', mode: 'tag' },
   { slug: 'elections', label: 'Elections', mode: 'tag' },
   { slug: 'crypto', label: 'Crypto', mode: 'tag' },
   { slug: 'tech', label: 'Tech', mode: 'tag' },
