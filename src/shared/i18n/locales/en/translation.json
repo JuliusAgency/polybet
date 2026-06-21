@@ -313,6 +313,8 @@
     "categoryFilterLabel": "Category",
     "categoryAll": "All categories",
     "subtagAll": "All",
+    "scrollLeft": "Scroll left",
+    "scrollRight": "Scroll right",
     "tags": {
       "trending": "Trending",
       "world-cup": "World Cup",

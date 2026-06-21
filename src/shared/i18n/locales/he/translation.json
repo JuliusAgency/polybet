@@ -313,6 +313,8 @@
     "categoryFilterLabel": "קטגוריה",
     "categoryAll": "כל הקטגוריות",
     "subtagAll": "הכול",
+    "scrollLeft": "גלול שמאלה",
+    "scrollRight": "גלול ימינה",
     "tags": {
       "trending": "פופולרי",
       "world-cup": "גביע העולם",

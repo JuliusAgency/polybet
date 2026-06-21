@@ -6,6 +6,17 @@ import { server } from './msw/server';
 // Vite-injected build constant — not present in test runtime.
 vi.stubGlobal('__APP_VERSION__', '0.0.0-test');
 
+// jsdom has no ResizeObserver; components that observe element size (e.g.
+// SubTagFilter's overflow chevrons) need a no-op stub.
+vi.stubGlobal(
+  'ResizeObserver',
+  class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+);
+
 // Supabase client throws at import time if these are absent (see
 // src/shared/api/supabase/client.ts). Stub them once for every component test.
 vi.stubEnv('VITE_SUPABASE_URL', 'http://127.0.0.1:54421');
