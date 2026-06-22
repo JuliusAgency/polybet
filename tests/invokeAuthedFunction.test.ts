@@ -3,12 +3,12 @@ import assert from 'node:assert/strict';
 import { invokeAuthedFunction, SESSION_EXPIRED_ERROR } from '../src/shared/api/supabase/invokeAuthedFunction.ts';
 
 interface SessionResponse {
-  data: { session: { access_token: string } | null };
+  data: { session: { access_token: string; expires_at?: number } | null };
   error: Error | null;
 }
 
 interface RefreshResponse {
-  data: { session: { access_token: string } | null };
+  data: { session: { access_token: string; expires_at?: number } | null };
   error: Error | null;
 }
 
@@ -104,6 +104,69 @@ test('invokeAuthedFunction refreshes the session before invoking when needed', a
       },
     },
   });
+});
+
+test('invokeAuthedFunction refreshes proactively when the cached token is near expiry', async () => {
+  const nowSeconds = Date.now() / 1000;
+  const { client, invokeCalls } = createClient({
+    // Cached session exists but expires in 5s — must NOT be reused.
+    session: {
+      data: { session: { access_token: 'stale-token', expires_at: nowSeconds + 5 } },
+      error: null,
+    },
+    refreshedSession: {
+      data: { session: { access_token: 'fresh-token' } },
+      error: null,
+    },
+  });
+
+  await invokeAuthedFunction(client, 'quote-bet', { body: { x: 1 } });
+
+  assert.equal(invokeCalls.length, 1);
+  assert.equal(
+    (invokeCalls[0].options as { headers: Record<string, string> }).headers.Authorization,
+    'Bearer fresh-token'
+  );
+});
+
+test('invokeAuthedFunction retries once with a refreshed token on a 401', async () => {
+  let calls = 0;
+  const invokeCalls: Array<{ functionName: string; options: unknown }> = [];
+  const client = {
+    auth: {
+      async getSession() {
+        return { data: { session: { access_token: 'expired-but-present' } }, error: null };
+      },
+      async refreshSession() {
+        return { data: { session: { access_token: 'refreshed-token' } }, error: null };
+      },
+      async signOut() {},
+    },
+    functions: {
+      async invoke(functionName: string, options: unknown) {
+        calls += 1;
+        invokeCalls.push({ functionName, options });
+        // First call: simulate the edge function rejecting our token (401).
+        if (calls === 1) {
+          return { data: null, error: { context: { status: 401 } } };
+        }
+        return { data: { ok: true }, error: null };
+      },
+    },
+  };
+
+  const result = await invokeAuthedFunction(client, 'market-price-history', { body: { id: 'm1' } });
+
+  assert.equal(calls, 2);
+  assert.equal(
+    (invokeCalls[0].options as { headers: Record<string, string> }).headers.Authorization,
+    'Bearer expired-but-present'
+  );
+  assert.equal(
+    (invokeCalls[1].options as { headers: Record<string, string> }).headers.Authorization,
+    'Bearer refreshed-token'
+  );
+  assert.deepEqual((result as { data: unknown }).data, { ok: true });
 });
 
 test('invokeAuthedFunction throws a session error instead of sending a publishable key', async () => {
