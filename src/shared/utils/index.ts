@@ -9,6 +9,8 @@ export { formatProbability } from './formatProbability';
 export { formatSharePrice } from './formatSharePrice';
 export { mapBalanceErrorMessage } from './mapBalanceError';
 export { polymarketMarketUrl } from './polymarketUrl';
+export { dedupeSavedMarkets } from './dedupeSavedMarkets';
+export { marketMatchesSearch } from './marketMatchesSearch';
 
 /**
  * Returns a display name for a transaction/action initiator.
