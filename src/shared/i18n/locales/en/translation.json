@@ -616,6 +616,7 @@
     "syncDimRun": "Last sync run",
     "syncHealthLive": "Live",
     "syncHealthCadence": "updates every ~4s",
+    "syncHealthUpdatesPerMin": "{{n}} updates/min",
     "syncHealthDelayed": "Sync delayed",
     "syncHealthUnknown": "Sync status unknown",
     "syncHealthLastUpdate": "last update {{age}} ago",

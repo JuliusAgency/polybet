@@ -117,8 +117,12 @@ const AgentsDashboardPage = () => {
             color: stale > threshold ? PENDING : WIN,
           };
 
-    // 1) Market prices — realtime writer freshness (market_outcome_books).
+    // 1) Market prices — realtime writer freshness (market_outcome_books). When
+    //    fresh, show the genuine price-write count over the last minute (refreshed
+    //    each 60s poll — a per-minute figure that never looks frozen). Falls back to
+    //    the "last update X ago" text in the rare fresh-but-quiet case (count 0).
     const pricesColor = syncHealth === null ? SECONDARY : syncIsStale ? ERROR : WIN;
+    const pricesUpdates = syncHealth?.books_updates_last_minute ?? 0;
     const pricesValue =
       syncHealth === null
         ? unknown
@@ -126,7 +130,15 @@ const AgentsDashboardPage = () => {
           ? syncStaleSeconds === null
             ? t('agentsDashboard.syncHealthNever')
             : t('agentsDashboard.syncHealthLastUpdate', { age: formatAge(syncStaleSeconds, t) })
-          : `${t('agentsDashboard.syncHealthLive')} · ${t('agentsDashboard.syncHealthCadence')}`;
+          : pricesUpdates > 0
+            ? `${t('agentsDashboard.syncHealthLive')} · ${t(
+                'agentsDashboard.syncHealthUpdatesPerMin',
+                {
+                  count: pricesUpdates,
+                  n: pricesUpdates.toLocaleString(),
+                }
+              )}`
+            : t('agentsDashboard.syncHealthLastUpdate', { age: formatAge(syncStaleSeconds, t) });
 
     // 2) Price feed (WS) — CLOB websocket link, via the tracker heartbeat. A
     //    stale/absent heartbeat means the tracker process itself is down.

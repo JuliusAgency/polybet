@@ -16,6 +16,9 @@ export const TRENDING_STALE_THRESHOLD_SECONDS = 15 * 60;
 export interface SyncHealth {
   books_latest_at: string | null;
   books_stale_seconds: number | null;
+  // Count of genuine price writes (book changes) in the trailing minute. Refreshed
+  // once per poll — a per-minute figure, so the 60s cadence reads as "this minute".
+  books_updates_last_minute: number | null;
   last_run_status: string | null;
   last_run_started_at: string | null;
   last_run_finished_at: string | null;

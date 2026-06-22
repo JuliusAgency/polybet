@@ -616,6 +616,7 @@
     "syncDimRun": "סנכרון אחרון",
     "syncHealthLive": "פעיל",
     "syncHealthCadence": "מתעדכן כל ~4 ש׳",
+    "syncHealthUpdatesPerMin": "{{n}} עדכונים/דקה",
     "syncHealthDelayed": "סנכרון מתעכב",
     "syncHealthUnknown": "סטטוס סנכרון לא ידוע",
     "syncHealthLastUpdate": "עדכון אחרון לפני {{age}}",
