@@ -35,23 +35,13 @@ import { SubTagFilter } from '@/widgets/MarketSubTagFilter';
 import { CollapsibleSearch } from '@/widgets/MarketSearchBox';
 import { WORLD_CUP_TAG_SLUG } from '@/shared/config/worldCup';
 import { CLOSING_TODAY_TAG_SLUG } from '@/entities/market';
-import { FeedSearchTools } from './components/FeedSearchTools';
+import { FeedSearchTools } from '@/widgets/FeedSearchTools';
+import { dedupeSavedMarkets, marketMatchesSearch } from '@/shared/utils';
 import { WorldCupSubTabs, type WorldCupTab } from './components/WorldCupSubTabs';
 
 interface SelectedBet {
   market: Market;
   outcome: MarketOutcome;
-}
-
-// Client-side search predicate for the by-id feeds (Saved / My bets), which are
-// fetched without the server's `question` ilike. Mirrors that question match and
-// additionally matches the parent event's title so an event card is findable by
-// its own label, not only its sub-market questions.
-function marketMatchesSearch(market: Market, query: string): boolean {
-  const needle = query.trim().toLowerCase();
-  if (!needle) return true;
-  if (market.question.toLowerCase().includes(needle)) return true;
-  return market.event?.title.toLowerCase().includes(needle) ?? false;
 }
 
 const MarketsFeedPage = () => {
@@ -203,17 +193,12 @@ const MarketsFeedPage = () => {
     isError: isErrorSavedEvents,
     error: errorSavedEvents,
   } = useEventsByIds(savedEventIds, statusFilter, true, savedOnly);
-  // Saved view dedupe (Bug 4):
-  //   Drop any standalone-favourited market whose parent event is ALSO
-  //   event-favourited — otherwise the same market surfaces twice (as a
-  //   standalone card AND inside the event card preview), and toggling the
-  //   bookmark on the duplicated market doesn't appear to remove it because
-  //   the parent-event row keeps the market visible until the event itself
-  //   is unsaved.
-  const savedStandaloneFiltered = (savedStandaloneMarkets ?? []).filter(
-    (m) => !m.event_id || !favoriteEventSet.has(m.event_id)
+  // Saved view dedupe (Bug 4) — see dedupeSavedMarkets for the rationale.
+  const savedMarkets = dedupeSavedMarkets(
+    savedEventMarkets ?? [],
+    savedStandaloneMarkets ?? [],
+    favoriteEventSet
   );
-  const savedMarkets = [...(savedEventMarkets ?? []), ...savedStandaloneFiltered];
   const isLoadingSaved = isLoadingSavedMarkets || isLoadingSavedEvents;
   const isErrorSaved = isErrorSavedMarkets || isErrorSavedEvents;
   const errorSaved = errorSavedMarkets ?? errorSavedEvents;
