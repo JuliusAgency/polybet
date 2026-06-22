@@ -30,12 +30,12 @@ import { StatusFilter } from '@/widgets/StatusFilter';
 import { WorldCupHero } from '@/widgets/WorldCupHero';
 import { GamesList } from '@/widgets/GamesList';
 import { WorldCupMap } from '@/widgets/WorldCupMap';
+import { TagFilter } from '@/widgets/MarketTagFilter';
+import { SubTagFilter } from '@/widgets/MarketSubTagFilter';
+import { CollapsibleSearch } from '@/widgets/MarketSearchBox';
 import { WORLD_CUP_TAG_SLUG } from '@/shared/config/worldCup';
 import { CLOSING_TODAY_TAG_SLUG } from '@/entities/market';
-import { TagFilter } from './components/TagFilter';
-import { SubTagFilter } from './components/SubTagFilter';
 import { FeedSearchTools } from './components/FeedSearchTools';
-import { CollapsibleSearch } from './components/CollapsibleSearch';
 import { WorldCupSubTabs, type WorldCupTab } from './components/WorldCupSubTabs';
 
 interface SelectedBet {

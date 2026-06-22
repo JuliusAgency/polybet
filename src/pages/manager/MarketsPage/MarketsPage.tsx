@@ -1,15 +1,24 @@
 import { useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useMarkets, useAllowedCategoryTags, groupMarketsByEvent } from '@/features/bet';
+import {
+  useMarkets,
+  useAllowedCategoryTags,
+  useCategorySubtags,
+  subtagsForCategory,
+  groupMarketsByEvent,
+} from '@/features/bet';
 import type { MarketStatusFilter } from '@/entities/market';
-import { isMarketEffectivelyOpen } from '@/entities/market';
+import { isMarketEffectivelyOpen, CLOSING_TODAY_TAG_SLUG } from '@/entities/market';
+import { WORLD_CUP_TAG_SLUG } from '@/shared/config/worldCup';
 import { ROUTES, buildPath } from '@/app/router/routes';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { useIntersectionObserver } from '@/shared/hooks/useIntersectionObserver';
 import { MarketCard } from '@/widgets/MarketCard';
 import { EventCard } from '@/widgets/EventCard';
 import { StatusFilter } from '@/widgets/StatusFilter';
-import { CategoryFilter } from '@/widgets/CategoryFilter';
+import { TagFilter } from '@/widgets/MarketTagFilter';
+import { SubTagFilter } from '@/widgets/MarketSubTagFilter';
+import { CollapsibleSearch } from '@/widgets/MarketSearchBox';
 import { CardGridSkeleton } from '@/shared/ui/CardGridSkeleton';
 import { Spinner } from '@/shared/ui/Spinner';
 
@@ -18,12 +27,20 @@ const MarketsPage = () => {
   const [statusFilter, setStatusFilter] = useState<MarketStatusFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [tagSlug, setTagSlug] = useState<string | null>(null);
+  // Secondary tag within the active category (Polymarket related-tags bar).
+  // null = no sub-filter ("All"). Cleared whenever the top category changes.
+  const [subTagSlug, setSubTagSlug] = useState<string | null>(null);
   const debouncedSearch = useDebounce(searchQuery, 300);
 
-  const { data: categories = [] } = useAllowedCategoryTags();
+  const { data: allowedTags = [] } = useAllowedCategoryTags();
+  const { data: subtagsMap = {} } = useCategorySubtags();
+  // Sub-tags for the active category — hidden for the virtual "Closing today"
+  // and "World Cup" categories (no related-tags set), mirroring the user feed.
+  const showSubTags = tagSlug !== WORLD_CUP_TAG_SLUG && tagSlug !== CLOSING_TODAY_TAG_SLUG;
+  const activeSubtags = showSubTags ? subtagsForCategory(subtagsMap, tagSlug) : [];
 
   const { markets, isLoading, isError, error, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useMarkets(statusFilter, debouncedSearch, null, tagSlug);
+    useMarkets(statusFilter, debouncedSearch, null, tagSlug, subTagSlug);
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const handleLoadMore = useCallback(() => {
@@ -43,56 +60,49 @@ const MarketsPage = () => {
 
   return (
     <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--color-bg-base)' }}>
-      <h1 className="mb-6 text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-        {t('markets.title')}
-      </h1>
-
-      {/* Filters */}
+      {/* Category bar — Polymarket-style scrollable category chips, identical to
+        the user feed. */}
       <div className="mb-4">
-        {/* Row: status pills + search */}
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <StatusFilter value={statusFilter} onChange={setStatusFilter} />
-          <div className="relative flex items-center">
-            <div
-              className="pointer-events-none absolute inset-y-0 flex items-center"
-              style={{ insetInlineStart: '10px' }}
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                style={{ color: 'var(--color-text-muted)' }}
-              >
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-            </div>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t('markets.searchPlaceholder')}
-              className="rounded-full border py-1 text-sm outline-none"
-              style={{
-                backgroundColor: 'var(--color-bg-elevated)',
-                borderColor: 'var(--color-border)',
-                color: 'var(--color-text-primary)',
-                paddingInlineStart: '2rem',
-                paddingInlineEnd: '0.75rem',
-              }}
-            />
-          </div>
-        </div>
-        {/* Category filter — below status row */}
-        <CategoryFilter value={tagSlug} onChange={setTagSlug} categories={categories} />
+        <TagFilter
+          value={tagSlug}
+          onChange={(next) => {
+            setTagSlug(next);
+            // Switching the top category drops any active sub-tag.
+            setSubTagSlug(null);
+          }}
+          tags={allowedTags}
+        />
       </div>
 
-      {isLoading && <CardGridSkeleton count={4} />}
+      {/* Header — page title on the start side; the collapsible search at the
+        end. As a flex row with justify-between they auto-swap sides in RTL. */}
+      <div className="mb-6 flex items-center justify-between gap-2">
+        <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
+          {t('markets.allTitle')}
+        </h1>
+        <div className="flex shrink-0 items-center gap-1">
+          <CollapsibleSearch
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder={t('markets.searchPlaceholder')}
+          />
+        </div>
+      </div>
+
+      {/* Sub-tag bar — Polymarket's related-tags carousel under the title.
+        Rendered only when the active category actually has sub-tags. */}
+      {activeSubtags.length > 0 && (
+        <div className="mb-6 -mt-3">
+          <SubTagFilter subtags={activeSubtags} value={subTagSlug} onChange={setSubTagSlug} />
+        </div>
+      )}
+
+      {/* Status pills — Open / Closed / Archived. */}
+      <div className="mb-6">
+        <StatusFilter value={statusFilter} onChange={setStatusFilter} />
+      </div>
+
+      {isLoading && <CardGridSkeleton count={8} />}
 
       {isError && (
         <p className="text-sm" style={{ color: 'var(--color-error)' }}>
