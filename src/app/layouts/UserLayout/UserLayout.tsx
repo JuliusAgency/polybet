@@ -7,6 +7,7 @@ import { LanguageSwitcher } from '@/shared/ui/LanguageSwitcher';
 import { ThemeSwitcher } from '@/shared/ui/ThemeSwitcher';
 import { useUserBalance, useMyBets, useBetResultNotifications } from '@/features/bet';
 import { ActiveBetsDrawer } from '@/widgets/ActiveBetsDrawer';
+import { NavMarketSearch } from '@/widgets/NavMarketSearch';
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   `px-3 py-2 rounded-md text-sm font-medium transition-colors ${
@@ -70,6 +71,11 @@ export const UserLayout = () => {
               <NavLink to={ROUTES.USER.STATS} className={navLinkClass}>
                 {t('nav.stats')}
               </NavLink>
+              {/* Polymarket-style persistent market search, adjacent to Stats.
+                Hidden below md so the header doesn't overflow on small screens. */}
+              <div className="ms-2 hidden md:block">
+                <NavMarketSearch />
+              </div>
             </nav>
           </div>
 

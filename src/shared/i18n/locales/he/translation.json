@@ -335,6 +335,8 @@
     "removeEvent": "הסר אירוע מהשמורים",
     "removeEventConfirm": "להסיר את כל {{count}} השווקים השמורים מהאירוע?",
     "searchPlaceholder": "חיפוש שווקים…",
+    "searchMarketsAria": "חיפוש שווקים",
+    "searchResultsAria": "תוצאות חיפוש שווקים",
     "clearSearch": "נקה חיפוש",
     "filters": "מסננים",
     "loadingMore": "טוען עוד שווקים…",

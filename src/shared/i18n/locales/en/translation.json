@@ -335,6 +335,8 @@
     "removeEvent": "Remove event from saved",
     "removeEventConfirm": "Remove all {{count}} saved markets from this event?",
     "searchPlaceholder": "Search markets…",
+    "searchMarketsAria": "Search markets",
+    "searchResultsAria": "Market search results",
     "clearSearch": "Clear search",
     "filters": "Filters",
     "loadingMore": "Loading more markets…",

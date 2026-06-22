@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { CategorySubtag } from '@/features/bet';
-import { SubTagFilter } from '@/pages/user/MarketsFeedPage/components/SubTagFilter';
+import { SubTagFilter } from '@/widgets/MarketSubTagFilter';
 import { renderWithProviders } from '../helpers/render';
 
 const SUBTAGS: CategorySubtag[] = [
