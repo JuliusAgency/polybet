@@ -1,0 +1,15 @@
+-- Drop close_expired_markets() — a time-based market closer that violated the
+-- "status authority = Polymarket closed/resolved flags, NOT close_at" rule.
+--
+-- It bulk-flipped markets.status open→closed once close_at < now(). Since
+-- close_at = Polymarket endDate ≈ kickoff for sports markets, it closed live
+-- matches ~1 min after kickoff (the market-tracker ran it every minute), making
+-- them vanish from our app while Polymarket kept trading them live in-play.
+--
+-- The only caller was the market-tracker's closeExpiredMarkets task (removed in
+-- the same change); the pg_cron caller was already dropped in migration 055.
+-- Polymarket-driven closure is now mirrored solely by lifecycleCrawl (pulls
+-- closed events) + resolutionScan/resolutionDetector (settle resolved markets),
+-- matching the edge sync, refresh-markets, the place_bet gate, and
+-- entities/market/effectiveStatus.
+drop function if exists public.close_expired_markets();
