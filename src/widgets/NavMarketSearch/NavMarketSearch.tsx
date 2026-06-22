@@ -93,7 +93,8 @@ export function NavMarketSearch() {
     }
   };
 
-  const activeOptionId = showDropdown && results.length > 0 ? `${listboxId}-opt-${highlight}` : undefined;
+  const activeOptionId =
+    showDropdown && results.length > 0 ? `${listboxId}-opt-${highlight}` : undefined;
 
   return (
     <div ref={containerRef} className="nav-market-search">
