@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ROUTES, buildPath } from '@/app/router/routes';
 import {
@@ -25,8 +25,6 @@ import { Spinner } from '@/shared/ui/Spinner';
 import { CardGridSkeleton } from '@/shared/ui/CardGridSkeleton';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { BetSlip, BETSLIP_DOCK_QUERY } from '@/widgets/BetSlip';
-import { MarketCard } from '@/widgets/MarketCard';
-import { EventCard } from '@/widgets/EventCard';
 import { StatusFilter } from '@/widgets/StatusFilter';
 import { WorldCupHero } from '@/widgets/WorldCupHero';
 import { GamesList } from '@/widgets/GamesList';
@@ -39,6 +37,8 @@ import { CLOSING_TODAY_TAG_SLUG } from '@/entities/market';
 import { FeedSearchTools } from '@/widgets/FeedSearchTools';
 import { dedupeSavedMarkets, marketMatchesSearch } from '@/shared/utils';
 import { WorldCupSubTabs, type WorldCupTab } from './components/WorldCupSubTabs';
+import { FeedGrid } from './components/FeedGrid';
+import { useFeedTabTransition } from './useFeedTabTransition';
 
 const buildEventHref = (id: string) => buildPath(ROUTES.USER.EVENT_DETAIL, { id });
 
@@ -127,36 +127,13 @@ const MarketsFeedPage = () => {
     : isFetchingNextPage;
   const activeIsFetching = worldCupPropsEnabled ? isFetchingProps : isFetching;
 
-  // Tab-transition skeleton (Bug 1): TanStack Query keeps cached data per
-  // (tagSlug) — switching back to a previously-loaded tag is instant, so
-  // `isLoading` stays false and the skeleton never shows. Force a brief
-  // loader on every tab change so Trending and other tabs feel consistent.
-  // Cleared when isFetching settles or after TAB_TRANSITION_MS as a safety net.
-  const TAB_TRANSITION_MS = 280;
-  const [isTabTransitioning, setIsTabTransitioning] = useState(false);
+  // Tab-transition skeleton (Bug 1): TanStack Query keeps cached data per tab,
+  // so switching back to a previously-loaded tag is instant — `isLoading` stays
+  // false and the skeleton never shows. useFeedTabTransition forces a brief
+  // loader on every tab change (cleared when the query settles or after a max
+  // window). See the hook for the single-effect rationale.
   const tabKey = `${tagSlug ?? 'all'}|${subTagSlug ?? ''}|${myBetsOnly ? 'mb' : ''}|${savedOnly ? 'sv' : ''}`;
-  const [lastTabKey, setLastTabKey] = useState(tabKey);
-  // Adjust state during render when the tab changes (React's recommended
-  // pattern over a setState-in-effect): flips the skeleton on immediately.
-  if (lastTabKey !== tabKey) {
-    setLastTabKey(tabKey);
-    setIsTabTransitioning(true);
-  }
-  // Clear the flag after a max window once a transition starts...
-  useEffect(() => {
-    if (!isTabTransitioning) return;
-    const id = window.setTimeout(() => setIsTabTransitioning(false), TAB_TRANSITION_MS);
-    return () => window.clearTimeout(id);
-  }, [isTabTransitioning]);
-  // ...or immediately as soon as the underlying query reports it's no longer
-  // fetching — so when data arrives faster than the timeout, we don't keep an
-  // empty skeleton on screen.
-  useEffect(() => {
-    if (!activeIsFetching && isTabTransitioning) {
-      const id = window.setTimeout(() => setIsTabTransitioning(false), 80);
-      return () => window.clearTimeout(id);
-    }
-  }, [activeIsFetching, isTabTransitioning]);
+  const isTabTransitioning = useFeedTabTransition(tabKey, activeIsFetching);
 
   const { data: balance } = useUserBalance();
   const { data: bets } = useMyBets();
@@ -524,57 +501,16 @@ const MarketsFeedPage = () => {
 
             {/* Feed grid: events grouped + standalone markets */}
             {!feedIsLoading && !feedIsError && feedItems.length > 0 && (
-              <div className={feedGridClass}>
-                {feedItems.map((item, index) => {
-                  const card =
-                    item.type === 'event' ? (
-                      <EventCard
-                        event={item.event}
-                        markets={item.markets}
-                        bets={bets ?? []}
-                        mode={item.event.status === 'archived' ? 'readonly' : 'interactive'}
-                        onOutcomeClick={handleOutcomeClick}
-                        // In "my bets" mode only the user's wagered markets are passed;
-                        // force multi-row so a truly multi-market event doesn't collapse
-                        // into the single-market visual just because siblings were filtered out.
-                        forceMultiRow={myBetsOnly}
-                        totalMarketsCount={eventMarketCounts?.[item.event.id]}
-                      />
-                    ) : (
-                      <MarketCard
-                        market={item.market}
-                        userBet={userBetForMarket(item.market.id)}
-                        betCount={betCountForMarket(item.market.id)}
-                        mode={
-                          item.market.status === 'open' || item.market.status === 'closed'
-                            ? 'interactive'
-                            : 'readonly'
-                        }
-                        showRefreshAction={false}
-                        showCloseDate={false}
-                        onOutcomeClick={handleOutcomeClick}
-                      />
-                    );
-                  return (
-                    <div
-                      key={item.key}
-                      className="card-enter"
-                      style={{
-                        contentVisibility: 'auto',
-                        containIntrinsicSize: 'auto 260px',
-                        // Staggered cascade for a diagonal top-to-bottom reveal.
-                        // Capped so infinite-scroll cards never accrue an unbounded
-                        // delay — the cascade runs across the first ~15 cards, the
-                        // rest fade in together a beat later. The animation fires once
-                        // on mount (stable key), so polling/refetch never replays it.
-                        animationDelay: `${Math.min(index, 14) * 35}ms`,
-                      }}
-                    >
-                      {card}
-                    </div>
-                  );
-                })}
-              </div>
+              <FeedGrid
+                items={feedItems}
+                gridClassName={feedGridClass}
+                bets={bets ?? []}
+                forceMultiRow={myBetsOnly}
+                eventMarketCounts={eventMarketCounts}
+                onOutcomeClick={handleOutcomeClick}
+                getUserBet={userBetForMarket}
+                getBetCount={betCountForMarket}
+              />
             )}
 
             {/* Infinite scroll sentinel — disabled in fixed-result-set views (my-bets, saved). */}
