@@ -21,7 +21,9 @@ const MarketsPage = () => {
     <ReadOnlyMarketsFeed
       eventHref={eventHref}
       onArchive={handleArchive}
-      archivingMarketId={archiveMarket.isPending ? (archiveMarket.variables?.marketId ?? null) : null}
+      archivingMarketId={
+        archiveMarket.isPending ? (archiveMarket.variables?.marketId ?? null) : null
+      }
     />
   );
 };

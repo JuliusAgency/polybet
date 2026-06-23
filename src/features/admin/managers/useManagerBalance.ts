@@ -1,7 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/shared/api/supabase';
 
-export const managerBalanceQueryKey = (managerId: string) => ['admin', 'manager-balance', managerId];
+export const managerBalanceQueryKey = (managerId: string) => [
+  'admin',
+  'manager-balance',
+  managerId,
+];
 
 const fetchManagerBalance = async (managerId: string): Promise<number> => {
   const { data, error } = await supabase
