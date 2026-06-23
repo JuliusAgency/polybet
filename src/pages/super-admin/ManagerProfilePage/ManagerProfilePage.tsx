@@ -1,8 +1,7 @@
 import { useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 import { useParams } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { supabase } from '@/shared/api/supabase';
 import { Button } from '@/shared/ui/Button';
 import { Badge } from '@/shared/ui/Badge';
 import { Modal } from '@/shared/ui/Modal';
@@ -17,6 +16,12 @@ import {
   useAdminUpdateUser,
 } from '@/features/admin/manage-user';
 import { useManagerUsers, useManagerActionLogs } from '@/features/admin/manager-users';
+import {
+  useManagerProfile,
+  managerProfileQueryKey,
+  useManagerBalance,
+  managerBalanceQueryKey,
+} from '@/features/admin/managers';
 import { useBetLimitSettings } from '@/features/admin/bet-limits';
 import { EffectiveLimitBadge } from '@/pages/super-admin/BetLimitsPage/components/EffectiveLimitBadge';
 import type { DbProfile } from '@/shared/types/database';
@@ -24,29 +29,8 @@ import { formatInitiatorName, mapBalanceErrorMessage } from '@/shared/utils';
 
 const ACTION_LOG_QUERY_KEY = ['admin', 'action-logs'];
 
-const fetchManagerBalance = async (managerId: string): Promise<number> => {
-  const { data, error } = await supabase
-    .from('managers')
-    .select('balance')
-    .eq('id', managerId)
-    .single();
-  if (error) throw new Error(error.message);
-  return (data as { balance: number }).balance;
-};
-
 const FINANCIAL_ACTIONS = new Set(['adjustment', 'transfer']);
 const ACCOUNT_ACTIONS = new Set(['block', 'unblock', 'reset_password', 'update_profile']);
-
-const fetchManagerProfile = async (managerId: string): Promise<DbProfile | null> => {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', managerId)
-    .eq('role', 'manager')
-    .single();
-  if (error) throw new Error(error.message);
-  return data as DbProfile;
-};
 
 const formatAmount = (value: number | null | undefined) => (value != null ? value.toFixed(2) : '—');
 
@@ -247,8 +231,8 @@ export const ManagerProfilePage = () => {
   const { t } = useTranslation();
   const { id: managerId = '' } = useParams<{ id: string }>();
   const usersQueryKey = ['admin', 'manager-users', managerId];
-  const managerQueryKey = ['admin', 'manager', managerId];
-  const managerBalanceQueryKey = ['admin', 'manager-balance', managerId];
+  const managerQueryKey = managerProfileQueryKey(managerId);
+  const managerBalanceKey = managerBalanceQueryKey(managerId);
   const queryClient = useQueryClient();
 
   const [modal, setModal] = useState<ModalState>(null);
@@ -260,17 +244,8 @@ export const ManagerProfilePage = () => {
   const [managerActionPending, setManagerActionPending] = useState(false);
   const [logFilter, setLogFilter] = useState<LogFilter>('all');
 
-  const { data: manager, isLoading: managerLoading } = useQuery({
-    queryKey: managerQueryKey,
-    queryFn: () => fetchManagerProfile(managerId),
-    enabled: !!managerId,
-  });
-
-  const { data: managerBalance } = useQuery({
-    queryKey: managerBalanceQueryKey,
-    queryFn: () => fetchManagerBalance(managerId),
-    enabled: !!managerId,
-  });
+  const { data: manager, isLoading: managerLoading } = useManagerProfile(managerId);
+  const { data: managerBalance } = useManagerBalance(managerId);
 
   const { data: users, isLoading: usersLoading, error: usersError } = useManagerUsers(managerId);
   const { data: betLimitSettings, isLoading: betLimitLoading } = useBetLimitSettings(managerId);
@@ -302,7 +277,7 @@ export const ManagerProfilePage = () => {
   const invalidateManagerPageData = () => {
     queryClient.invalidateQueries({ queryKey: usersQueryKey });
     queryClient.invalidateQueries({ queryKey: managerQueryKey });
-    queryClient.invalidateQueries({ queryKey: managerBalanceQueryKey });
+    queryClient.invalidateQueries({ queryKey: managerBalanceKey });
     invalidateActionLog();
   };
 
