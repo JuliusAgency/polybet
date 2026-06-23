@@ -476,15 +476,21 @@ Deno.serve(async (req: Request) => {
       if (mode === 'backfill') {
         await updateRun({ phase: 'syncing_resolved' });
 
-        // Step 1: collect distinct market IDs that have open bets
+        // Step 1: collect distinct market IDs that have open positions.
+        // NOTE: `bets` is FROZEN since the 2026-06-02 positions+trades cutover
+        // (place_bet writes only to positions/trades). Querying bets here returned
+        // only the pre-cutover snapshot, so settlement backfill silently no-op'd
+        // for all post-cutover users. .limit() lifts the PostgREST 1000-row default
+        // (one row per open position; deduped client-side below).
         const { data: openBetRows, error: betsErr } = await supabase
-          .from('bets')
+          .from('positions')
           .select('market_id')
-          .eq('status', 'open');
+          .eq('status', 'open')
+          .limit(50000);
 
         if (betsErr || !Array.isArray(openBetRows)) {
           stats.errors.push(
-            `Failed to fetch open bets: ${betsErr?.message ?? 'unexpected format'}`
+            `Failed to fetch open positions: ${betsErr?.message ?? 'unexpected format'}`
           );
           await archiveResolvedMarkets(supabase, archiveAfterHours, stats);
           await updateRun(
@@ -590,13 +596,17 @@ Deno.serve(async (req: Request) => {
           stats.errors.push(`Failed to fetch visible markets for hot_set: ${visibleErr.message}`);
         }
 
+        // bets is FROZEN since the positions+trades cutover — query positions so
+        // in-play markets are found for current users. .limit() lifts the 1000-row
+        // PostgREST default (one row per open position; deduped client-side below).
         const { data: openBetRows, error: openBetsErr } = await supabase
-          .from('bets')
+          .from('positions')
           .select('market_id')
-          .eq('status', 'open');
+          .eq('status', 'open')
+          .limit(50000);
 
         if (openBetsErr) {
-          stats.errors.push(`Failed to fetch open bets for hot_set: ${openBetsErr.message}`);
+          stats.errors.push(`Failed to fetch open positions for hot_set: ${openBetsErr.message}`);
         }
 
         const openBetMarketIds = [
