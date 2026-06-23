@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ROUTES, buildPath } from '@/app/router/routes';
 import {
   useMarkets,
   useMarketsByIds,
@@ -38,6 +39,8 @@ import { CLOSING_TODAY_TAG_SLUG } from '@/entities/market';
 import { FeedSearchTools } from '@/widgets/FeedSearchTools';
 import { dedupeSavedMarkets, marketMatchesSearch } from '@/shared/utils';
 import { WorldCupSubTabs, type WorldCupTab } from './components/WorldCupSubTabs';
+
+const buildEventHref = (id: string) => buildPath(ROUTES.USER.EVENT_DETAIL, { id });
 
 interface SelectedBet {
   market: Market;
@@ -477,6 +480,7 @@ const MarketsFeedPage = () => {
                 ? { marketId: selectedBet.market.id, outcomeId: selectedBet.outcome.id }
                 : null
             }
+            buildEventHref={buildEventHref}
           />
         )}
 
@@ -484,7 +488,7 @@ const MarketsFeedPage = () => {
           the "World Cup Winner" event. */}
         {isWorldCup && worldCupTab === 'map' && (
           <div className="mb-4">
-            <WorldCupMap />
+            <WorldCupMap buildEventHref={buildEventHref} />
           </div>
         )}
 

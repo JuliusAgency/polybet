@@ -92,10 +92,19 @@ function buildGame(): WorldCupGame {
   ])[0];
 }
 
+// Mirrors the real ROUTES.USER.EVENT_DETAIL shape the parent page injects.
+const buildEventHref = (id: string) => `/events/${id}`;
+
 describe('GamesList', () => {
   it('renders team rows with moneyline prices in cents and a draw button', () => {
     renderWithProviders(
-      <GamesList games={[buildGame()]} isLoading={false} isError={false} onOutcomeClick={vi.fn()} />
+      <GamesList
+        games={[buildGame()]}
+        isLoading={false}
+        isError={false}
+        onOutcomeClick={vi.fn()}
+        buildEventHref={buildEventHref}
+      />
     );
 
     expect(screen.getByText('France')).toBeInTheDocument();
@@ -108,7 +117,13 @@ describe('GamesList', () => {
 
   it('renders the three moneyline bet buttons (win / draw / loss)', () => {
     renderWithProviders(
-      <GamesList games={[buildGame()]} isLoading={false} isError={false} onOutcomeClick={vi.fn()} />
+      <GamesList
+        games={[buildGame()]}
+        isLoading={false}
+        isError={false}
+        onOutcomeClick={vi.fn()}
+        buildEventHref={buildEventHref}
+      />
     );
 
     const buttons = screen.getAllByRole('button');
@@ -127,6 +142,7 @@ describe('GamesList', () => {
         isLoading={false}
         isError={false}
         onOutcomeClick={onOutcomeClick}
+        buildEventHref={buildEventHref}
       />
     );
 
@@ -139,7 +155,13 @@ describe('GamesList', () => {
 
   it('shows a date header grouping the games by kickoff day', () => {
     renderWithProviders(
-      <GamesList games={[buildGame()]} isLoading={false} isError={false} onOutcomeClick={vi.fn()} />
+      <GamesList
+        games={[buildGame()]}
+        isLoading={false}
+        isError={false}
+        onOutcomeClick={vi.fn()}
+        buildEventHref={buildEventHref}
+      />
     );
     // en-US weekday/long-month/day header for 2026-06-16.
     expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('June');
@@ -147,21 +169,39 @@ describe('GamesList', () => {
 
   it('renders the empty state when there are no games', () => {
     renderWithProviders(
-      <GamesList games={[]} isLoading={false} isError={false} onOutcomeClick={vi.fn()} />
+      <GamesList
+        games={[]}
+        isLoading={false}
+        isError={false}
+        onOutcomeClick={vi.fn()}
+        buildEventHref={buildEventHref}
+      />
     );
     expect(screen.getByText(/no games scheduled/i)).toBeInTheDocument();
   });
 
   it('renders the error state', () => {
     renderWithProviders(
-      <GamesList games={[]} isLoading={false} isError onOutcomeClick={vi.fn()} />
+      <GamesList
+        games={[]}
+        isLoading={false}
+        isError
+        onOutcomeClick={vi.fn()}
+        buildEventHref={buildEventHref}
+      />
     );
     expect(screen.getByText(/couldn't load games/i)).toBeInTheDocument();
   });
 
   it('links Order Book to the event detail page', () => {
     renderWithProviders(
-      <GamesList games={[buildGame()]} isLoading={false} isError={false} onOutcomeClick={vi.fn()} />
+      <GamesList
+        games={[buildGame()]}
+        isLoading={false}
+        isError={false}
+        onOutcomeClick={vi.fn()}
+        buildEventHref={buildEventHref}
+      />
     );
     const link = screen.getByRole('link', { name: /order book/i });
     expect(link).toHaveAttribute('href', '/events/evt-fra-sen');

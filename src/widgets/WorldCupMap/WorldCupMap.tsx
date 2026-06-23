@@ -2,7 +2,6 @@ import { lazy, Suspense, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import 'flag-icons/css/flag-icons.min.css';
-import { ROUTES, buildPath } from '@/app/router/routes';
 import { useWorldCupWinner, type WorldCupCountry } from '@/features/bet';
 import { Spinner } from '@/shared/ui/Spinner';
 import { CountryList } from './CountryList';
@@ -12,7 +11,13 @@ import './worldCupMap.css';
 // stays out of the main bundle and only fetches when the Map sub-tab is opened.
 const Globe = lazy(() => import('./Globe/Globe'));
 
-export const WorldCupMap = () => {
+interface WorldCupMapProps {
+  /** Resolves an event id to its detail URL. Injected by the parent page so
+   *  this widget does not import the app-layer route map (FSD). */
+  buildEventHref: (eventId: string) => string;
+}
+
+export const WorldCupMap = ({ buildEventHref }: WorldCupMapProps) => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { eventId, countries, updatedAt, isLoading, isError } = useWorldCupWinner();
@@ -28,7 +33,7 @@ export const WorldCupMap = () => {
 
   const handleSelect = (country: WorldCupCountry) => {
     if (!eventId) return;
-    const path = buildPath(ROUTES.USER.EVENT_DETAIL, { id: eventId });
+    const path = buildEventHref(eventId);
     navigate(`${path}?market=${encodeURIComponent(country.marketId)}`);
   };
 

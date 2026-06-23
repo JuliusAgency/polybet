@@ -11,6 +11,8 @@ export interface GamesListProps {
   isError: boolean;
   onOutcomeClick: (market: Market, outcome: MarketOutcome) => void;
   selected?: { marketId: string; outcomeId: string } | null;
+  /** Resolves an event id to its detail URL; threaded down to each GameCard. */
+  buildEventHref: (eventId: string) => string;
 }
 
 function localeOf(lang: string): string {
@@ -29,7 +31,14 @@ function formatDayHeader(group: { games: WorldCupGame[] }, lang: string): string
   }).format(d);
 }
 
-export function GamesList({ games, isLoading, isError, onOutcomeClick, selected }: GamesListProps) {
+export function GamesList({
+  games,
+  isLoading,
+  isError,
+  onOutcomeClick,
+  selected,
+  buildEventHref,
+}: GamesListProps) {
   const { t, i18n } = useTranslation();
 
   if (isLoading) return <CardGridSkeleton count={6} />;
@@ -70,6 +79,7 @@ export function GamesList({ games, isLoading, isError, onOutcomeClick, selected 
                   game={game}
                   onOutcomeClick={onOutcomeClick}
                   selected={selected}
+                  buildEventHref={buildEventHref}
                 />
               ))}
             </div>

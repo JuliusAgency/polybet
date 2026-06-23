@@ -2,7 +2,6 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import type { Market, MarketOutcome } from '@/entities/market';
 import type { GameTeam } from '@/entities/event';
-import { ROUTES, buildPath } from '@/app/router/routes';
 import { formatVolume } from '@/shared/utils';
 import type { WorldCupGame } from '@/features/bet';
 import { toGameView, formatOddCents, readableTextColor, type MoneylineSlot } from './helpers';
@@ -11,6 +10,9 @@ export interface GameCardProps {
   game: WorldCupGame;
   onOutcomeClick: (market: Market, outcome: MarketOutcome) => void;
   selected?: { marketId: string; outcomeId: string } | null;
+  /** Resolves an event id to its detail URL. Injected by the parent page so
+   *  this widget does not import the app-layer route map (FSD). */
+  buildEventHref: (eventId: string) => string;
 }
 
 function localeOf(lang: string): string {
@@ -101,7 +103,7 @@ function TeamRow({ team }: { team: GameTeam }) {
   );
 }
 
-export function GameCard({ game, onOutcomeClick, selected }: GameCardProps) {
+export function GameCard({ game, onOutcomeClick, selected, buildEventHref }: GameCardProps) {
   const { t, i18n } = useTranslation();
   const view = toGameView(game);
   const kickoff = formatKickoff(game.event.game_start_time, i18n.language);
@@ -168,7 +170,7 @@ export function GameCard({ game, onOutcomeClick, selected }: GameCardProps) {
           )}
         </div>
         <Link
-          to={buildPath(ROUTES.USER.EVENT_DETAIL, { id: game.event.id })}
+          to={buildEventHref(game.event.id)}
           className="text-xs font-medium hover:underline"
           style={{ color: 'var(--color-accent)' }}
         >

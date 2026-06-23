@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { Outlet, NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/shared/hooks/useAuth';
-import { ROUTES } from '@/app/router/routes';
+import { ROUTES, buildPath } from '@/app/router/routes';
 import { LanguageSwitcher } from '@/shared/ui/LanguageSwitcher';
 import { ThemeSwitcher } from '@/shared/ui/ThemeSwitcher';
 import { useUserBalance, useMyBets, useBetResultNotifications } from '@/features/bet';
 import { ActiveBetsDrawer } from '@/widgets/ActiveBetsDrawer';
 import { NavMarketSearch } from '@/widgets/NavMarketSearch';
+
+const buildEventHref = (id: string) => buildPath(ROUTES.USER.EVENT_DETAIL, { id });
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   `px-3 py-2 rounded-md text-sm font-medium transition-colors ${
@@ -74,7 +76,7 @@ export const UserLayout = () => {
               {/* Polymarket-style persistent market search, adjacent to Stats.
                 Hidden below md so the header doesn't overflow on small screens. */}
               <div className="ms-2 hidden md:block">
-                <NavMarketSearch />
+                <NavMarketSearch buildEventHref={buildEventHref} />
               </div>
             </nav>
           </div>

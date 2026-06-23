@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useMarkets } from '@/features/bet';
 import type { Market } from '@/entities/market';
-import { ROUTES, buildPath } from '@/app/router/routes';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import './navMarketSearch.css';
 
@@ -19,7 +18,13 @@ const MAX_RESULTS = 8;
  * a results dropdown. Fully keyboard-navigable (Arrow keys / Enter / Escape) and
  * closes on outside click. Selecting a result opens that market's event detail.
  */
-export function NavMarketSearch() {
+interface NavMarketSearchProps {
+  /** Resolves an event id to its detail URL. Injected by the parent layout so
+   *  this widget does not import the app-layer route map (FSD). */
+  buildEventHref: (eventId: string) => string;
+}
+
+export function NavMarketSearch({ buildEventHref }: NavMarketSearchProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
@@ -57,8 +62,7 @@ export function NavMarketSearch() {
 
   // Markets attached to an event open the event detail; standalone markets fall
   // back to their own id on the same route (mirrors the feed's detailHref rule).
-  const hrefFor = (market: Market) =>
-    buildPath(ROUTES.USER.EVENT_DETAIL, { id: market.event_id ?? market.id });
+  const hrefFor = (market: Market) => buildEventHref(market.event_id ?? market.id);
 
   const goTo = (market: Market) => {
     setOpen(false);
