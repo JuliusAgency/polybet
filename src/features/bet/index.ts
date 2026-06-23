@@ -20,6 +20,12 @@ export type { UserBalance } from './useUserBalance';
 export { usePlaceBet, OddsDriftError } from './usePlaceBet';
 export type { PlaceBetInput } from './usePlaceBet';
 
+export { usePlaceBetWithRetry } from './usePlaceBetWithRetry';
+export type {
+  UsePlaceBetWithRetry,
+  UsePlaceBetWithRetryParams,
+} from './usePlaceBetWithRetry';
+
 export { useBetQuote } from './useBetQuote';
 export type { BetQuote } from './useBetQuote';
 

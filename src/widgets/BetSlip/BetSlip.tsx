@@ -1,20 +1,16 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
-import { useQueryClient } from '@tanstack/react-query';
 import { SidePanel } from '@/shared/ui/SidePanel';
 import { Button } from '@/shared/ui/Button';
 import { Spinner } from '@/shared/ui/Spinner';
 import { OutcomeButtons, type OutcomeButton } from '@/shared/ui/OutcomeButtons';
 import {
-  usePlaceBet,
-  OddsDriftError,
+  usePlaceBetWithRetry,
   useBetQuote,
   useMyBetLimit,
   usePositions,
   SellForm,
 } from '@/features/bet';
-import type { BetQuote } from '@/features/bet';
 import { getOrderedOutcomes, type Market, type MarketOutcome } from '@/entities/market';
 import { formatSharePrice } from '@/shared/utils';
 
@@ -36,11 +32,6 @@ export interface BetSlipProps {
   showClose?: boolean;
 }
 
-// Match place_bet's c_odds_drift_tolerance (2%). Constants live in sync; if
-// the backend tunes the threshold, mirror it here so the user doesn't get
-// a silent server rejection after a passing client-side check.
-const ODDS_DRIFT_TOLERANCE = 0.02;
-
 const parseStake = (value: string): number | null => {
   // Reject anything that isn't a plain decimal number (no commas, no trailing chars)
   if (!/^\d+(\.\d+)?$/.test(value.trim())) return null;
@@ -58,9 +49,7 @@ export const BetSlip = ({
   showClose = true,
 }: BetSlipProps) => {
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
   const [amount, setAmount] = useState('');
-  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Single source of truth for which side we're buying. Everything downstream
   // (quote token, price, shares, drift, place_bet payload) derives from
@@ -107,8 +96,6 @@ export const BetSlip = ({
   const headerImage = market.image_url ?? market.event?.image_url ?? null;
   const eventTitle = market.event?.title ?? null;
   const marketLabel = market.group_label ?? market.question;
-
-  const { mutateAsync: placeBet, isPending } = usePlaceBet();
 
   const stake = parseStake(amount);
   const isValidStake = stake !== null;
@@ -160,6 +147,25 @@ export const BetSlip = ({
   );
   const isQuoteLoading = quoteEnabled && !quote && !isUntradable;
 
+  // Placement state machine (place_bet + book re-warm + drift check + single
+  // stale-book retry) lives in this hook; the slip just feeds it the computed
+  // guards and quote and renders confirm / isPending / submitError.
+  const { confirm, isPending, submitError, setSubmitError } = usePlaceBetWithRetry({
+    market,
+    selected,
+    stake,
+    quote,
+    displayOdds,
+    hasBetLimit,
+    maxBetLimit,
+    isValidStake,
+    isInsufficient,
+    isOverLimit,
+    isUntradable,
+    onSuccess,
+    onClose,
+  });
+
   const handleSelectOutcome = (id: string) => {
     setSelectedOutcomeId(id);
     setSubmitError(null);
@@ -168,138 +174,6 @@ export const BetSlip = ({
   const handleAmountChange = (value: string) => {
     setAmount(value);
     setSubmitError(null);
-  };
-
-  const handleConfirm = async () => {
-    if (isPending) return;
-    if (!isValidStake || isInsufficient || isOverLimit) return;
-    if (isUntradable) {
-      setSubmitError(t('markets.outcomeUntradable'));
-      return;
-    }
-    // Shares model: do not submit unless the live book quote is in hand. The
-    // server rejects with "Market book unavailable" when there is no fresh
-    // book, so a client-side guard here avoids a pointless round-trip.
-    if (!quote || quote.book_updated_at === null) {
-      setSubmitError(t('markets.quoteUnavailable'));
-      return;
-    }
-    if (quote.partial || quote.shares <= 0) {
-      setSubmitError(t('markets.lowLiquidity'));
-      return;
-    }
-
-    // Refresh the live book, validate, drift-check and place. quote-bet also
-    // re-UPSERTs market_outcome_books on every call, so this refresh is exactly
-    // what keeps place_bet's freshness guard satisfied. The book bound is 30s
-    // (see migration 20260603100437), comfortably above the 2s quote poll, so a
-    // freshly-refreshed quote effectively never trips the server's stale guard.
-    setSubmitError(null);
-    const roundedStake = Math.round(stake! * 100) / 100;
-    const quoteKey = ['bet-quote', selected.polymarket_token_id, roundedStake] as const;
-
-    // Refetch the live quote and return it, or null if the book came back
-    // unavailable (CLOB transient failure between debounce and Confirm) — the
-    // server has no mid-price fallback, so a null book means "cannot place".
-    const refreshQuote = async (): Promise<BetQuote | null> => {
-      try {
-        await queryClient.refetchQueries({ queryKey: quoteKey });
-      } catch {
-        // Fall back to the last known quote below.
-      }
-      const next = queryClient.getQueryData<BetQuote | null>(quoteKey) ?? quote ?? null;
-      return next && next.book_updated_at !== null ? next : null;
-    };
-
-    // Surface a non-stale server/validation error to the user (no retry). Maps
-    // raw server guard strings to friendly messages instead of leaking the
-    // English Postgres exception.
-    const surfaceError = (err: unknown): void => {
-      if (err instanceof OddsDriftError) {
-        setSubmitError(
-          t('markets.oddsChanged', {
-            odds: err.latestOdds !== null ? err.latestOdds.toFixed(2) : '—',
-          })
-        );
-        return;
-      }
-      const raw = err instanceof Error ? err.message : '';
-      if (raw.includes('Insufficient liquidity')) {
-        setSubmitError(t('markets.lowLiquidity'));
-        return;
-      }
-      if (raw.includes('Stake exceeds effective maximum bet limit')) {
-        setSubmitError(hasBetLimit ? t('markets.exceedsMaxBet', { amount: maxBetLimit }) : raw);
-        return;
-      }
-      setSubmitError(raw || t('common.unknownError'));
-    };
-
-    // One placement attempt: re-warm + lock the price against the fresh quote,
-    // drift-check, then call place_bet. Returns 'stale' when the server rejected
-    // on freshness (the caller may retry once), 'ok' on success, or 'handled'
-    // when an error was already surfaced to the user.
-    const attempt = async (): Promise<'ok' | 'stale' | 'handled'> => {
-      const fresh = await refreshQuote();
-      if (!fresh) {
-        setSubmitError(t('markets.quoteUnavailable'));
-        return 'handled';
-      }
-      if (fresh.partial || fresh.shares <= 0) {
-        setSubmitError(t('markets.lowLiquidity'));
-        return 'handled';
-      }
-      const lockOdds = fresh.effective_odds;
-      if (lockOdds > 0 && displayOdds > 0) {
-        const drift = Math.abs(lockOdds - displayOdds) / displayOdds;
-        if (drift > ODDS_DRIFT_TOLERANCE) {
-          setSubmitError(t('markets.oddsChanged', { odds: lockOdds.toFixed(2) }));
-          return 'handled';
-        }
-      }
-      try {
-        await placeBet({
-          marketId: market.id,
-          outcomeId: selected.id,
-          stake: stake!,
-          expectedOdds: lockOdds,
-        });
-        return 'ok';
-      } catch (err) {
-        const raw = err instanceof Error ? err.message : '';
-        const isStale =
-          raw.includes('Market price feed is stale') ||
-          raw.includes('Market book is stale') ||
-          raw.includes('Outcome price feed is stale');
-        if (isStale) return 'stale';
-        surfaceError(err);
-        return 'handled';
-      }
-    };
-
-    // First attempt; on a stale-book rejection, retry exactly once. The retry's
-    // refreshQuote() re-warms the book server-side first, so transient
-    // staleness clears silently — the user only sees the stale message if the
-    // SECOND attempt also fails (e.g. CLOB persistently down).
-    let result = await attempt();
-    if (result === 'stale') {
-      result = await attempt();
-    }
-
-    if (result === 'stale') {
-      setSubmitError(t('markets.priceStaleRetry'));
-      void queryClient.refetchQueries({ queryKey: ['event'] });
-      void queryClient.refetchQueries({ queryKey: quoteKey });
-      return;
-    }
-    if (result === 'ok') {
-      toast.success(
-        t('bet.notification.placed', { outcome: selected.name, stake: stake!.toFixed(2) }),
-        { duration: 5000 }
-      );
-      onSuccess();
-      onClose();
-    }
   };
 
   const isConfirmDisabled =
@@ -569,7 +443,7 @@ export const BetSlip = ({
             <div className="flex flex-col gap-3">
               <Button
                 variant="primary"
-                onClick={handleConfirm}
+                onClick={confirm}
                 disabled={isConfirmDisabled}
                 className="w-full py-3 text-base"
               >
