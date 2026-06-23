@@ -4,17 +4,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/Button';
 import { Badge } from '@/shared/ui/Badge';
-import { Modal } from '@/shared/ui/Modal';
-import { Input } from '@/shared/ui/Input';
 import { Spinner } from '@/shared/ui/Spinner';
-import { MIN_ADJUST_AMOUNT, MAX_NOTE_LENGTH } from '@/shared/config/validation';
 import { EditUserModal, type EditUserValues } from '@/shared/ui/EditUserModal';
-import { useAdjustBalance, useAdjustManagerBalance } from '@/features/admin/adjust-balance';
-import {
-  useToggleUserBlock,
-  useResetPassword,
-  useAdminUpdateUser,
-} from '@/features/admin/manage-user';
+import { useToggleUserBlock, useAdminUpdateUser } from '@/features/admin/manage-user';
 import { useManagerUsers, useManagerActionLogs } from '@/features/admin/manager-users';
 import {
   useManagerProfile,
@@ -25,7 +17,9 @@ import {
 import { useBetLimitSettings } from '@/features/admin/bet-limits';
 import { EffectiveLimitBadge } from '@/pages/super-admin/BetLimitsPage/components/EffectiveLimitBadge';
 import type { DbProfile } from '@/shared/types/database';
-import { formatInitiatorName, mapBalanceErrorMessage } from '@/shared/utils';
+import { formatInitiatorName } from '@/shared/utils';
+import { AdjustBalanceModal } from './components/AdjustBalanceModal';
+import { ResetPasswordModal } from './components/ResetPasswordModal';
 
 const ACTION_LOG_QUERY_KEY = ['admin', 'action-logs'];
 
@@ -41,181 +35,6 @@ const showTransientFeedback = (
 ) => {
   setFeedback({ message, isError });
   window.setTimeout(() => setFeedback(null), 3000);
-};
-
-interface AdjustModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  type: 'deposit' | 'withdrawal';
-  targetUser: DbProfile;
-  onSuccess: () => void;
-}
-
-const AdjustBalanceModal = ({ isOpen, onClose, type, targetUser, onSuccess }: AdjustModalProps) => {
-  const { t } = useTranslation();
-  const [amount, setAmount] = useState('');
-  const [note, setNote] = useState('');
-  const [errorMsg, setErrorMsg] = useState('');
-
-  const adjustBalance = useAdjustBalance();
-  const adjustManagerBalance = useAdjustManagerBalance();
-
-  const isManager = targetUser.role === 'manager';
-  const isPending = isManager ? adjustManagerBalance.isPending : adjustBalance.isPending;
-
-  const handleSubmit = async () => {
-    setErrorMsg('');
-    const parsed = parseFloat(amount);
-    if (isNaN(parsed) || parsed <= 0) {
-      setErrorMsg(t('managerProfile.amountError'));
-      return;
-    }
-    if (parsed < MIN_ADJUST_AMOUNT) {
-      setErrorMsg(t('managerProfile.minAmountError', { amount: MIN_ADJUST_AMOUNT }));
-      return;
-    }
-    if (note.trim().length > MAX_NOTE_LENGTH) {
-      setErrorMsg(t('managerProfile.noteTooLong', { max: MAX_NOTE_LENGTH }));
-      return;
-    }
-    const roundedAmount = Math.round(parsed * 100) / 100;
-
-    try {
-      if (isManager) {
-        await adjustManagerBalance.mutateAsync({
-          managerId: targetUser.id,
-          amount: roundedAmount,
-          type,
-          note,
-        });
-      } else {
-        await adjustBalance.mutateAsync({
-          targetUserId: targetUser.id,
-          amount: roundedAmount,
-          type,
-          note,
-        });
-      }
-
-      onSuccess();
-      setAmount('');
-      setNote('');
-      onClose();
-    } catch (err) {
-      setErrorMsg(
-        err instanceof Error ? mapBalanceErrorMessage(err.message, t) : t('common.unknownError')
-      );
-    }
-  };
-
-  const title = type === 'deposit' ? t('managerProfile.deposit') : t('managerProfile.withdraw');
-
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`${title} - ${targetUser.username}`}>
-      <div className="flex flex-col gap-4">
-        <Input
-          label={t('managerProfile.amountLabel')}
-          type="number"
-          min="0.01"
-          step="0.01"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          placeholder="0.00"
-        />
-        <Input
-          label={t('managerProfile.noteLabelOpt')}
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          placeholder={t('managerProfile.notePlaceholder')}
-          maxLength={MAX_NOTE_LENGTH}
-        />
-        {errorMsg && (
-          <p className="text-sm" style={{ color: 'var(--color-loss)' }}>
-            {errorMsg}
-          </p>
-        )}
-        <div className="flex justify-end gap-2 pt-2">
-          <Button variant="secondary" onClick={onClose}>
-            {t('common.cancel')}
-          </Button>
-          <Button variant="primary" onClick={handleSubmit} disabled={isPending}>
-            {isPending ? t('common.processing') : title}
-          </Button>
-        </div>
-      </div>
-    </Modal>
-  );
-};
-
-interface ResetPasswordModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  targetUser: DbProfile;
-  onSuccess: () => void;
-}
-
-const ResetPasswordModal = ({
-  isOpen,
-  onClose,
-  targetUser,
-  onSuccess,
-}: ResetPasswordModalProps) => {
-  const { t } = useTranslation();
-  const [password, setPassword] = useState('');
-  const [errorMsg, setErrorMsg] = useState('');
-
-  const resetPassword = useResetPassword();
-
-  const handleSubmit = async () => {
-    setErrorMsg('');
-    if (password.length < 6) {
-      setErrorMsg(t('managerProfile.passwordError'));
-      return;
-    }
-
-    try {
-      await resetPassword.mutateAsync({
-        targetUserId: targetUser.id,
-        newPassword: password,
-      });
-      setPassword('');
-      onSuccess();
-      onClose();
-    } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : t('common.unknownError'));
-    }
-  };
-
-  return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={`${t('managerProfile.resetPwd')} - ${targetUser.username}`}
-    >
-      <div className="flex flex-col gap-4">
-        <Input
-          label={t('managerProfile.newPassword')}
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder={t('managerProfile.passwordPh')}
-        />
-        {errorMsg && (
-          <p className="text-sm" style={{ color: 'var(--color-loss)' }}>
-            {errorMsg}
-          </p>
-        )}
-        <div className="flex justify-end gap-2 pt-2">
-          <Button variant="secondary" onClick={onClose}>
-            {t('common.cancel')}
-          </Button>
-          <Button variant="primary" onClick={handleSubmit} disabled={resetPassword.isPending}>
-            {resetPassword.isPending ? t('common.saving') : t('managerProfile.reset')}
-          </Button>
-        </div>
-      </div>
-    </Modal>
-  );
 };
 
 type ModalState =
