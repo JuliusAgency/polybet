@@ -1,40 +1,46 @@
-Codemap regeneration — 2026-05-01 (post code-review)
+<!-- Generated: 2026-06-23 | scanned ~146 migrations, 8 edge fns, ~65 feature hooks, 17 widgets, market-tracker | ~950 tokens -->
+PolyBet codemap (replaces Jun-3 baseline). Paths relative to /…/polybet unless noted (svc = /…/services/market-tracker).
 
-Status: incremental update on top of initial generation earlier this session.
+== FRONTEND (FSD: app>pages>widgets>features>entities>shared) ==
+Router: src/app/router/{routes.ts(ROUTES+buildPath SoT),Router.tsx,RoleGuard.tsx}. 3 role trees: /admin(super_admin),/manager(manager),pathless(user).
+Providers order: ThemeProvider>QueryProvider>AuthProvider>RTLProvider. AuthProvider lazy supabase singleton + is_active realtime force-signout.
+Layouts: UserLayout now OWNS useUserBalance+useMyBets+useBetResultNotifications+ActiveBetsDrawer (was per-page). SuperAdmin/Manager sidebars.
+Pages: MarketsFeedPage(636L,tag/subtag/status+WorldCup+infinite+docked BetSlip), EventDetailPage(shared 3 roles via readonly prop), MyBetsPage(positions/history, NOT bets), SavedMarketsPage(dups feed dock logic), AgentsDashboardPage(659L,6-dim sync-health panel), ManagerProfilePage(958L,inline supabase calls), GlobalBetLogPage(admin_bet_log view, Side col, Polymarket link).
 
-Files updated:
-  docs/CODEMAPS/frontend.md     — useMarketRefresh signature now accepts options object
-  docs/CODEMAPS/backend.md      — migration 070 BEGIN/COMMIT + SET LOCAL note
-  docs/CODEMAPS/data.md         — same migration 070 note
+== ARCH CHANGES SINCE JUN-3 ==
++ positions+trades exchange model LIVE (migs 20260602xxxxxx). bets FROZEN. place_bet->positions+trades; sell_position; settle_market settles positions.
++ sync-health: useSyncHealth (features/stats) polls get_sync_health() RPC 60s; AgentsDashboard 6-dim panel.
++ navbar search: widgets/NavMarketSearch (debounced combobox) + MarketSearchBox/CollapsibleSearch.
++ admin/manager feed parity: super-admin & manager MarketsPage near-identical readonly feeds (EventDetailPage shared).
++ market-tracker (svc/) NOW DOCUMENTED: Heroku dyno, persistent CLOB WS + Gamma REST scheduler, canonical data pipeline.
++ migrations ~70 -> ~146 (75 numeric 001-075 + 1 remote + ~70 timestamp 20260504..20260622).
+- close_expired_markets() DROPPED (mig 20260622165744) + tracker closeExpiredMarkets task removed. Status authority = Polymarket flags only.
+- markets+market_outcomes(069) and events(20260617) DROPPED from supabase_realtime publication.
 
-Architecture changes documented (since pre-session baseline):
-  + migration 069 — markets.tag_slugs denormalization, DROP markets+market_outcomes
-                    from supabase_realtime publication
-  + migration 070 — backfill + GIN idx_markets_tag_slugs_visible
-                    BEGIN/COMMIT-wrapped UPDATE with SET LOCAL statement_timeout=0
-                    so the long backfill cannot leak its timeout setting to
-                    subsequent migrations on a partial failure
-  + frontend:    cross-user realtime subscriptions removed in favour of polling
-                 (useMarkets, useMyBets, useSystemKpis, WalletPage duplicate)
-  + frontend:    EventDetailPage now polls via useMarketRefresh + useEventById refetchInterval
-                 (antifraud window = MARKETS_REFRESH_INTERVAL_MS = 30s)
-  + frontend:    useMarketRefresh exposes (ids, { autoRefresh?, eventId? })
-                 — narrow ['event', eventId] invalidation when eventId is in scope,
-                 no broadcast invalidation that would refetch every cached event
-  + cleanup:     three unused eslint-disable directives removed,
-                 unused `cn` className helper removed,
-                 RefreshResult demoted from exported to local type
+== DATA FLOW ==
+BUY: BetSlip stake -> useBetQuote(2s poll quote-bet edge, walks CLOB asks, upserts market_outcome_books) -> usePlaceBet -> rpc place_bet (status=open+is_visible, ≤30s book, drift 2% P0002, weighted-avg upsert) -> balance_transactions(bet_lock).
+SELL: SellForm -> useSellQuote(quote-sell edge, walks bids) -> useSellPosition -> rpc sell_position (releases cost_basis, P0002) -> bt(bet_sell).
+SETTLE: settle_market(service-only) -> positions won/lost -> bt(bet_payout) -> realtime INSERT -> useBetResultNotifications toast.
+FEED freshness: useMarkets->useMarketRefresh TWO intervals: 3s patchVisibleFromDb (DB read) + 30s refresh-markets edge. EventDetail: useEventById refetch 3s + useMarketRefresh({eventId}) narrow ['event',id] invalidation.
+TRACKER (svc): CLOB WS -> priceBuffer(1s flush, flush_outcome_prices RPC) + bookWriter(1s, market_outcome_books top-10). Gamma tasks: eventCrawl 5m, lifecycleCrawl 10m, resolutionScan 2m, syncTrendingRankings 5m, refreshCategorySubtags 1h, heartbeat 10s->system_settings.tracker_heartbeat.
 
-Realtime publication state:
-  in:    bets, balances, balance_transactions, profiles, events
-  out:   markets (069), market_outcomes (069)
+== KEY DENORM (markets, trigger-maintained) ==
+sort_volume(057,<-events.volume), tag_slugs(069,<-events.tag_slugs,GIN), trending_rank+volume_24hr(075), event_is_visible(20260618 NEW,kills RLS correlated subquery feed timeout).
+RLS realtime pub NOW: bets, balances, balance_transactions, profiles (events removed). positions/trades NOT in pub (polled).
+Edge auth: all 8 fns verify_jwt=false, in-fn authorizeEdgeCall (_shared/edgeAuth+edgeAuthRules). CORS locked to polybet-mu.vercel.app. invokeAuthedFunction = 60s skew + 401-retry (NEW).
 
-Critical perf indexes (markets feed):
-  idx_markets_visible_sort_volume        — feed cursor (057)
-  idx_markets_close_at_visible           — closing-today filter (066)
-  idx_markets_tag_slugs_visible (GIN)    — tag filter (070, NEW)
-  idx_markets_event_visible_status      — per-event children (048)
+== NEW DEPENDENCIES / FILES ==
+cobe (globe, WorldCupMap). New shared: invokeAuthedFunction, edge _shared/{cors,gammaUrls,marketDataDelta,marketLifecycle,syncRunProgress,polymarketWinner}. New edge: quote-sell. sync-polymarket-markets 5 modes.
+New hooks: usePositions/PositionHistory/Trades/SellQuote/SellPosition, useSyncHealth, useWorldCupWinner/Games/Props, useCategorySubtags, useAllowedCategoryTags, useEventFavoriteState, useEventMarketCounts.
+New widgets: BetSlip Buy/Sell tabs+docked mode, SellSlip, FeedSearchTools, MarketSubTagFilter, NavMarketSearch, CollapsibleSearch, WorldCupHero/Map, GamesList/GameCard, ActiveBetsDrawer(global).
 
-Test baseline: 84 pass / 12 fail (pre-existing — no regression introduced this session).
-
-Staleness: none.
+== DRIFT / STALENESS WARNINGS (from findings) ==
+* CLAUDE.md catalogue stale: colorsByTheme does NOT exist; OddsBar/ProbabilityGauge gone (ChanceGauge is the gauge); useMyBets no longer drives MyBetsPage (it's positions).
+* shared/types/database.ts STALE: TransactionType missing 'bet_sell'; DbBalanceTransaction missing trade_id/position_id; DbBet dead type; MarketStatus duplicated vs entities/market.
+* EVENT_SELECT + MarketEvent MISSING events.slug -> polymarketMarketUrl 404 deep-link bug (QA 2026-06-10) STILL OPEN.
+* FSD violations: shared/ui BookmarkButton/EventBookmarkButton/PriceHistoryChart import features/; widgets GameCard/WorldCupMap/NavMarketSearch import @/app/router.
+* DEAD: TreasuryPage (no route); sync-polymarket-markets backfill/hot_set still query frozen bets table -> no-op; tracker startRealtimeBetsListener+fetchTrackableMarkets read bets (miss positions-only markets up to 5m).
+* DUP: super-admin/manager MarketsPage; feed-filter bar x3 pages; quote-bet/walkAsks(TOP_N=100) vs quote-sell/walkBids(TOP_N=10) DIVERGE; priceToOdds/parseJsonField dup across edge+tracker.
+* svc README STALE: PRICE_BUFFER_FLUSH_MS=1000 (README 200), DELTA_MIN_THRESHOLD=0.05 (README 0.01). VOLUME_THRESHOLD_USD 500k->200k. CATEGORY_WHITELIST 10 (memory says 12).
+* closeSyncRun (svc) inverted bug: success branch sets status='running'; never called -> sync_runs rows perpetually 'running'.
+* entities/{balance,manager,outcome,transaction,user} = .gitkeep only (empty).

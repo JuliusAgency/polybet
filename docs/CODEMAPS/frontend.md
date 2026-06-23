@@ -1,137 +1,151 @@
-<!-- Generated: 2026-06-03 (positions/trades trading model) | Files scanned: ~150 .tsx/.ts | Token estimate: ~900 -->
+<!-- Generated: 2026-06-23 | ~140 .tsx/.ts (app/pages/widgets/features/entities/shared) | ~980 tokens -->
 
 # Frontend
 
-React 19 + Vite 5 + TypeScript strict + Tailwind v3 + TanStack Query + Zustand + react-router v7. FSD layering. Path alias `@/` → `src/`.
+React 19 + Vite 5 + TS strict + Tailwind v3 + TanStack Query v5 + Zustand + react-router v7. FSD layering (`app→pages→widgets→features→entities→shared`). Path alias `@/` → `src/`.
 
 ## Entry
 
 ```
 main.tsx → App.tsx
-  └── AppProviders  (AuthProvider · QueryProvider · RTLProvider · ThemeProvider)
-       └── Router  (RoleGuard-wrapped routes)
-       └── Toaster  (sonner)
+  └── AppProviders   (ThemeProvider › QueryProvider › AuthProvider › RTLProvider)  [outer→inner]
+       └── Router    (BrowserRouter + ErrorBoundary + Suspense; RoleGuard groups)
+       └── Toaster   (sonner)
 ```
+AuthProvider lazy-loads supabase via module-level singleton promise; 3 effects: bootstrap, onAuthStateChange, per-user `profiles` realtime guard (force sign-out on is_active=false).
 
-## Routes (`src/app/router/routes.ts`)
-
-```
-SIGN_IN          /sign-in                                   AuthLayout      AuthPages.SignInPage
-ADMIN.*          /admin/{dashboard,managers,managers/:id,
-                   markets,bets-log,reports,test-lab,
-                   limits,settings}                         SuperAdminLayout (super_admin)
-MANAGER.*        /manager/{users,users/:id,markets,
-                   reports,activity}                        ManagerLayout    (manager|super_admin)
-USER.*           /, /markets, /events/:id, /wallet,
-                 /my-bets, /saved, /stats                   UserLayout       (any authed)
-```
-
-`buildPath(template, params)` for parameterised paths. RoleGuard reads `useAuth().role`.
-
-## Pages
+## Routes (`src/app/router/routes.ts`, `buildPath(tpl, params)`)
 
 ```
-src/pages/auth/SignInPage
-src/pages/manager/{ManagerUsersPage, ManagerUserProfilePage, ManagerMarketsPage,
-                   ManagerReportsPage, ManagerActivityPage}
-src/pages/super-admin/{AdminDashboardPage, ManagersPage, ManagerProfilePage,
-                       AdminMarketsPage, AdminBetLogPage, AdminReportsPage,
-                       TestLabPage, LimitsPage, SettingsPage}
-src/pages/user/{MarketsFeedPage, EventDetailPage, MyBetsPage (=Portfolio: positions w/ mark-to-market + Sell),
-                SavedMarketsPage, StatsPage, WalletPage}
+SIGN_IN     /sign-in                                          AuthLayout
+ADMIN.*     /admin/{dashboard,managers,managers/:id,markets,  SuperAdminLayout (super_admin)
+              markets/:id,bets-log,reports,test-lab,limits,settings}
+MANAGER.*   /manager/{users,users/:id,markets,markets/:id,    ManagerLayout (manager|super_admin)
+              reports,activity}
+USER.*      / /markets /events/:id /wallet /my-bets /saved /stats   UserLayout (pathless, any authed)
 ```
-Widgets: `widgets/SellSlip` (Portfolio sell modal → SellForm), `widgets/BetSlip` (Buy/Sell tabs; Sell tab renders SellForm for the held position).
+RoleGuard: loading spinner while auth/role resolves → Navigate /sign-in if no user → cross-role redirect via `getDashboardForRole(role)`. EventDetailPage is ONE component mounted at `/events/:id`, `/admin/markets/:id`, `/manager/markets/:id` (readonly prop). `MANAGER.TREASURY` has no route — `pages/manager/TreasuryPage` is DEAD.
+
+## Pages (`src/pages/`)
+
+```
+auth/SignInPage
+user/  MarketsFeedPage (636L: tag/subtag/status filters, WC hero+subtabs, infinite scroll,
+                        docked/overlay BetSlip, My-Bets+Saved view toggle)
+       EventDetailPage (388L, 3-role readonly; ?market= deep-link + desktop auto-select)
+       MyBetsPage (Portfolio: usePositions+usePositionHistory, mark-to-market + SellSlip; NOT bets)
+       SavedMarketsPage (standalone; dup of feed dock logic + BalanceWidget)
+       WalletPage, StatsPage
+super-admin/ AgentsDashboardPage (659L: mgr stats + KPI + 6-dim sync-health panel)
+       ManagerProfilePage (958L: mgr + users; inline Adjust/ResetPassword modals, raw supabase)
+       GlobalBetLogPage (admin_bet_log view, Side col buy/sell, Polymarket ExternalLink)
+       MarketsPage, ManagersPage, ReportsPage, TestLabPage, LimitsPage, SettingsPage
+manager/ MarketsPage (≈twin of admin MarketsPage, ROUTES.MANAGER href), UsersPage, ReportsPage,
+       UserActivityPage (dual-context: /manager/activity vs /manager/users/:id via routeUserId)
+```
 
 ## State management
 
-| Concern | Tool | Where |
-|---|---|---|
-| Server state | TanStack Query | hooks under `src/features/<domain>/` |
-| Auth session | React context | `AuthProvider` → `useAuth()` |
-| Theme | React context + localStorage | `ThemeProvider` → `useTheme()` (key: `polybet-theme`) |
-| RTL direction | React effect | `RTLProvider` (sets `<html dir>`) |
-| URL state | router params + search params | `react-router-dom` `useParams`/`useSearchParams` |
-| Local UI state | `useState` | components |
-| Zustand store | bet slip / lightweight UI flows | declared per-feature when needed |
+| Concern | Tool / Where |
+|---|---|
+| Server state | TanStack Query — hooks in `features/<domain>/` |
+| Auth session | `AuthProvider` → `useAuth()` |
+| Theme | `ThemeProvider` → `useTheme()` (localStorage `polybet-theme`) |
+| RTL dir | `RTLProvider` sets `<html dir>` |
+| URL state | `useParams`/`useSearchParams` (filters, tab, ?market=) |
+| Local UI | `useState`; Zustand per-feature when needed |
 
-## Feature hooks (`src/features/`)
-
-```
-auth/sign-in, auth/sign-out
-bet/                                            (markets, events, bets, balance, prices)
-  useMarkets               infinite list, cursor by sort_volume; calls useMarketRefresh
-  useMarketsByIds          single fetch by ids list (saved, my-bets cross-fetch)
-  useEventById             single event with markets+outcomes; refetchInterval=30s
-  useEventPriceHistory     bucketed prices for chart
-  useMarketRefresh         POSTs refresh-markets edge fn; patches ['markets']
-                           Accepts (ids, true|false) OR (ids, { autoRefresh?, eventId? }).
-                           When `eventId` is passed, invalidates ['event', eventId] after refresh.
-                           eventId tracked via ref (not closure) to stay fresh across navigations.
-  TRADING MODEL (positions + trades, 2026-06-02):
-  usePositions             open positions (portfolio); poll 30s
-  usePositionHistory       closed/won/lost positions
-  useTrades                immutable fill ledger (buy + sell)
-  useMyBets                ADAPTER over positions → legacy MyBet shape (feed/event "you hold this")
-  usePlaceBet              mutation → place_bet RPC (BUY)
-  useBetQuote              live ASK quote via quote-bet edge fn (BetSlip Buy)
-  useSellQuote             live BID quote via quote-sell edge fn (Sell)
-  useSellPosition          mutation → sell_position RPC (+PriceDriftError, P0002)
-  SellForm                 (features/bet/SellForm) reusable sell form — used by widgets/SellSlip + BetSlip Sell tab
-  useUserBalance           balances row + realtime listener (filter by user_id)
-  useUserTransactions      ledger view + realtime on balance_transactions
-  useBetResultNotifications  toast won/lost via balance_transactions INSERT (bet_payout) → also invalidates positions
-  useSimilarEvents, useMarketCategories, useAllowedCategoryTags
-  groupMarketsByEvent, priceHistoryBucket, usePriceHistory
-favorites/                                       (toggle saved markets)
-wallet/useUserTransactions
-admin/{adjust-balance, agent-stats, bet-limits, bet-log, financial-transactions,
-       managers, manager-users, manage-user, markets, reports, settings, settlement}
-manager/{user list/profile/markets/reports}
-super-admin/(stats KPI tiles)
-stats/useSystemKpis        polls every 30s (cross-user data — no realtime; see CLAUDE.md)
-```
-
-## Realtime listeners (per-user only)
+## Feature hooks (`src/features/`, ~65 hooks; TanStack Query)
 
 ```
-balances             useUserBalance              filter user_id=eq.${userId}
-balance_transactions useBetResultNotifications   filter user_id=eq.${userId} (bet_payout INSERT → toast + invalidate positions)
-balance_transactions useUserTransactions         filter user_id=eq.${userId}
-profiles             AuthProvider                filter id=eq.${userId} (manager-block check)
+bet/  TRADING (positions+trades; bets FROZEN):
+  useMarkets         infinite keyset (sort_volume|trending_rank); calls useMarketRefresh; .contains('tag_slugs')
+  useEventById       event+markets refetchInterval=3s (MARKETS_PRICE_POLL_INTERVAL_MS); 2 seq reads
+  useMarketRefresh   TWO intervals: 30s edge refresh-markets + 3s DB patchVisibleFromDb; invalidates ['event',id] when eventId set
+  usePositions / usePositionHistory / useTrades   poll; key incl userId
+  useMyBets          ADAPTER positions→legacy MyBet (feed/event "you hold")
+  usePlaceBet (place_bet, OddsDriftError P0002) / useSellPosition (sell_position, PriceDriftError P0002)
+  useBetQuote (quote-bet 2s) / useSellQuote (quote-sell 2s)
+  SellForm/          reusable sell UI — used by widgets/SellSlip + BetSlip Sell tab (NOT a widget, FSD)
+  useUserBalance     balances + realtime (user_id filter); key ['user','balance',userId]
+  useBetResultNotifications  realtime balance_transactions INSERT(bet_payout) → toast + invalidate positions
+  WORLD CUP: useWorldCupWinner, useWorldCupGames, useWorldCupProps (paginates by EVENT), useWorldCupWinnerEventId
+  useCategorySubtags (system_settings.category_subtags), useAllowedCategoryTags
+  useEventFavoriteState, useEventMarketCounts (event_market_counts RPC), useArchiveMarket
+favorites/  useToggleFavoriteMarket, useToggleFavoriteEvent (cascade-deletes child mkt favs); optimistic
+wallet/  useUserTransactions  realtime balance_transactions (user_id) — 2nd subscriber on same table
+admin/   bet-limits (useAllLimitsData/useBetLimitSettings: multi-step seq reads), managers, manager-users,
+         manage-user (useAdminUpdateUser/ToggleBlock/ResetPassword/AdjustBalance — no cache invalidation),
+         financial-transactions, reports (useManagersReport→admin_get_report_dataset), settlement
+manager/ balance/AdjustBalanceModal, user list/profile
+stats/   useSystemKpis (poll 30s), useSyncHealth (get_sync_health RPC poll 60s; ws/tokens/heartbeat/pending), useUserStats
+auth/    sign-in (useSignIn: awaitingRole effect — no timeout dead-end), sign-out
+```
+KEY MISMATCH: usePlaceBet/useSellPosition invalidate 2-elem `['user','balance'|'positions'|'trades']` (prefix-matches the 3-elem registered keys, works but inconsistent vs useBetResultNotifications which uses userId).
+
+## Realtime listeners (per-user filter ONLY)
+
+```
+balances              useUserBalance              user_id=eq.${id}
+balance_transactions  useBetResultNotifications   user_id=eq.${id}  (bet_payout INSERT → toast + invalidate)
+balance_transactions  useUserTransactions         user_id=eq.${id}  (2nd channel, same table)
+profiles              AuthProvider                id=eq.${id}       (is_active guard)
+```
+`positions`/`trades`/`markets`/`market_outcomes`/`events` NOT in publication → polled + invalidated by mutations. Cross-user data uses `refetchInterval` (KPIs 30s, sync-health 60s).
+
+## Layouts (`src/app/layouts/`)
+
+```
+AuthLayout       centered card, LanguageSwitcher
+UserLayout       top nav: NavMarketSearch + balance/in-play pill + ActiveBetsDrawer; mounts
+                 useUserBalance+useMyBets+useBetResultNotifications globally; Theme/Lang switchers
+ManagerLayout    sidebar (Markets/Users/Reports/Activity); inline flexDirection for RTL
+SuperAdminLayout sidebar (8 routes incl TestLab); same RTL pattern
 ```
 
-`positions`/`trades` are NOT in the realtime publication — usePositions/usePositionHistory poll + are invalidated by buy/sell mutations and the bet_payout signal above. `useMyBets` is now an adapter over those queries (no own realtime).
-
-Cross-user data uses `refetchInterval: 30_000` polling (`useSystemKpis`, `useAgentStats`, `useFinancialTransactions`).
-
-## Layouts
+## Widgets (`src/widgets/`, 17)
 
 ```
-AuthLayout         (no nav, centered card, language switcher)
-UserLayout         header + main + footer; user balance pill, ThemeSwitcher, LanguageSwitcher
-ManagerLayout      sidebar + main; isRTL-aware via inline flex-direction
-SuperAdminLayout   sidebar + main; same RTL pattern
+Cards    EventCard(369L) MarketCard(336L)            — share card shell (dup)
+Trade    BetSlip(607L Buy/Sell tabs, docked|overlay via BETSLIP_DOCK_QUERY) SellSlip(modal→SellForm)
+Tables   FinancialTransactionsTable ManagersReportTable ActiveBetsDrawer(global) BalanceWidget(Saved-only)
+Search   NavMarketSearch(navbar combobox) CollapsibleSearch FeedSearchTools(MyBets/Saved/Filter toggles)
+Filters  TagFilter SubTagFilter StatusFilter
+WorldCup WorldCupHero(flag-wheel rAF) WorldCupMap(cobe globe) GamesList+GameCard
+```
+FSD violations: GameCard/WorldCupMap/NavMarketSearch import `@/app/router/routes`. Filter-bar trio duplicated across feed + admin + manager MarketsPage.
+
+## Shared (`src/shared/`)
+
+```
+api/supabase  client (sessionStorage auth, throws on missing env) · invokeSupabaseFunction → invokeAuthedFunction
+              (60s skew refresh + single 401-retry) · selects/{MARKET_SELECT_FULL,_NO_EVENT,EVENT_SELECT}
+config        markets.ts (REFRESH=30s, PRICE_POLL=3s, PAGE_LIMIT=50), validation, worldCup, countries
+i18n          i18next + locales/{en,he}/translation.json
+theme         tokens.css (OKLCH dark :root / light [data-theme=light]); const THEME_STORAGE_KEY
+ui            Button Card Badge Input Modal SidePanel(docked) Spinner Skeleton TableSkeleton CardGridSkeleton
+              OutcomeButtons ChanceGauge BetMarker MarketThumbnail PriceHistoryChart(+WindowToggle)
+              BookmarkButton EventBookmarkButton UnseenBadge ProgressBar ExternalLink ErrorBoundary
+              LanguageSwitcher ThemeSwitcher EditUserModal SetPasswordModal
+hooks         useMediaQuery (useSyncExternalStore), useHorizontalScroll (RTL-aware), useDebounce
+utils         formatVolume/Probability/SharePrice, mapBalanceErrorMessage, polymarketMarketUrl(eventSlug,mktSlug),
+              dedupeSavedMarkets, marketMatchesSearch
+entities      bet(MyBet adapter) event(MarketEvent+GameTeam,effectiveStatus) market(types,statusFilter,outcomes)
+              position(Position/Trade,pnl). balance/manager/outcome/transaction/user = .gitkeep only
 ```
 
-## Shared
+## Known drift / gotchas
 
-```
-src/shared/api/supabase     (singleton client + invokeSupabaseFunction)
-src/shared/config/markets.ts (MARKETS_PAGE_LIMIT, MARKETS_REFRESH_INTERVAL_MS=30s, MARKETS_REFRESH_MAX_IDS=20)
-src/shared/i18n             (i18next + en/he/translation.json)
-src/shared/theme            (CSS vars in tokens.css; colorsByTheme for JS-only)
-src/shared/ui               (Button, Card, Modal, OddsBar, ChanceGauge, ProbabilityGauge,
-                             PriceHistoryChart, Skeleton family, Spinner, Input,
-                             ThemeSwitcher, LanguageSwitcher, MarketThumbnail, …)
-src/shared/hooks            (useAuth, useTheme, …)
-src/shared/utils            (formatters, dates, currency)
-src/shared/types            (SystemKpi, etc.)
-```
+- `colorsByTheme`, `OddsBar`, `ProbabilityGauge` referenced in CLAUDE.md but DON'T exist — use ChanceGauge + hardcoded OKLCH in `priceHistoryPalette.ts`.
+- `BookmarkButton`/`EventBookmarkButton`/`PriceHistoryChart` import from `@/features` (FSD violation, shared←features).
+- `Button/const.ts` uses raw Tailwind `bg-blue-600` etc — bypasses OKLCH tokens.
+- `database.ts` TransactionType missing `bet_sell`; DbBalanceTransaction missing trade_id/position_id; DbBet dead.
+- `EVENT_SELECT` + MarketEvent lack `slug` → polymarketMarketUrl 404 bug (2026-06-10).
+- Modal/SidePanel/Spinner aria-labels hardcoded English (not i18n).
 
 ## Conventions
 
-- Folder-per-component: `Foo/{Foo.tsx, index.ts, const.ts?, components/?}`. Import `@/shared/ui/Foo`.
-- Theme tokens only — no hardcoded colours.
-- All user-visible strings via `t('key')` with both en + he keys.
-- RTL: inline `flexDirection` for sidebars (Tailwind `rtl:` variants are unreliable); always `text-start` on `<th>` directly (UA `text-align:center` overrides inherited).
-- Use `ROUTES` map + `buildPath` — never hand-concat URLs.
+- Folder-per-component `Foo/{Foo.tsx,index.ts,const.ts?,components/?}`; import `@/shared/ui/Foo`.
+- Theme tokens only, no hardcoded colours. All strings via `t()` with en+he keys.
+- RTL: inline `flexDirection` for sidebars; `text-start` directly on `<th>`; `ms-`/`me-` spacing.
+- Use `ROUTES` + `buildPath` — never hand-concat URLs. No direct supabase calls in components — go via feature hooks.
