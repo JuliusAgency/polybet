@@ -2,11 +2,10 @@ import { useQuery } from '@tanstack/react-query';
 import type { PriceHistoryWindow } from './priceHistoryBucket';
 import { fetchPriceHistory } from './fetchPriceHistory';
 
-export interface PriceHistoryPoint {
-  outcome_id: string;
-  bucket_ts: string;
-  price: number;
-}
+// Re-exported from shared so existing `@/features/bet` consumers are unaffected
+// after the type moved down to shared/ (FSD: shared/ui needs it too).
+export type { PriceHistoryPoint } from '@/shared/types/priceHistory';
+import type { PriceHistoryPoint } from '@/shared/types/priceHistory';
 
 export function usePriceHistory(
   marketId: string | undefined,

@@ -9,7 +9,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import type { PriceHistoryPoint } from '@/features/bet';
+import type { PriceHistoryPoint } from '@/shared/types/priceHistory';
 
 // Structural subset of OutcomeForChart needed by the chart. Defined locally so
 // shared/ does not import from features/ (FSD violation) or entities/ (also

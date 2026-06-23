@@ -1,4 +1,9 @@
-export type PriceHistoryWindow = '1H' | '6H' | '1D' | '1W' | '1M' | 'ALL';
+// PriceHistoryWindow + PRICE_HISTORY_WINDOWS moved to shared/ (consumed by
+// shared/ui/PriceHistoryChart). Re-exported here so `@/features/bet` consumers
+// are unaffected.
+export type { PriceHistoryWindow } from '@/shared/types/priceHistory';
+export { PRICE_HISTORY_WINDOWS } from '@/shared/types/priceHistory';
+import type { PriceHistoryWindow } from '@/shared/types/priceHistory';
 
 export interface PriceHistoryRange {
   since: Date;
@@ -29,12 +34,3 @@ export function getPriceHistoryRange(
       return { since: new Date(0), until, bucket: '1 day' };
   }
 }
-
-export const PRICE_HISTORY_WINDOWS: readonly PriceHistoryWindow[] = [
-  '1H',
-  '6H',
-  '1D',
-  '1W',
-  '1M',
-  'ALL',
-] as const;

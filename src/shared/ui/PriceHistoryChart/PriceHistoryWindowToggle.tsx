@@ -1,4 +1,4 @@
-import { PRICE_HISTORY_WINDOWS, type PriceHistoryWindow } from '@/features/bet';
+import { PRICE_HISTORY_WINDOWS, type PriceHistoryWindow } from '@/shared/types/priceHistory';
 
 interface PriceHistoryWindowToggleProps {
   value: PriceHistoryWindow;
