@@ -3,7 +3,7 @@ import type { Market, MarketOutcome } from '@/entities/market';
 import { getOrderedOutcomes, getYesProbability, getResolvedWinnerOutcome } from '@/entities/market';
 import type { MyBet } from '@/entities/bet';
 import { Badge } from '@/shared/ui/Badge';
-import { BookmarkButton } from '@/shared/ui/BookmarkButton';
+import { BookmarkButton } from '@/features/favorites';
 import { BetMarker } from '@/shared/ui/BetMarker';
 import { MarketThumbnail } from '@/shared/ui/MarketThumbnail';
 import { OutcomeButtons, type OutcomeButton } from '@/shared/ui/OutcomeButtons';

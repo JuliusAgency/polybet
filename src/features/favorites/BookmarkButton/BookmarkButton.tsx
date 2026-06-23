@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useFavoriteMarkets, useToggleFavoriteMarket } from '@/features/favorites';
+import { useFavoriteMarkets } from '../useFavoriteMarkets';
+import { useToggleFavoriteMarket } from '../useToggleFavoriteMarket';
 
 interface BookmarkButtonProps {
   marketId: string;

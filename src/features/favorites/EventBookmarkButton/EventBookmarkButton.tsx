@@ -1,6 +1,7 @@
 import { useCallback, useId } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useEventFavoriteState, useToggleFavoriteEvent } from '@/features/favorites';
+import { useEventFavoriteState } from '../useEventFavoriteState';
+import { useToggleFavoriteEvent } from '../useToggleFavoriteEvent';
 
 interface EventBookmarkButtonProps {
   eventId: string;

@@ -4,3 +4,5 @@ export { useToggleFavoriteMarket } from './useToggleFavoriteMarket';
 export { useToggleFavoriteEvent } from './useToggleFavoriteEvent';
 export { useEventFavoriteState } from './useEventFavoriteState';
 export type { EventFavoriteState } from './useEventFavoriteState';
+export { BookmarkButton } from './BookmarkButton';
+export { EventBookmarkButton } from './EventBookmarkButton';

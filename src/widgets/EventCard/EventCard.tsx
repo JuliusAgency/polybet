@@ -13,7 +13,7 @@ import { getEventEffectiveStatus } from '@/entities/event';
 import type { MyBet } from '@/entities/bet';
 import { OutcomeButtons, type OutcomeButton } from '@/shared/ui/OutcomeButtons';
 import { MarketThumbnail } from '@/shared/ui/MarketThumbnail';
-import { EventBookmarkButton } from '@/shared/ui/EventBookmarkButton';
+import { EventBookmarkButton } from '@/features/favorites';
 import { ChanceGauge } from '@/shared/ui/ChanceGauge';
 import { BetMarker } from '@/shared/ui/BetMarker';
 import { formatVolume, formatProbability } from '@/shared/utils';

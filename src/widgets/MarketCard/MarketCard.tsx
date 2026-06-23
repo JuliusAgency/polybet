@@ -12,7 +12,7 @@ import type { MyBet } from '@/entities/bet';
 import { useMarketRefresh } from '@/features/bet';
 import { OutcomeButtons, type OutcomeButton } from '@/shared/ui/OutcomeButtons';
 import { MarketThumbnail } from '@/shared/ui/MarketThumbnail';
-import { BookmarkButton } from '@/shared/ui/BookmarkButton';
+import { BookmarkButton } from '@/features/favorites';
 import { ChanceGauge } from '@/shared/ui/ChanceGauge';
 import { BetMarker } from '@/shared/ui/BetMarker';
 import { MARKETS_STALE_THRESHOLD_MS } from '@/shared/config/markets';
