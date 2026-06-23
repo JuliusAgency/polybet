@@ -6,7 +6,7 @@
 
 export type MarketStatus = 'open' | 'closed' | 'resolved' | 'archived';
 export type BetStatus = 'open' | 'won' | 'lost' | 'cancelled';
-export type TransactionType = 'mint' | 'transfer' | 'bet_lock' | 'bet_payout' | 'adjustment';
+export type TransactionType = 'mint' | 'transfer' | 'bet_lock' | 'bet_payout' | 'bet_sell' | 'adjustment';
 export type SyncRunStatus = 'running' | 'completed' | 'completed_with_warnings' | 'failed';
 
 export interface DbProfile {
@@ -73,6 +73,11 @@ export interface DbMarketOutcome {
   updated_at: string;
 }
 
+/**
+ * @deprecated FROZEN/historical (since the 2026-06-02 positions+trades cutover).
+ * No app code reads or writes `bets` anymore — it was backfilled into positions/trades.
+ * Kept only for the legacy schema reference. New transaction rows key on trade_id/position_id.
+ */
 export interface DbBet {
   id: string;
   user_id: string;
@@ -94,6 +99,8 @@ export interface DbBalanceTransaction {
   amount: number;
   balance_after: number;
   bet_id: string | null;
+  trade_id: string | null;
+  position_id: string | null;
   note: string | null;
   created_at: string;
 }

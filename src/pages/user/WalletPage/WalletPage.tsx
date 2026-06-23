@@ -6,9 +6,10 @@ import { useUserTransactions } from '@/features/wallet';
 import { Card } from '@/shared/ui/Card';
 import { Input } from '@/shared/ui/Input';
 import { Spinner } from '@/shared/ui/Spinner';
+import type { TransactionType } from '@/shared/types/database';
 
 const formatTransactionType = (
-  txType: 'mint' | 'transfer' | 'bet_lock' | 'bet_payout' | 'adjustment' | 'bet_sell',
+  txType: TransactionType,
   t: TFunction
 ): string => {
   switch (txType) {

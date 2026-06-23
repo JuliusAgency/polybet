@@ -2,11 +2,12 @@ import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/shared/api/supabase';
 import { useAuth } from '@/shared/hooks/useAuth';
+import type { TransactionType } from '@/shared/types/database';
 
 export interface UserTransaction {
   id: string;
   created_at: string;
-  type: 'mint' | 'transfer' | 'bet_lock' | 'bet_payout' | 'adjustment' | 'bet_sell';
+  type: TransactionType;
   amount: number;
   balance_after: number;
   bet_id: string | null;
