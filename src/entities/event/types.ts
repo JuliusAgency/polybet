@@ -21,6 +21,9 @@ export interface MarketEvent {
   tag_slug: string | null;
   tag_label: string | null;
   tag_slugs: string[] | null;
+  // Polymarket event slug — canonical /event/{slug} URL segment (events.slug,
+  // migration 048). Now part of EVENT_SELECT so it hydrates on every event query.
+  slug?: string | null;
   // Sports "game" metadata (World Cup Games tab). Null on non-match events.
   // See migration 20260616143809_world_cup_games_metadata.
   game_start_time?: string | null;
