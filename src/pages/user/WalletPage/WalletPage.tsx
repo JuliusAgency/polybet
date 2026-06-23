@@ -8,10 +8,7 @@ import { Input } from '@/shared/ui/Input';
 import { Spinner } from '@/shared/ui/Spinner';
 import type { TransactionType } from '@/shared/types/database';
 
-const formatTransactionType = (
-  txType: TransactionType,
-  t: TFunction
-): string => {
+const formatTransactionType = (txType: TransactionType, t: TFunction): string => {
   switch (txType) {
     case 'mint':
       return t('wallet.typeMint');

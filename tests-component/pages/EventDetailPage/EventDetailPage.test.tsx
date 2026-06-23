@@ -95,7 +95,12 @@ const baseEvent: MarketEvent = {
   tag_slugs: ['world-cup'],
 };
 
-function market(id: string, label: string, yesPrice: number, status: Market['status'] = 'open'): Market {
+function market(
+  id: string,
+  label: string,
+  yesPrice: number,
+  status: Market['status'] = 'open'
+): Market {
   return {
     id,
     polymarket_id: `pm-${id}`,
