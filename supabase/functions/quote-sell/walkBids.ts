@@ -27,7 +27,12 @@ export interface SellWalkResult {
   availableShares: number;
 }
 
-const TOP_N_LEVELS = 10;
+// Persisted bid-book depth. Mirrors the ask-side fix in quote-bet/walkAsks.ts:
+// with a shallow cap a large sell that eats past the cap gets partial=true from
+// quote_sell_proceeds even though the live book can fill it — a false
+// "Insufficient liquidity" rejection. 100 matches the ask side; Polymarket books
+// rarely exceed ~100 levels and ~200 numbers/token is negligible storage.
+const TOP_N_LEVELS = 100;
 
 /**
  * Walk bids (DESC by price) accumulating proceeds until `shares` is sold or the

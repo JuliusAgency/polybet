@@ -75,14 +75,14 @@ test('walkAsks: NaN or out-of-range levels are skipped', () => {
   assert.ok(Math.abs(r.shares - 2500) < 1e-6, `shares=${r.shares}`);
 });
 
-test('serializeSide: asks ascending, truncated to top 10', () => {
+test('serializeSide: asks ascending, all 15 levels kept under the 100-level cap', () => {
   const levels = Array.from({ length: 15 }, (_, i) => ({
     price: ((i + 1) / 100).toString(),
     size: '100',
   }));
   const flat = serializeSide(levels, false);
-  // 10 levels × 2 numbers per level = 20.
-  assert.equal(flat.length, 20);
+  // 15 levels × 2 numbers per level = 30 (TOP_N_LEVELS=100, so nothing is dropped).
+  assert.equal(flat.length, 30);
   // First price is the smallest.
   assert.equal(flat[0], 0.01);
   // Strictly ascending across pairs.
