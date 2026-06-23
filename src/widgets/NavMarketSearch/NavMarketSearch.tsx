@@ -70,8 +70,15 @@ export function NavMarketSearch({ buildEventHref }: NavMarketSearchProps) {
     navigate(hrefFor(market));
   };
 
-  const showDropdown = open && enabled;
-  const showNoResults = showDropdown && !isLoading && results.length === 0;
+  // Open the dropdown as soon as the LIVE query is searchable (not the debounced
+  // value) so the panel is never invisible during the 300ms debounce window —
+  // the reason the dropdown "sometimes didn't appear" while typing.
+  const liveEnabled = query.trim().length >= MIN_QUERY_LENGTH;
+  const showDropdown = open && liveEnabled;
+  // Results for the current term aren't ready while the debounce hasn't caught up
+  // or the fetch is still in flight; show a "Searching…" row instead of an empty
+  // (zero-height, invisible) dropdown.
+  const isSearchPending = liveEnabled && (isLoading || debouncedQuery.trim() !== query.trim());
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Escape') {
@@ -115,7 +122,7 @@ export function NavMarketSearch({ buildEventHref }: NavMarketSearchProps) {
         aria-activedescendant={activeOptionId}
         className="nav-market-search__input"
         value={query}
-        placeholder={t('markets.searchPlaceholder')}
+        placeholder={t('markets.searchNavPlaceholder')}
         onChange={(event) => {
           setQuery(event.target.value);
           setOpen(true);
@@ -131,11 +138,7 @@ export function NavMarketSearch({ buildEventHref }: NavMarketSearchProps) {
           aria-label={t('markets.searchResultsAria')}
           className="nav-market-search__results"
         >
-          {showNoResults ? (
-            <li className="nav-market-search__empty" role="option" aria-disabled="true">
-              {t('markets.noResults')}
-            </li>
-          ) : (
+          {results.length > 0 ? (
             results.map((market, index) => {
               const isActive = index === highlight;
               const subtitle = market.event?.title ?? market.category ?? '';
@@ -161,6 +164,14 @@ export function NavMarketSearch({ buildEventHref }: NavMarketSearchProps) {
                 </li>
               );
             })
+          ) : isSearchPending ? (
+            <li className="nav-market-search__empty" role="option" aria-disabled="true">
+              {t('markets.searching')}
+            </li>
+          ) : (
+            <li className="nav-market-search__empty" role="option" aria-disabled="true">
+              {t('markets.noResults')}
+            </li>
           )}
         </ul>
       )}

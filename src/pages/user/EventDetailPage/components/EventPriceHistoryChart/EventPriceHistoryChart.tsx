@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Market, MarketOutcome } from '@/entities/market';
+import { getChartOutcomes } from '@/entities/market';
 import type { PriceHistoryPoint, PriceHistoryWindow } from '@/features/bet';
 import { useEventPriceHistory } from '@/features/bet';
 import { PriceHistoryChart, PriceHistoryWindowToggle } from '@/shared/ui/PriceHistoryChart';
@@ -54,8 +55,14 @@ export const EventPriceHistoryChart = ({
     sortedMarkets.forEach((market) => {
       if (!selectedIds.has(market.id)) return;
       const prefix = marketLabel(market);
-      market.market_outcomes.forEach((o) => {
-        outcomesOut.push({ ...o, name: `${prefix}: ${o.name}` });
+      // Binary sub-markets collapse to their single Yes line (the No line is a
+      // redundant 1 − Yes mirror); multi-outcome sub-markets keep every option.
+      // A lone line is named by the market label alone ("Argentina") — prefixing
+      // "Argentina: Yes" would just be noise.
+      const chartOutcomes = getChartOutcomes(market);
+      chartOutcomes.forEach((o) => {
+        const name = chartOutcomes.length === 1 ? prefix : `${prefix}: ${o.name}`;
+        outcomesOut.push({ ...o, name });
       });
       const marketPoints = pointsByMarketId[market.id] ?? [];
       marketPoints.forEach((p) => pointsOut.push(p));

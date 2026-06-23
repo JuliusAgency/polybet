@@ -215,7 +215,7 @@ const EventDetailPage = ({ readonly = false }: EventDetailPageProps = {}) => {
             )}
           </div>
           <h1
-            className="text-2xl font-bold leading-tight"
+            className="text-xl font-bold leading-tight sm:text-2xl"
             style={{ color: 'var(--color-text-primary)', fontFamily: 'var(--font-sans)' }}
           >
             {event.title}

@@ -71,123 +71,131 @@ export const EventMarketRow = ({
 
   return (
     <div
-      className="flex items-center gap-3 px-4 py-3"
+      className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:gap-3"
       style={{
         borderTop: isFirst ? undefined : '1px solid var(--color-border-subtle)',
       }}
     >
-      <MarketThumbnail src={market.image_url} title={label} id={market.id} size="sm" />
+      {/* Identity — thumbnail + label/meta + Yes %. Always one row; on mobile the
+          actions wrap beneath instead of being clipped off the right edge. */}
+      <div className="flex min-w-0 items-center gap-3 sm:flex-1">
+        <MarketThumbnail src={market.image_url} title={label} id={market.id} size="sm" />
 
-      <div className="min-w-0 flex-1">
-        <p
-          className="truncate text-sm font-semibold"
-          style={{
-            color: 'var(--color-text-primary)',
-            ...(isHebrew && { direction: 'ltr' as const, textAlign: 'right' as const }),
-          }}
-        >
-          {label}
-        </p>
-        <div
-          className="mt-0.5 flex items-center gap-2 text-[11px]"
-          style={{ color: 'var(--color-text-muted)' }}
-        >
-          {volumeLabel && (
-            <span className="font-mono">{t('markets.volumeShort', { value: volumeLabel })}</span>
-          )}
-          {userBet && (
-            <span className="flex items-center gap-1" style={{ color: 'var(--color-accent)' }}>
-              <span>{t('markets.yourBet')}:</span>
-              <span style={{ fontWeight: 600 }}>{userBet.market_outcomes?.name ?? '—'}</span>
-              <span className="font-mono">{userBet.stake.toFixed(2)}</span>
-              {userBet.status !== 'open' && (
-                <Badge variant={userBet.status === 'won' ? 'win' : 'loss'}>
-                  {userBet.status === 'won' ? t('bet.won') : t('bet.lost')}
-                </Badge>
-              )}
-            </span>
-          )}
-          {statusLabel && (
-            <span
-              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                isHebrew ? '' : 'uppercase tracking-wide'
-              }`}
-              style={{
-                backgroundColor: `color-mix(in oklch, var(--color-${effectiveStatus === 'resolved' ? 'resolved' : 'text-secondary'}) 14%, transparent)`,
-                color:
-                  effectiveStatus === 'resolved'
-                    ? 'var(--color-resolved)'
-                    : 'var(--color-text-secondary)',
-              }}
-            >
-              {statusLabel}
-            </span>
-          )}
-        </div>
-      </div>
-
-      {yesPct && (
-        <div className="shrink-0 ps-4 pe-6 text-center">
-          <div
-            className="text-lg font-bold tabular-nums"
-            style={{ color: 'var(--color-text-primary)' }}
+        <div className="min-w-0 flex-1">
+          <p
+            className="truncate text-sm font-semibold"
+            style={{
+              color: 'var(--color-text-primary)',
+              ...(isHebrew && { direction: 'ltr' as const, textAlign: 'right' as const }),
+            }}
           >
-            {yesPct}
+            {label}
+          </p>
+          <div
+            className="mt-0.5 flex items-center gap-2 text-[11px]"
+            style={{ color: 'var(--color-text-muted)' }}
+          >
+            {volumeLabel && (
+              <span className="font-mono">{t('markets.volumeShort', { value: volumeLabel })}</span>
+            )}
+            {userBet && (
+              <span className="flex items-center gap-1" style={{ color: 'var(--color-accent)' }}>
+                <span>{t('markets.yourBet')}:</span>
+                <span style={{ fontWeight: 600 }}>{userBet.market_outcomes?.name ?? '—'}</span>
+                <span className="font-mono">{userBet.stake.toFixed(2)}</span>
+                {userBet.status !== 'open' && (
+                  <Badge variant={userBet.status === 'won' ? 'win' : 'loss'}>
+                    {userBet.status === 'won' ? t('bet.won') : t('bet.lost')}
+                  </Badge>
+                )}
+              </span>
+            )}
+            {statusLabel && (
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                  isHebrew ? '' : 'uppercase tracking-wide'
+                }`}
+                style={{
+                  backgroundColor: `color-mix(in oklch, var(--color-${effectiveStatus === 'resolved' ? 'resolved' : 'text-secondary'}) 14%, transparent)`,
+                  color:
+                    effectiveStatus === 'resolved'
+                      ? 'var(--color-resolved)'
+                      : 'var(--color-text-secondary)',
+                }}
+              >
+                {statusLabel}
+              </span>
+            )}
           </div>
         </div>
-      )}
 
-      <div className="w-[320px] shrink-0">
-        <OutcomeButtons
-          outcomes={outcomeButtons}
-          size="sm"
-          disabled={!isInteractive}
-          appearance={outcomeAppearance}
-          showPercentage
-          priceFormat="cents"
-          ctaLabel={t('markets.buy', { defaultValue: 'Buy' })}
-          onClick={
-            isInteractive && onOutcomeClick
-              ? (outcomeId) => {
-                  const outcome = market.market_outcomes.find((o) => o.id === outcomeId);
-                  if (outcome && outcome.polymarket_token_id) {
-                    onOutcomeClick(market, outcome);
-                  }
-                }
-              : undefined
-          }
-        />
+        {yesPct && (
+          <div className="shrink-0 ps-2 text-end sm:ps-4 sm:pe-6 sm:text-center">
+            <div
+              className="text-lg font-bold tabular-nums"
+              style={{ color: 'var(--color-text-primary)' }}
+            >
+              {yesPct}
+            </div>
+          </div>
+        )}
       </div>
 
-      {userBet && <BetMarker />}
-      <BookmarkButton marketId={market.id} eventId={market.event_id} stopPropagation />
-      {onArchive && market.status === 'resolved' && (
-        <button
-          type="button"
-          onClick={() => onArchive(market)}
-          disabled={isArchiving}
-          title={t('markets.archive')}
-          aria-label={t('markets.archive')}
-          className="rounded-md p-1 transition-colors hover:opacity-80 disabled:opacity-40"
-          style={{ color: 'var(--color-text-secondary)' }}
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
+      {/* Actions — outcome buttons fill the width on mobile (no fixed 320px that
+          would overflow a 320px screen); fixed column from sm up. */}
+      <div className="flex items-center gap-2 sm:gap-3">
+        <div className="min-w-0 flex-1 sm:w-[320px] sm:flex-none">
+          <OutcomeButtons
+            outcomes={outcomeButtons}
+            size="sm"
+            disabled={!isInteractive}
+            appearance={outcomeAppearance}
+            showPercentage
+            priceFormat="cents"
+            ctaLabel={t('markets.buy', { defaultValue: 'Buy' })}
+            onClick={
+              isInteractive && onOutcomeClick
+                ? (outcomeId) => {
+                    const outcome = market.market_outcomes.find((o) => o.id === outcomeId);
+                    if (outcome && outcome.polymarket_token_id) {
+                      onOutcomeClick(market, outcome);
+                    }
+                  }
+                : undefined
+            }
+          />
+        </div>
+
+        {userBet && <BetMarker />}
+        <BookmarkButton marketId={market.id} eventId={market.event_id} stopPropagation />
+        {onArchive && market.status === 'resolved' && (
+          <button
+            type="button"
+            onClick={() => onArchive(market)}
+            disabled={isArchiving}
+            title={t('markets.archive')}
+            aria-label={t('markets.archive')}
+            className="rounded-md p-1 transition-colors hover:opacity-80 disabled:opacity-40"
+            style={{ color: 'var(--color-text-secondary)' }}
           >
-            <polyline points="21 8 21 21 3 21 3 8" />
-            <rect x="1" y="3" width="22" height="5" />
-            <line x1="10" y1="12" x2="14" y2="12" />
-          </svg>
-        </button>
-      )}
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <polyline points="21 8 21 21 3 21 3 8" />
+              <rect x="1" y="3" width="22" height="5" />
+              <line x1="10" y1="12" x2="14" y2="12" />
+            </svg>
+          </button>
+        )}
+      </div>
     </div>
   );
 };

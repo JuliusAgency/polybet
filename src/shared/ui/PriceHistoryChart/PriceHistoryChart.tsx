@@ -20,8 +20,63 @@ interface OutcomeForChart {
   price: number | null;
 }
 import { Spinner } from '@/shared/ui/Spinner';
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { formatProbability } from '@/shared/utils';
 import { pickOutcomeColor } from './priceHistoryPalette';
+
+// Px reserved on the right of the plot for the end-of-line "<name> <pct>" labels.
+const LABEL_MARGIN_DESKTOP = 120;
+const LABEL_MARGIN_NARROW = 76;
+const LABEL_GAP = 8;
+
+function truncateName(name: string, max: number): string {
+  return name.length > max ? `${name.slice(0, Math.max(1, max - 1))}…` : name;
+}
+
+interface LineEndLabelProps {
+  index?: number;
+  // recharts hands these to the label renderer with a very wide union type; keep
+  // them `unknown` (so recharts' Props stays assignable to this) and narrow below.
+  x?: unknown;
+  y?: unknown;
+  value?: unknown;
+}
+
+/**
+ * End-of-line label: renders the outcome name + its current % at the rightmost
+ * point of each line so the graph self-identifies its lines (e.g. "Argentina
+ * 68%"). recharts calls the label renderer for EVERY data point, so this draws
+ * only at the last index and returns an empty group elsewhere.
+ */
+function renderLineEndLabel(
+  props: LineEndLabelProps,
+  lastIndex: number,
+  name: string,
+  fallbackPrice: number | null,
+  color: string,
+  isNarrow: boolean
+) {
+  const { index, x, y, value } = props;
+  const px = typeof x === 'number' ? x : Number(x);
+  const py = typeof y === 'number' ? y : Number(y);
+  if (index !== lastIndex || !Number.isFinite(px) || !Number.isFinite(py)) return <g />;
+  const pct = typeof value === 'number' ? value : fallbackPrice;
+  const shown = truncateName(name, isNarrow ? 10 : 16);
+  const text = pct == null ? shown : `${shown} ${formatProbability(pct)}`;
+  return (
+    <text
+      x={px + LABEL_GAP}
+      y={py}
+      dy="0.32em"
+      fontSize={isNarrow ? 10 : 11}
+      fontWeight={600}
+      fill={color}
+      textAnchor="start"
+    >
+      {text}
+    </text>
+  );
+}
 
 interface PriceHistoryChartProps {
   points: PriceHistoryPoint[];
@@ -113,6 +168,7 @@ export const PriceHistoryChart = ({
   height = 260,
 }: PriceHistoryChartProps) => {
   const { t, i18n } = useTranslation();
+  const isNarrow = useMediaQuery('(max-width: 640px)');
   const rows = useMemo(() => buildChartRows(points, outcomes), [points, outcomes]);
   const span = rows.length > 1 ? rows[rows.length - 1].ts - rows[0].ts : 0;
 
@@ -138,7 +194,15 @@ export const PriceHistoryChart = ({
   return (
     <div style={{ height, direction: 'ltr' }}>
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={rows} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+        <LineChart
+          data={rows}
+          margin={{
+            top: 8,
+            right: isNarrow ? LABEL_MARGIN_NARROW : LABEL_MARGIN_DESKTOP,
+            left: 0,
+            bottom: 0,
+          }}
+        >
           <CartesianGrid
             stroke="var(--color-border-subtle)"
             strokeDasharray="2 4"
@@ -164,19 +228,25 @@ export const PriceHistoryChart = ({
             content={<PriceTooltip outcomes={outcomes} locale={i18n.language} />}
             cursor={{ stroke: 'var(--color-border-strong)' }}
           />
-          {outcomes.map((o, idx) => (
-            <Line
-              key={o.id}
-              type="monotone"
-              dataKey={o.id}
-              name={o.name}
-              stroke={pickOutcomeColor(idx)}
-              strokeWidth={2}
-              dot={false}
-              connectNulls
-              isAnimationActive={false}
-            />
-          ))}
+          {outcomes.map((o, idx) => {
+            const color = pickOutcomeColor(idx);
+            return (
+              <Line
+                key={o.id}
+                type="monotone"
+                dataKey={o.id}
+                name={o.name}
+                stroke={color}
+                strokeWidth={2}
+                dot={false}
+                connectNulls
+                isAnimationActive={false}
+                label={(labelProps: LineEndLabelProps) =>
+                  renderLineEndLabel(labelProps, rows.length - 1, o.name, o.price, color, isNarrow)
+                }
+              />
+            );
+          })}
         </LineChart>
       </ResponsiveContainer>
     </div>

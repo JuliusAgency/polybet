@@ -8,6 +8,7 @@ export {
   getYesOutcome,
   getNoOutcome,
   getOrderedOutcomes,
+  getChartOutcomes,
   getYesProbability,
   getResolvedWinnerOutcome,
   sortMarketsByYesDesc,

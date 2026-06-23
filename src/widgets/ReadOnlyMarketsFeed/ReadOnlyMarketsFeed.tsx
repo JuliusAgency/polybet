@@ -187,7 +187,7 @@ export function ReadOnlyMarketsFeed({
           <CollapsibleSearch
             value={searchQuery}
             onChange={setSearchQuery}
-            placeholder={t('markets.searchPlaceholder')}
+            placeholder={t('markets.searchFeedPlaceholder')}
           />
         </div>
       </div>

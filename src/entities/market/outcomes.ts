@@ -58,6 +58,21 @@ export function getOrderedOutcomes(market: OutcomesHolder): MarketOutcome[] {
   return [yes, no];
 }
 
+/**
+ * Outcomes to plot on the price-history chart. A binary (Yes/No) market collapses
+ * to its single Yes line — the No line is just 1 − Yes, a redundant mirror that
+ * clutters the graph. A multi-outcome market (e.g. team1 / draw / team2) keeps all
+ * of its outcomes so every relevant option gets its own line. Falls back to the
+ * first outcome when a binary market's names don't match the Yes/No aliases, so the
+ * chart still draws a single line rather than two mirrored ones.
+ */
+export function getChartOutcomes(market: OutcomesHolder): MarketOutcome[] {
+  if (!isBinaryMarket(market)) return market.market_outcomes;
+  const yes = getYesOutcome(market);
+  if (yes) return [yes];
+  return market.market_outcomes.slice(0, 1);
+}
+
 /** Yes-side probability (0..1) for a binary market, or null. */
 export function getYesProbability(market: OutcomesHolder): number | null {
   return getYesOutcome(market)?.price ?? null;

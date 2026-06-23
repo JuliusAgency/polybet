@@ -45,7 +45,8 @@
     "myBets": "Portfolio",
     "wallet": "Wallet",
     "stats": "Stats",
-    "settings": "Settings"
+    "settings": "Settings",
+    "menu": "Menu"
   },
   "auth": {
     "signOut": "Sign Out",
@@ -334,7 +335,9 @@
     "partialFavorite": "Some markets in this event are saved",
     "removeEvent": "Remove event from saved",
     "removeEventConfirm": "Remove all {{count}} saved markets from this event?",
-    "searchPlaceholder": "Search markets…",
+    "searchNavPlaceholder": "Search on markets",
+    "searchFeedPlaceholder": "Search in category",
+    "searching": "Searching…",
     "searchMarketsAria": "Search markets",
     "searchResultsAria": "Market search results",
     "clearSearch": "Clear search",

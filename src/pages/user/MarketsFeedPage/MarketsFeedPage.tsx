@@ -403,7 +403,7 @@ const MarketsFeedPage = () => {
             <CollapsibleSearch
               value={searchQuery}
               onChange={setSearchQuery}
-              placeholder={t('markets.searchPlaceholder')}
+              placeholder={t('markets.searchFeedPlaceholder')}
             />
           </div>
         </div>

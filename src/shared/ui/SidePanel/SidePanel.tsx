@@ -114,7 +114,7 @@ export const SidePanel = ({
         </div>
       )}
 
-      <div className="overflow-y-auto px-5 py-4">{children}</div>
+      <div className="w-full min-w-0 overflow-y-auto px-5 py-4">{children}</div>
     </div>
   );
 };

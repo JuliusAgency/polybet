@@ -45,7 +45,8 @@
     "myBets": "תיק",
     "wallet": "ארנק",
     "stats": "סטטיסטיקה",
-    "settings": "הגדרות"
+    "settings": "הגדרות",
+    "menu": "תפריט"
   },
   "auth": {
     "signOut": "התנתק",
@@ -334,7 +335,9 @@
     "partialFavorite": "חלק מהשווקים באירוע זה שמורים",
     "removeEvent": "הסר אירוע מהשמורים",
     "removeEventConfirm": "להסיר את כל {{count}} השווקים השמורים מהאירוע?",
-    "searchPlaceholder": "חיפוש שווקים…",
+    "searchNavPlaceholder": "חיפוש בשווקים",
+    "searchFeedPlaceholder": "חיפוש בקטגוריה",
+    "searching": "מחפש…",
     "searchMarketsAria": "חיפוש שווקים",
     "searchResultsAria": "תוצאות חיפוש שווקים",
     "clearSearch": "נקה חיפוש",

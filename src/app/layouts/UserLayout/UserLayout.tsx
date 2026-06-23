@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Outlet, NavLink } from 'react-router-dom';
+import { Outlet, NavLink, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { ROUTES, buildPath } from '@/app/router/routes';
@@ -22,6 +22,9 @@ export const UserLayout = () => {
   const { data: balance } = useUserBalance();
   const { data: bets } = useMyBets();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  // Mobile nav menu (hamburger) — the inline nav links + controls collapse into
+  // this below the md breakpoint so the header fits from 320px up.
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // Mount globally so settlement notifications fire on any page
   useBetResultNotifications();
@@ -56,11 +59,18 @@ export const UserLayout = () => {
         }}
       >
         <div className="max-w-[90rem] mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <span className="text-lg font-bold" style={{ color: 'var(--color-text-primary)' }}>
+          <div className="flex items-center gap-3 md:gap-6">
+            {/* Logo returns to the All-markets home from every page. */}
+            <Link
+              to={ROUTES.USER.MARKETS}
+              className="text-lg font-bold"
+              style={{ color: 'var(--color-text-primary)', textDecoration: 'none' }}
+            >
               PolyBet
-            </span>
-            <nav className="flex items-center gap-1">
+            </Link>
+            {/* Desktop nav — collapses into the hamburger menu below md so the
+                header never crams / wraps on small screens. */}
+            <nav className="hidden items-center gap-1 md:flex">
               <NavLink to={ROUTES.USER.MARKETS} className={navLinkClass}>
                 {t('nav.allMarkets')}
               </NavLink>
@@ -73,15 +83,14 @@ export const UserLayout = () => {
               <NavLink to={ROUTES.USER.STATS} className={navLinkClass}>
                 {t('nav.stats')}
               </NavLink>
-              {/* Polymarket-style persistent market search, adjacent to Stats.
-                Hidden below md so the header doesn't overflow on small screens. */}
-              <div className="ms-2 hidden md:block">
+              {/* Polymarket-style persistent market search, adjacent to Stats. */}
+              <div className="ms-2">
                 <NavMarketSearch buildEventHref={buildEventHref} />
               </div>
             </nav>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <span
               className="hidden text-sm sm:inline"
               style={{ color: 'var(--color-text-secondary)' }}
@@ -170,23 +179,97 @@ export const UserLayout = () => {
               </>
             )}
 
+            {/* Desktop-only controls — collapse into the mobile menu below md. */}
+            <div className="hidden items-center gap-3 md:flex">
+              <button
+                onClick={() => void signOut()}
+                className="text-sm transition-colors"
+                style={{ color: 'var(--color-text-secondary)' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = 'var(--color-text-primary)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = 'var(--color-text-secondary)';
+                }}
+              >
+                {t('auth.signOut')}
+              </button>
+              <ThemeSwitcher />
+              <LanguageSwitcher />
+            </div>
+
+            {/* Mobile hamburger — toggles the collapsed nav menu below md. */}
             <button
-              onClick={() => void signOut()}
-              className="text-sm transition-colors"
-              style={{ color: 'var(--color-text-secondary)' }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = 'var(--color-text-primary)';
+              type="button"
+              onClick={() => setIsMenuOpen((v) => !v)}
+              className="flex h-8 w-8 items-center justify-center rounded-md md:hidden"
+              style={{
+                color: 'var(--color-text-secondary)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
               }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = 'var(--color-text-secondary)';
-              }}
+              aria-label={t('nav.menu')}
+              aria-expanded={isMenuOpen}
             >
-              {t('auth.signOut')}
+              {isMenuOpen ? <CloseIcon /> : <MenuIcon />}
             </button>
-            <ThemeSwitcher />
-            <LanguageSwitcher />
           </div>
         </div>
+
+        {/* Mobile menu — the nav links + controls hidden from the bar below md. */}
+        {isMenuOpen && (
+          <nav
+            className="flex flex-col gap-1 border-t px-4 py-3 md:hidden"
+            style={{ borderColor: 'var(--color-border)' }}
+          >
+            <NavLink
+              to={ROUTES.USER.MARKETS}
+              className={navLinkClass}
+              onClick={() => setIsMenuOpen(false)}
+            >
+              {t('nav.allMarkets')}
+            </NavLink>
+            <NavLink
+              to={ROUTES.USER.MY_BETS}
+              className={navLinkClass}
+              onClick={() => setIsMenuOpen(false)}
+            >
+              {t('nav.myBets')}
+            </NavLink>
+            <NavLink
+              to={ROUTES.USER.WALLET}
+              className={navLinkClass}
+              onClick={() => setIsMenuOpen(false)}
+            >
+              {t('nav.wallet')}
+            </NavLink>
+            <NavLink
+              to={ROUTES.USER.STATS}
+              className={navLinkClass}
+              onClick={() => setIsMenuOpen(false)}
+            >
+              {t('nav.stats')}
+            </NavLink>
+            <div
+              className="mt-2 flex items-center gap-3 border-t pt-3"
+              style={{ borderColor: 'var(--color-border)' }}
+            >
+              <ThemeSwitcher />
+              <LanguageSwitcher />
+              <button
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  void signOut();
+                }}
+                className="ms-auto text-sm"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                {t('auth.signOut')}
+              </button>
+            </div>
+          </nav>
+        )}
       </header>
 
       <main className="flex-1 max-w-[90rem] w-full mx-auto px-4 py-6">
@@ -198,3 +281,38 @@ export const UserLayout = () => {
     </div>
   );
 };
+
+const MenuIcon = () => (
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <line x1="3" y1="6" x2="21" y2="6" />
+    <line x1="3" y1="12" x2="21" y2="12" />
+    <line x1="3" y1="18" x2="21" y2="18" />
+  </svg>
+);
+
+const CloseIcon = () => (
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);

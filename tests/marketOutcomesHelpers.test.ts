@@ -4,6 +4,7 @@ import {
   getYesOutcome,
   getNoOutcome,
   getOrderedOutcomes,
+  getChartOutcomes,
   getYesProbability,
   getResolvedWinnerOutcome,
   isBinaryMarket,
@@ -118,6 +119,34 @@ test('getOrderedOutcomes falls back when binary names are unknown (defensive)', 
   // Yes alias 'long' matches but 'Maybe' doesn't match 'no' aliases —
   // helper bails to source order so callers still render *something*.
   assert.deepEqual(ordered, [long, exotic]);
+});
+
+test('getChartOutcomes collapses a binary market to its single Yes line', () => {
+  const yes = outcome({ name: 'Yes', price: 0.7 });
+  const no = outcome({ name: 'No', price: 0.3 });
+  // The No line is just 1 − Yes (a redundant mirror) — only Yes should be plotted.
+  const chart = getChartOutcomes(market({ market_outcomes: [no, yes] }));
+  assert.deepEqual(
+    chart.map((o) => o.name),
+    ['Yes']
+  );
+});
+
+test('getChartOutcomes keeps every outcome for a non-binary (e.g. 3-way) market', () => {
+  const team1 = outcome({ name: 'Argentina', price: 0.68 });
+  const draw = outcome({ name: 'Draw', price: 0.23 });
+  const team2 = outcome({ name: 'Austria', price: 0.11 });
+  const chart = getChartOutcomes(market({ market_outcomes: [team1, draw, team2] }));
+  assert.deepEqual(chart, [team1, draw, team2]);
+});
+
+test('getChartOutcomes draws a single line when a binary market lacks Yes/No aliases', () => {
+  const a = outcome({ name: 'Maybe', price: 0.6 });
+  const b = outcome({ name: 'Perhaps', price: 0.4 });
+  // Defensive: no Yes alias matches, but the two sides are still complements —
+  // collapse to a single line rather than two mirrored ones.
+  const chart = getChartOutcomes(market({ market_outcomes: [a, b] }));
+  assert.deepEqual(chart, [a]);
 });
 
 test('isBinaryMarket counts outcomes only', () => {
