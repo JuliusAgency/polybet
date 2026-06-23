@@ -1,9 +1,10 @@
 // PriceHistoryWindow + PRICE_HISTORY_WINDOWS moved to shared/ (consumed by
 // shared/ui/PriceHistoryChart). Re-exported here so `@/features/bet` consumers
-// are unaffected.
-export type { PriceHistoryWindow } from '@/shared/types/priceHistory';
-export { PRICE_HISTORY_WINDOWS } from '@/shared/types/priceHistory';
-import type { PriceHistoryWindow } from '@/shared/types/priceHistory';
+// are unaffected. The path is relative (not the `@/` alias) because this module
+// is loaded by the node:test tier, which resolves relative imports only.
+export type { PriceHistoryWindow } from '../../shared/types/priceHistory';
+export { PRICE_HISTORY_WINDOWS } from '../../shared/types/priceHistory';
+import type { PriceHistoryWindow } from '../../shared/types/priceHistory';
 
 export interface PriceHistoryRange {
   since: Date;
