@@ -11,6 +11,7 @@ export { mapBalanceErrorMessage } from './mapBalanceError';
 export { polymarketMarketUrl } from './polymarketUrl';
 export { dedupeSavedMarkets } from './dedupeSavedMarkets';
 export { marketMatchesSearch } from './marketMatchesSearch';
+export { isDynamicImportError, attemptChunkReload } from './chunkReload';
 
 /**
  * Returns a display name for a transaction/action initiator.
