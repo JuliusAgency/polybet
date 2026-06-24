@@ -7,17 +7,21 @@ import { withTransaction } from '../helpers/pg';
 // non-partial order-book quote — there is no mid-price fallback.
 //
 // place_bet enforces (in order):
-//   1. stake > 0, effective bet limit
+//   1. account active, stake > 0, effective bet limit
 //   2. market status='open' AND is_visible (close_at is informational)  [`not available for betting`]
-//   3. market.last_synced_at within 3 min                 [`Market price feed is stale`]
-//   4. outcome has polymarket_token_id                    [`not tradable (no Polymarket token)`]
-//   5. price not null, not exact 0/1                      [`out of tradable range`]
-//   6. effective_odds <= 1000                             [`Outcome odds out of bounds`]
-//   7. outcome.updated_at within 3 min                    [`Outcome price feed is stale`]
-//   8. book present (book_updated_at NOT NULL)            [`Market book unavailable`]
-//   9. book fresh (<= 30s)                                [`Market book is stale`]
-//  10. book non-partial AND shares > 0                    [`Insufficient liquidity`]
-//  11. optional drift |expected - bookEffOdds|/bookEffOdds <= 2%  [`Odds changed`, P0002]
+//   3. outcome has polymarket_token_id                    [`not tradable (no Polymarket token)`]
+//   4. price not null, not exact 0/1                      [`out of tradable range`]
+//   5. effective_odds <= 1000                             [`Outcome odds out of bounds`]
+//   6. book present (book_updated_at NOT NULL)            [`Market book unavailable`]
+//   7. book fresh (<= 30s)                                [`Market book is stale`]
+//   8. book non-partial AND shares > 0                    [`Insufficient liquidity`]
+//   9. optional drift |expected - bookEffOdds|/bookEffOdds <= 2%  [`Odds changed`, P0002]
+//
+// NOTE (migration 20260624162430): the 3-minute indicative price-feed staleness
+// guards on markets.last_synced_at and market_outcomes.updated_at were REMOVED.
+// In the positions model the live order book (steps 6-7) is the authoritative
+// price + liveness gate; a stale Gamma feed no longer blocks a bet as long as a
+// fresh (<=30s) book is present.
 //
 // On success place_bet upserts a position (shares + volume-weighted avg_price +
 // cost_basis) and appends a buy trade; it RETURNS the position id. The legacy
@@ -27,9 +31,10 @@ const USER1 = '00000000-0000-0000-0000-000000000003';
 const FAR_FUTURE = "now() + interval '30 days'";
 const FRESH = 'now()';
 const STALE = "now() - interval '10 minutes'";
-// Comfortably past the 30s book-freshness bound (migration 20260603100437)
-// while staying under the 3-min price-feed bound, so only the book-stale guard
-// trips. now() advances during the txn, so an exact-30s value would be flaky.
+// Comfortably past the 30s book-freshness bound (migration 20260603100437).
+// now() advances during the txn, so an exact-30s value would be flaky. (The
+// 3-min indicative price-feed guard was removed in 20260624162430, so the book
+// is now the only staleness gate.)
 const STALE_BOOK = "now() - interval '2 minutes'";
 
 interface MarketSeed {
@@ -228,16 +233,34 @@ describe('place_bet shares model (require book)', () => {
     });
   });
 
-  it('rejects when both market and outcome have a stale sync timestamp', async () => {
+  it('accepts a stale indicative price feed when the live book is fresh (gates on the book, migration 20260624162430)', async () => {
     await withTransaction(async (c) => {
+      // Indicative feed (markets.last_synced_at + market_outcomes.updated_at) is
+      // 10 min stale — the OLD 3-min guard rejected this. The live order book is
+      // fresh (seedFreshMarket default), so the positions-model gate accepts it.
+      // This is the regression test for the 2026-06-24 "~70% of bets fail with
+      // 'Market data is not up to date'" report.
       const { marketId, outcomeId } = await seedFreshMarket(
         c,
         { last_synced_at: STALE },
         { price: 0.5, effective_odds: 2, updated_at: STALE }
       );
-      await expect(callPlaceBet(c, { marketId, outcomeId })).rejects.toThrow(
-        /Market price feed is stale|Outcome price feed is stale/i
+      const positionId = await callPlaceBet(c, { marketId, outcomeId, expectedOdds: 2 });
+      expect(positionId).toMatch(/^[0-9a-f-]{36}$/);
+    });
+  });
+
+  it('still rejects a stale indicative feed when the book is ALSO stale (book guard intact)', async () => {
+    await withTransaction(async (c) => {
+      // Feed stale AND book > 30s stale → the book-freshness guard (the real
+      // gate) must still reject. Proves we narrowed the gate, not removed it.
+      const { marketId, outcomeId } = await seedFreshMarket(
+        c,
+        { last_synced_at: STALE },
+        { price: 0.5, effective_odds: 2, updated_at: STALE },
+        { updated_at: STALE_BOOK }
       );
+      await expect(callPlaceBet(c, { marketId, outcomeId })).rejects.toThrow(/book is stale/i);
     });
   });
 
