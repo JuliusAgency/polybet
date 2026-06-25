@@ -17,7 +17,7 @@ import { ChanceGauge } from '@/shared/ui/ChanceGauge';
 import { BetMarker } from '@/shared/ui/BetMarker';
 import { MARKETS_STALE_THRESHOLD_MS } from '@/shared/config/markets';
 import { useTicker } from '@/shared/hooks/useTicker';
-import { formatVolume } from '@/shared/utils';
+import { formatVolume, formatProbability } from '@/shared/utils';
 
 export interface MarketCardProps {
   market: Market;
@@ -100,6 +100,9 @@ export const MarketCard = ({
   // Gauge: only meaningful for binary markets where Yes is well-defined.
   const isBinary = isBinaryMarket(market);
   const yesProbability = isBinary ? getYesProbability(market) : null;
+  // Mobile shows this as a compact inline % in the title row instead of the arc
+  // gauge, mirroring the EventCard outcome rows (F1 density).
+  const yesPct = yesProbability != null ? formatProbability(yesProbability) : null;
   // Cards (feed + single-market event view) render outcomes at full strength.
   // Long-tail fading is reserved for the multi-market list on the event detail page.
 
@@ -113,9 +116,21 @@ export const MarketCard = ({
   const cardHref =
     detailHref ?? (linkToEvent && market.event_id ? `/events/${market.event_id}` : null);
 
+  // Shared so the mobile (compact) and desktop (full-width) outcome rows below
+  // wire the exact same buy handler without duplicating logic.
+  const handleOutcomeClick =
+    isInteractive && onOutcomeClick
+      ? (outcomeId: string) => {
+          const outcome = market.market_outcomes.find((o) => o.id === outcomeId);
+          if (outcome && outcome.polymarket_token_id) {
+            onOutcomeClick(market, outcome);
+          }
+        }
+      : undefined;
+
   return (
     <article
-      className="relative flex h-full flex-col gap-3 p-3 transition-[transform,box-shadow] motion-reduce:transition-none hover:-translate-y-0.5 hover:[box-shadow:var(--shadow-md)] motion-reduce:hover:translate-y-0"
+      className="relative flex h-full flex-col gap-2 p-2.5 transition-[transform,box-shadow] motion-reduce:transition-none hover:-translate-y-0.5 hover:[box-shadow:var(--shadow-md)] motion-reduce:hover:translate-y-0 md:gap-3 md:p-3"
       style={{
         backgroundColor: 'var(--color-bg-surface)',
         border: '1px solid var(--color-border)',
@@ -145,14 +160,39 @@ export const MarketCard = ({
           <MarketCardHeaderContent market={market} withTitleHover={!!cardHref} />
         </div>
         {yesProbability != null && (
-          <div className="shrink-0">
-            <ChanceGauge value={yesProbability} size={64} />
-          </div>
+          <>
+            {/* Desktop keeps the arc gauge; mobile shows a compact inline % so the
+                binary card collapses to Polymarket-like density (F1). */}
+            <div className="hidden shrink-0 md:block">
+              <ChanceGauge value={yesProbability} size={64} />
+            </div>
+            <span
+              className="shrink-0 text-sm font-semibold tabular-nums md:hidden"
+              style={{ color: 'var(--color-text-primary)' }}
+            >
+              {yesPct}
+            </span>
+          </>
         )}
       </header>
 
-      {/* Outcome CTAs — full-width, gauge moved to the header. */}
-      <div className="relative z-10 flex min-h-20 grow items-center">
+      {/* Outcome CTAs. Mobile: compact sm pills, right-aligned, no reserved band —
+          the card collapses to content height (~160px). Desktop (md+): unchanged
+          full-width xl buttons in the reserved 80px band. */}
+      <div className="relative z-10 flex items-center justify-end md:hidden">
+        <div className="w-[128px] shrink-0">
+          <OutcomeButtons
+            outcomes={outcomeButtons}
+            size="sm"
+            disabled={!isInteractive}
+            appearance={outcomeAppearance}
+            showPercentage={false}
+            hoverShowsPercentage
+            onClick={handleOutcomeClick}
+          />
+        </div>
+      </div>
+      <div className="relative z-10 hidden min-h-20 grow items-center md:flex">
         <div className="min-w-0 flex-1">
           <OutcomeButtons
             outcomes={outcomeButtons}
@@ -161,16 +201,7 @@ export const MarketCard = ({
             appearance={outcomeAppearance}
             showPercentage={false}
             hoverShowsPercentage
-            onClick={
-              isInteractive && onOutcomeClick
-                ? (outcomeId) => {
-                    const outcome = market.market_outcomes.find((o) => o.id === outcomeId);
-                    if (outcome && outcome.polymarket_token_id) {
-                      onOutcomeClick(market, outcome);
-                    }
-                  }
-                : undefined
-            }
+            onClick={handleOutcomeClick}
           />
         </div>
       </div>

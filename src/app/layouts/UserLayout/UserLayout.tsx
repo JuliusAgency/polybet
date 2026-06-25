@@ -8,6 +8,7 @@ import { ThemeSwitcher } from '@/shared/ui/ThemeSwitcher';
 import { useUserBalance, useMyBets, useBetResultNotifications } from '@/features/bet';
 import { ActiveBetsDrawer } from '@/widgets/ActiveBetsDrawer';
 import { NavMarketSearch } from '@/widgets/NavMarketSearch';
+import { BottomTabBar } from '@/shared/ui/BottomTabBar';
 
 const buildEventHref = (id: string) => buildPath(ROUTES.USER.EVENT_DETAIL, { id });
 
@@ -112,6 +113,7 @@ export const UserLayout = () => {
             {balance != null && (
               <>
                 <div
+                  className="hidden md:block"
                   style={{
                     width: '1px',
                     height: '16px',
@@ -146,7 +148,7 @@ export const UserLayout = () => {
                   </span>
                   {openBetsCount > 0 && (
                     <span
-                      className="rounded-full px-1.5 py-0.5 text-xs font-medium"
+                      className="hidden rounded-full px-1.5 py-0.5 text-xs font-medium md:inline-flex"
                       style={{
                         backgroundColor: 'var(--color-accent)',
                         color: 'var(--color-bg-base)',
@@ -170,6 +172,7 @@ export const UserLayout = () => {
                   </svg>
                 </button>
                 <div
+                  className="hidden md:block"
                   style={{
                     width: '1px',
                     height: '16px',
@@ -217,64 +220,37 @@ export const UserLayout = () => {
           </div>
         </div>
 
-        {/* Mobile menu — the nav links + controls hidden from the bar below md. */}
+        {/* Mobile "More" menu — primary nav now lives in the BottomTabBar, so this
+            only holds the secondary controls (theme, language, sign out). */}
         {isMenuOpen && (
           <nav
-            className="flex flex-col gap-1 border-t px-4 py-3 md:hidden"
+            className="flex items-center gap-3 border-t px-4 py-3 md:hidden"
             style={{ borderColor: 'var(--color-border)' }}
           >
-            <NavLink
-              to={ROUTES.USER.MARKETS}
-              className={navLinkClass}
-              onClick={() => setIsMenuOpen(false)}
+            <ThemeSwitcher />
+            <LanguageSwitcher />
+            <button
+              onClick={() => {
+                setIsMenuOpen(false);
+                void signOut();
+              }}
+              className="ms-auto text-sm"
+              style={{ color: 'var(--color-text-secondary)' }}
             >
-              {t('nav.allMarkets')}
-            </NavLink>
-            <NavLink
-              to={ROUTES.USER.MY_BETS}
-              className={navLinkClass}
-              onClick={() => setIsMenuOpen(false)}
-            >
-              {t('nav.myBets')}
-            </NavLink>
-            <NavLink
-              to={ROUTES.USER.WALLET}
-              className={navLinkClass}
-              onClick={() => setIsMenuOpen(false)}
-            >
-              {t('nav.wallet')}
-            </NavLink>
-            <NavLink
-              to={ROUTES.USER.STATS}
-              className={navLinkClass}
-              onClick={() => setIsMenuOpen(false)}
-            >
-              {t('nav.stats')}
-            </NavLink>
-            <div
-              className="mt-2 flex items-center gap-3 border-t pt-3"
-              style={{ borderColor: 'var(--color-border)' }}
-            >
-              <ThemeSwitcher />
-              <LanguageSwitcher />
-              <button
-                onClick={() => {
-                  setIsMenuOpen(false);
-                  void signOut();
-                }}
-                className="ms-auto text-sm"
-                style={{ color: 'var(--color-text-secondary)' }}
-              >
-                {t('auth.signOut')}
-              </button>
-            </div>
+              {t('auth.signOut')}
+            </button>
           </nav>
         )}
       </header>
 
-      <main className="flex-1 max-w-[90rem] w-full mx-auto px-4 py-6">
+      {/* pb-24 on mobile reserves room for the fixed BottomTabBar so the last
+          content row is never hidden behind it; restored to pb-6 from md up. */}
+      <main className="flex-1 max-w-[90rem] w-full mx-auto px-4 pt-6 pb-24 md:pb-6">
         <Outlet />
       </main>
+
+      {/* Persistent Polymarket-style bottom navigation — mobile only (md:hidden). */}
+      <BottomTabBar />
 
       {/* Active bets drawer — opened from the In-Play indicator in the header. */}
       <ActiveBetsDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />

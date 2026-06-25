@@ -309,7 +309,7 @@ export const BetSlip = ({
                     placeholder="0"
                     disabled={isUntradable}
                     aria-label={t('markets.amount')}
-                    className="w-32 min-w-0 bg-transparent text-end text-3xl font-bold leading-tight outline-none"
+                    className="w-full min-w-0 bg-transparent text-end text-3xl font-bold leading-tight outline-none"
                     style={{
                       color: amount ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
                     }}
@@ -319,11 +319,11 @@ export const BetSlip = ({
 
               {/* Balance + max-bet hints sit quietly under the figure. */}
               <div className="flex items-center justify-between text-xs">
-                <span style={{ color: 'var(--color-text-muted)' }}>
+                <span className="min-w-0 truncate" style={{ color: 'var(--color-text-muted)' }}>
                   {t('markets.balance', { amount: availableBalance.toFixed(2) })}
                 </span>
                 {hasBetLimit && (
-                  <span style={{ color: 'var(--color-text-muted)' }}>
+                  <span className="min-w-0 truncate" style={{ color: 'var(--color-text-muted)' }}>
                     {t('markets.maxBet', { amount: maxBetLimit })}
                   </span>
                 )}

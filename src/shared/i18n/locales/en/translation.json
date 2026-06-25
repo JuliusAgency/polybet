@@ -46,7 +46,9 @@
     "wallet": "Wallet",
     "stats": "Stats",
     "settings": "Settings",
-    "menu": "Menu"
+    "menu": "Menu",
+    "more": "More",
+    "primary": "Primary navigation"
   },
   "auth": {
     "signOut": "Sign Out",

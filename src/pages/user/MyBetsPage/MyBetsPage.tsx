@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { usePositions, usePositionHistory } from '@/features/bet';
@@ -143,10 +143,12 @@ const MyBetsPage = () => {
           {open.length === 0 ? (
             <p style={{ color: 'var(--color-text-secondary)' }}>{t('portfolio.noOpenPositions')}</p>
           ) : (
-            <div
-              className="overflow-x-auto rounded-xl border"
-              style={{ borderColor: 'var(--color-border)' }}
-            >
+            <>
+              {/* Desktop table (clips financial columns ≤767px) → mobile card list below. */}
+              <div
+                className="hidden overflow-x-auto rounded-xl border md:block"
+                style={{ borderColor: 'var(--color-border)' }}
+              >
               <table className="w-full text-sm">
                 <thead>
                   <tr style={{ backgroundColor: 'var(--color-bg-surface)' }}>
@@ -234,7 +236,14 @@ const MyBetsPage = () => {
                   })}
                 </tbody>
               </table>
-            </div>
+              </div>
+              {/* Mobile: one card per position so the financial fields never clip. */}
+              <div className="flex flex-col gap-3 md:hidden">
+                {open.map((p) => (
+                  <OpenPositionCard key={p.id} position={p} onSell={() => setSelling(p)} />
+                ))}
+              </div>
+            </>
           )}
         </>
       )}
@@ -245,10 +254,12 @@ const MyBetsPage = () => {
           {closed.length === 0 ? (
             <p style={{ color: 'var(--color-text-secondary)' }}>{t('portfolio.noHistory')}</p>
           ) : (
-            <div
-              className="overflow-x-auto rounded-xl border"
-              style={{ borderColor: 'var(--color-border)' }}
-            >
+            <>
+              {/* Desktop table (clips financial columns ≤767px) → mobile card list below. */}
+              <div
+                className="hidden overflow-x-auto rounded-xl border md:block"
+                style={{ borderColor: 'var(--color-border)' }}
+              >
               <table className="w-full text-sm">
                 <thead>
                   <tr style={{ backgroundColor: 'var(--color-bg-surface)' }}>
@@ -316,7 +327,14 @@ const MyBetsPage = () => {
                   })}
                 </tbody>
               </table>
-            </div>
+              </div>
+              {/* Mobile: one card per closed position. */}
+              <div className="flex flex-col gap-3 md:hidden">
+                {closed.map((p) => (
+                  <HistoryPositionCard key={p.id} position={p} />
+                ))}
+              </div>
+            </>
           )}
         </>
       )}
@@ -339,5 +357,126 @@ const SummaryStat = ({ label, value, color }: { label: string; value: string; co
     </span>
   </div>
 );
+
+/** One label/value pair inside a mobile position card. Mono by default to match
+ *  the desktop table's numeric columns; pass mono={false} for text/badges. */
+const Field = ({
+  label,
+  children,
+  color,
+  mono = true,
+}: {
+  label: string;
+  children: ReactNode;
+  color?: string;
+  mono?: boolean;
+}) => (
+  <div className="flex min-w-0 flex-col gap-0.5">
+    <span className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+      {label}
+    </span>
+    <span className={mono ? 'font-mono' : ''} style={{ color: color ?? 'var(--color-text-primary)' }}>
+      {children}
+    </span>
+  </div>
+);
+
+/** Mobile (≤767px) card for an open position — same fields as the desktop table
+ *  row, stacked so nothing clips at 390px. */
+const OpenPositionCard = ({ position: p, onSell }: { position: Position; onSell: () => void }) => {
+  const { t } = useTranslation();
+  const mark = markPrice(p);
+  const value = p.shares * mark;
+  const upl = positionUnrealizedPnl(p, mark);
+  const uplPct = positionUnrealizedPnlPct(p, mark);
+  const uplColor = upl >= 0 ? 'var(--color-win)' : 'var(--color-loss)';
+  const sellable = Boolean(p.market_outcomes?.polymarket_token_id);
+  return (
+    <div
+      className="rounded-xl border p-4"
+      style={{ backgroundColor: 'var(--color-bg-surface)', borderColor: 'var(--color-border)' }}
+    >
+      <div
+        className="mb-3 line-clamp-2 text-sm font-medium"
+        style={{ color: 'var(--color-text-primary)' }}
+      >
+        <MarketCell position={p} />
+      </div>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+        <Field label={t('portfolio.selection')} mono={false}>
+          {p.market_outcomes?.name ?? '—'}
+        </Field>
+        <Field label={t('portfolio.shares')}>{p.shares.toFixed(2)}</Field>
+        <Field label={t('portfolio.avgCost')} color="var(--color-text-secondary)">
+          {formatSharePrice(p.avg_price)}
+        </Field>
+        <Field label={t('portfolio.value')}>
+          ${value.toFixed(2)}
+          <span className="ms-1 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+            @{formatSharePrice(mark)}
+          </span>
+        </Field>
+        <Field label={t('portfolio.pnl')} color={uplColor}>
+          {upl >= 0 ? '+' : ''}
+          {upl.toFixed(2)}
+          {uplPct !== null && (
+            <span className="ms-1 text-xs">
+              ({upl >= 0 ? '+' : ''}
+              {(uplPct * 100).toFixed(1)}%)
+            </span>
+          )}
+        </Field>
+      </div>
+      <Button
+        variant="secondary"
+        className="mt-3 w-full text-xs"
+        disabled={!sellable}
+        onClick={onSell}
+      >
+        {t('portfolio.sell')}
+      </Button>
+    </div>
+  );
+};
+
+/** Mobile (≤767px) card for a closed/settled position. */
+const HistoryPositionCard = ({ position: p }: { position: Position }) => {
+  const { t, i18n } = useTranslation();
+  const pnlColor = p.realized_pnl >= 0 ? 'var(--color-win)' : 'var(--color-loss)';
+  return (
+    <div
+      className="rounded-xl border p-4"
+      style={{ backgroundColor: 'var(--color-bg-surface)', borderColor: 'var(--color-border)' }}
+    >
+      <div
+        className="mb-3 line-clamp-2 text-sm font-medium"
+        style={{ color: 'var(--color-text-primary)' }}
+      >
+        <MarketCell position={p} />
+      </div>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+        <Field label={t('portfolio.selection')} mono={false}>
+          {p.market_outcomes?.name ?? '—'}
+        </Field>
+        <Field label={t('portfolio.shares')}>{p.shares.toFixed(2)}</Field>
+        <Field label={t('portfolio.avgCost')} color="var(--color-text-secondary)">
+          {formatSharePrice(p.avg_price)}
+        </Field>
+        <Field label={t('portfolio.realizedPnlCol')} color={pnlColor}>
+          {p.realized_pnl >= 0 ? '+' : ''}
+          {p.realized_pnl.toFixed(2)}
+        </Field>
+        <Field label={t('portfolio.status')} mono={false}>
+          <Badge variant={statusBadgeVariant(p.status)}>{statusLabel(t, p.status)}</Badge>
+        </Field>
+        <Field label={t('portfolio.settled')}>
+          {p.settled_at
+            ? new Date(p.settled_at).toLocaleDateString(i18n.language)
+            : new Date(p.updated_at).toLocaleDateString(i18n.language)}
+        </Field>
+      </div>
+    </div>
+  );
+};
 
 export default MyBetsPage;

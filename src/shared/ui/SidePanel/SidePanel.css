@@ -37,5 +37,8 @@
     max-height: 85vh;
     /* round only the top edge when anchored to the bottom */
     border-radius: var(--radius-lg) var(--radius-lg) 0 0 !important;
+    /* clear the iOS home indicator so the Trade CTA / terms are never flush
+     * to the device edge (needs viewport-fit=cover in index.html to be > 0). */
+    padding-block-end: env(safe-area-inset-bottom);
   }
 }
