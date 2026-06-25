@@ -88,9 +88,9 @@ const MyBetsPage = () => {
         {t('portfolio.title')}
       </h1>
 
-      {/* Portfolio summary band */}
+      {/* Portfolio summary band — A2: 2×2 grid on mobile, 4-up on desktop. */}
       <div
-        className="mb-6 flex flex-wrap gap-x-8 gap-y-3 rounded-xl border p-4"
+        className="mb-6 grid grid-cols-2 gap-4 rounded-xl border p-4 sm:grid-cols-4"
         style={{ backgroundColor: 'var(--color-bg-surface)', borderColor: 'var(--color-border)' }}
       >
         <SummaryStat label={t('portfolio.openValue')} value={`$${totalValue.toFixed(2)}`} />

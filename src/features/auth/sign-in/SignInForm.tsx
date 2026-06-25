@@ -53,10 +53,10 @@ export const SignInForm = () => {
             <button
                 type="submit"
                 disabled={isPending}
-                className="w-full py-2 px-4 rounded-md font-semibold transition-opacity disabled:opacity-60"
+                className="w-full rounded-lg px-4 py-2 font-semibold transition-opacity disabled:opacity-60"
                 style={{
                     backgroundColor: 'var(--color-accent)',
-                    color: '#ffffff',
+                    color: 'var(--color-accent-contrast)',
                 }}
             >
                 {isPending ? t('signIn.submitting') : t('signIn.submit')}

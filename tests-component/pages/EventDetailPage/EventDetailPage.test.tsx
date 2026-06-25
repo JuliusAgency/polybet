@@ -228,6 +228,32 @@ describe('EventDetailPage', () => {
     expect(screen.getAllByText('Brazil').length).toBeGreaterThan(0);
   });
 
+  it('renders the meta-row as a muted, mixed-case dot breadcrumb (E5)', async () => {
+    eventByIdMock.mockReturnValue({
+      data: multiMarketEvent(),
+      isLoading: false,
+      isError: false,
+    });
+    const EventDetailPage = await loadPage();
+
+    renderWithProviders(<EventDetailPage />, {
+      initialRoute: '/events/evt-1',
+      authValue: signedInUser,
+    });
+
+    // The category fixture is 'Sports'. Walk up to the meta-row container.
+    const category = screen.getByText('Sports');
+    const metaRow = category.closest('div.flex-wrap');
+    expect(metaRow).not.toBeNull();
+    // No uppercase/tracking — mixed-case breadcrumb.
+    expect(metaRow?.className).not.toContain('uppercase');
+    expect(metaRow?.className).not.toContain('tracking-wide');
+    // At least one dot separator between items.
+    expect(metaRow?.textContent).toContain('·');
+    // The category renders as written (mixed-case, not SPORTS).
+    expect(category.textContent).toBe('Sports');
+  });
+
   it('renders the single-market view (rules text from the event description)', async () => {
     eventByIdMock.mockReturnValue({
       data: singleMarketEvent(),

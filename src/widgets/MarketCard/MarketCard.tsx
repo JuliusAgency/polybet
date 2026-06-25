@@ -156,7 +156,9 @@ export const MarketCard = ({
           inline-end so buttons below can span the full width. */}
       <header className="-mx-1 -mt-1 flex items-start gap-2.5 rounded-md p-1">
         <div className="flex min-w-0 flex-1 items-start gap-2.5">
-          <MarketCardHeaderContent market={market} />
+          {/* F6: the compact binary feed card uses a smaller 32px thumbnail so
+              it doesn't dominate the short card; multi-outcome cards keep 40px. */}
+          <MarketCardHeaderContent market={market} thumbSize={isBinary ? 'sm' : 'md'} />
         </div>
         {/* Compact inline % at all widths — the arc gauge is dropped from the
             feed card entirely (F3). ChanceGauge still renders on EventDetail. */}
@@ -317,16 +319,23 @@ export const MarketCard = ({
 
 interface MarketCardHeaderContentProps {
   market: Market;
+  /** Thumbnail size — 'sm' (32px) on the compact binary card, 'md' (40px) else. */
+  thumbSize?: 'sm' | 'md';
 }
 
-function MarketCardHeaderContent({ market }: MarketCardHeaderContentProps) {
+function MarketCardHeaderContent({ market, thumbSize = 'md' }: MarketCardHeaderContentProps) {
   const { i18n } = useTranslation();
   const isHebrew = i18n.language === 'he';
   const category = market.category ?? market.event?.category ?? null;
 
   return (
     <>
-      <MarketThumbnail src={market.image_url} title={market.question} id={market.id} size="md" />
+      <MarketThumbnail
+        src={market.image_url}
+        title={market.question}
+        id={market.id}
+        size={thumbSize}
+      />
       <div className="min-w-0 flex-1">
         <h3
           className="line-clamp-2 text-sm font-semibold leading-snug"

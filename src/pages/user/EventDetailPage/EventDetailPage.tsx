@@ -231,25 +231,40 @@ const EventDetailPage = ({ readonly = false }: EventDetailPageProps = {}) => {
       <header className="mt-4 flex items-start gap-4">
         <MarketThumbnail src={event.image_url} title={event.title} id={event.id} size="lg" />
         <div className="min-w-0 flex-1">
+          {/* E5: muted, mixed-case, dot-separated breadcrumb (Polymarket-style).
+              Build an array of present items and interleave a muted "·" so there
+              is never a leading/trailing dot; flex-wrap + logical gap stays
+              RTL-safe and the dot is direction-neutral. */}
           <div
-            className={`mb-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-medium ${
-              isHebrew ? '' : 'uppercase tracking-wide'
-            }`}
+            className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-medium"
             style={{ color: 'var(--color-text-muted)' }}
           >
-            {event.category && <span>{event.category}</span>}
-            <span>
-              {t('events.marketCount', {
-                count: markets.length,
-              })}
-            </span>
-            {volumeLabel && <span>{t('markets.volumeShort', { value: volumeLabel })}</span>}
-            {closesDate && (
-              <span>
-                {event.status === 'open' ? t('markets.closesAt') : t('markets.closedAt')}{' '}
-                {closesDate}
-              </span>
-            )}
+            {[
+              event.category ? (
+                <span key="cat">{event.category}</span>
+              ) : null,
+              <span key="mc">{t('events.marketCount', { count: markets.length })}</span>,
+              volumeLabel ? (
+                <span key="vol">{t('markets.volumeShort', { value: volumeLabel })}</span>
+              ) : null,
+              closesDate ? (
+                <span key="cl">
+                  {event.status === 'open' ? t('markets.closesAt') : t('markets.closedAt')}{' '}
+                  {closesDate}
+                </span>
+              ) : null,
+            ]
+              .filter(Boolean)
+              .map((node, i, arr) => (
+                <span key={i} className="flex items-center gap-x-2">
+                  {node}
+                  {i < arr.length - 1 && (
+                    <span aria-hidden style={{ color: 'var(--color-text-muted)' }}>
+                      ·
+                    </span>
+                  )}
+                </span>
+              ))}
           </div>
           <h1
             className="text-xl font-bold leading-tight sm:text-2xl"

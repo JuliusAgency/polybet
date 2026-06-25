@@ -230,20 +230,10 @@ export const EventCard = ({
               onOutcomeClick={onOutcomeClick}
             />
           ))}
-          {/* Reserve a fixed-height line for the "+N closed markets" hint.
-              The count comes from a separate async RPC (useEventMarketCounts)
-              that resolves a tick after the card first paints. Rendering the
-              hint only when it's > 0 would grow the card height the moment the
-              count lands, reflowing the whole grid (the visible flicker on
-              load). Always reserving one line keeps every multi-row card a
-              stable height regardless of when — or whether — the count arrives.
-              `block min-h-[1rem]` holds the line height even when empty. */}
-          <span
-            className="mt-1 block min-h-[1rem] text-xs leading-4"
-            style={{ color: 'var(--color-text-muted)' }}
-          >
-            {hiddenClosedCount > 0 ? t('events.closedMarkets', { count: hiddenClosedCount }) : ' '}
-          </span>
+          {/* F8: the "+N closed markets" hint moved into the footer (next to
+              volume). The footer always renders at a constant single-line
+              height, so the count RPC landing a tick later doesn't reflow the
+              card -- no reserved body row needed here. */}
         </div>
       )}
 
@@ -255,6 +245,11 @@ export const EventCard = ({
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           {volumeLabel && (
             <span className="num">{t('markets.volumeShort', { value: volumeLabel })}</span>
+          )}
+          {hiddenClosedCount > 0 && (
+            <span className="num" style={{ color: 'var(--color-text-muted)' }}>
+              {t('events.closedMarkets', { count: hiddenClosedCount })}
+            </span>
           )}
           {statusLabel && (
             <span

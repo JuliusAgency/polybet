@@ -12,14 +12,7 @@ export const PriceHistoryWindowToggle = ({
   disabled = false,
 }: PriceHistoryWindowToggleProps) => {
   return (
-    <div
-      role="radiogroup"
-      className="inline-flex items-center gap-1 rounded-full p-0.5"
-      style={{
-        backgroundColor: 'var(--color-bg-elevated)',
-        border: '1px solid var(--color-border)',
-      }}
-    >
+    <div role="radiogroup" className="inline-flex items-center gap-2 sm:gap-3">
       {PRICE_HISTORY_WINDOWS.map((w) => {
         const active = w === value;
         return (
@@ -30,10 +23,11 @@ export const PriceHistoryWindowToggle = ({
             aria-checked={active}
             disabled={disabled}
             onClick={() => onChange(w)}
-            className="rounded-full px-2.5 py-1 font-mono text-[11px] font-medium uppercase transition-colors disabled:opacity-40"
+            className="px-1 py-0.5 font-mono text-[11px] font-medium transition-colors disabled:opacity-40"
             style={{
-              backgroundColor: active ? 'var(--color-accent)' : 'transparent',
-              color: active ? 'oklch(100% 0 0)' : 'var(--color-text-secondary)',
+              backgroundColor: 'transparent',
+              color: active ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+              fontWeight: active ? 700 : 500,
               transitionDuration: 'var(--duration-fast)',
               transitionTimingFunction: 'var(--ease-out-expo)',
             }}

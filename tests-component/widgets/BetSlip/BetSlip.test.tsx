@@ -263,6 +263,54 @@ describe('BetSlip — shares model', () => {
     expect(rpcMock).not.toHaveBeenCalled();
   });
 
+  it('renders Buy/Sell as a contained segmented pill (B4)', () => {
+    const market = makeMarket([YES, NO]);
+
+    renderWithProviders(
+      <BetSlip
+        market={market}
+        outcome={YES}
+        availableBalance={500}
+        onClose={() => {}}
+        onSuccess={() => {}}
+      />
+    );
+
+    // Both tabs render as pill buttons (rounded-md), not underline tabs.
+    const buy = screen.getByRole('button', { name: /^buy$/i });
+    const sell = screen.getByRole('button', { name: /^sell$/i });
+    expect(buy.className).toContain('rounded-md');
+    expect(sell.className).toContain('rounded-md');
+    // No leftover underline border on either tab.
+    expect(buy.className).not.toContain('border-b-2');
+    expect(sell.className).not.toContain('border-b-2');
+
+    // Active (Buy) carries the accent fill + contrast text; idle (Sell) muted.
+    const buyStyle = buy.getAttribute('style') ?? '';
+    expect(buyStyle).toContain('background-color: var(--color-accent)');
+    expect(buyStyle).toContain('color: var(--color-accent-contrast)');
+    const sellStyle = sell.getAttribute('style') ?? '';
+    expect(sellStyle).toContain('color: var(--color-text-secondary)');
+  });
+
+  it('switching to the Sell tab shows the sell branch (B4 — both tabs kept)', async () => {
+    // No open position in the selected outcome → the "no shares to sell" notice.
+    const market = makeMarket([YES, NO]);
+
+    renderWithProviders(
+      <BetSlip
+        market={market}
+        outcome={YES}
+        availableBalance={500}
+        onClose={() => {}}
+        onSuccess={() => {}}
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /^sell$/i }));
+    expect(screen.getByText(/shares to sell|מניות .*למכירה/i)).toBeInTheDocument();
+  });
+
   it('surfaces the drift error when the RPC rejects with P0002', async () => {
     const market = makeMarket([YES, NO]);
     rpcMock.mockResolvedValueOnce({

@@ -84,18 +84,20 @@ export const EventPriceHistoryChart = ({
   };
 
   return (
-    <section
-      className="flex flex-col gap-3 md:rounded-[var(--radius-lg)] md:border md:bg-[var(--color-bg-surface)] md:p-4"
-      style={{ borderColor: 'var(--color-border)' }}
-    >
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-          {t('eventDetail.priceHistory', { defaultValue: 'Price history' })}
-        </h3>
-        <PriceHistoryWindowToggle value={window} onChange={setWindow} />
-      </div>
+    <>
+      <section
+        className="flex flex-col gap-3 md:rounded-[var(--radius-lg)] md:border md:bg-[var(--color-bg-surface)] md:p-4"
+        style={{ borderColor: 'var(--color-border)' }}
+      >
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+            {t('eventDetail.priceHistory', { defaultValue: 'Price history' })}
+          </h3>
+          <PriceHistoryWindowToggle value={window} onChange={setWindow} />
+        </div>
 
-      <PriceHistoryChart points={points} outcomes={outcomes} isLoading={isLoading} />
+        <PriceHistoryChart points={points} outcomes={outcomes} isLoading={isLoading} />
+      </section>
 
       {sortedMarkets.length > 1 &&
         (() => {
@@ -107,7 +109,7 @@ export const EventPriceHistoryChart = ({
           const hiddenCount = sortedMarkets.length - collapsedBadgesCount;
 
           return (
-            <div className="flex flex-wrap gap-2 pt-1">
+            <div className="flex flex-wrap gap-2 px-1 pt-2">
               {visibleMarkets.map((m) => {
                 const active = selectedIds.has(m.id);
                 return (
@@ -153,6 +155,6 @@ export const EventPriceHistoryChart = ({
             </div>
           );
         })()}
-    </section>
+    </>
   );
 };

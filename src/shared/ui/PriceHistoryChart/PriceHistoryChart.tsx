@@ -218,7 +218,21 @@ export const PriceHistoryChart = ({
             minTickGap={40}
           />
           <YAxis
-            domain={[0, 1]}
+            // Auto-scale to the visible series so tight markets (e.g. 90–98%)
+            // fill the plot height instead of hugging the floor. Pad ~8% of the
+            // visible span, clamp into [0,1], and guard a flat/degenerate series.
+            domain={([dataMin, dataMax]: readonly [number, number]): [number, number] => {
+              if (
+                !Number.isFinite(dataMin) ||
+                !Number.isFinite(dataMax) ||
+                dataMax - dataMin < 1e-6
+              ) {
+                const c = Number.isFinite(dataMin) ? dataMin : 0.5;
+                return [Math.max(0, c - 0.05), Math.min(1, c + 0.05)];
+              }
+              const pad = (dataMax - dataMin) * 0.08;
+              return [Math.max(0, dataMin - pad), Math.min(1, dataMax + pad)];
+            }}
             tickFormatter={(v: number) => `${Math.round(v * 100)}%`}
             tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }}
             stroke="var(--color-border)"

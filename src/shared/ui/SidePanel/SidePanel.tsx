@@ -66,6 +66,12 @@ export const SidePanel = ({
         boxShadow: 'var(--shadow-lg)',
       }}
     >
+      {/* Mobile-only bottom-sheet grab handle. Presentational only (no drag); CSS
+          hides it on the desktop floating card and the docked column. */}
+      <div aria-hidden className="side-panel__grabber">
+        <span />
+      </div>
+
       {title && (
         <div
           className="flex items-center justify-between border-b px-5 py-4"

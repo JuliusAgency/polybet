@@ -230,12 +230,13 @@ export const BetSlip = ({
           </div>
         </div>
 
-        {/* Buy / Sell text tabs + order type, sharing a hairline divider */}
-        <div
-          className="flex items-center justify-between border-b"
-          style={{ borderColor: 'var(--color-border)' }}
-        >
-          <div className="flex gap-5">
+        {/* Buy / Sell — B4: contained segmented pill (Polymarket-style); the
+            order-type indicator stays on the inline-end. */}
+        <div className="flex items-center justify-between">
+          <div
+            className="flex gap-1 rounded-lg p-1"
+            style={{ backgroundColor: 'var(--color-bg-surface)' }}
+          >
             {(['buy', 'sell'] as const).map((m) => {
               const active = mode === m;
               return (
@@ -243,12 +244,15 @@ export const BetSlip = ({
                   key={m}
                   type="button"
                   onClick={() => setMode(m)}
-                  className="-mb-px border-b-2 pb-2 text-sm font-semibold transition-colors"
+                  className="rounded-md px-4 py-1.5 text-sm font-semibold transition-colors"
                   style={{
-                    borderColor: active ? 'var(--color-text-primary)' : 'transparent',
-                    color: active ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
-                    background: 'none',
+                    backgroundColor: active ? 'var(--color-accent)' : 'transparent',
+                    color: active
+                      ? 'var(--color-accent-contrast)'
+                      : 'var(--color-text-secondary)',
                     cursor: 'pointer',
+                    border: 'none',
+                    outline: 'none',
                   }}
                 >
                   {t(m === 'buy' ? 'markets.buyTab' : 'markets.sellTab')}
@@ -259,7 +263,7 @@ export const BetSlip = ({
           {/* Order type — this app only supports market orders; shown for parity. */}
           <span
             aria-hidden
-            className="flex items-center gap-1 pb-2 text-sm"
+            className="flex items-center gap-1 text-sm"
             style={{ color: 'var(--color-text-secondary)' }}
           >
             {t('markets.orderTypeMarket')}
