@@ -387,9 +387,12 @@ const MarketsFeedPage = () => {
           )}
 
           {/* Saved + My bets icon toggles and a Polymarket-style collapsible
-            search — all always visible. The search now filters the My bets and
-            Saved views too (client-side), not just the main feed, so it no longer
-            hides when either is active. */}
+            search. S1: at md+ the collapsible search stays on the H1 row beside
+            the tool icons; on mobile (<768px) the tool icons stay here and the
+            search drops to its own full-width row beneath (rendered below). Both
+            search inputs read/write the SAME searchQuery — only one renders at a
+            time (md:hidden / hidden md:block) so there is never a duplicate
+            focusable field. */}
           <div className="flex shrink-0 items-center gap-1">
             <FeedSearchTools
               showMyBets={hasBets}
@@ -400,12 +403,24 @@ const MarketsFeedPage = () => {
               filtersActive={filtersOpen}
               onFiltersToggle={() => setFiltersOpen((v) => !v)}
             />
-            <CollapsibleSearch
-              value={searchQuery}
-              onChange={setSearchQuery}
-              placeholder={t('markets.searchFeedPlaceholder')}
-            />
+            <div className="hidden md:block">
+              <CollapsibleSearch
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder={t('markets.searchFeedPlaceholder')}
+              />
+            </div>
           </div>
+        </div>
+
+        {/* S1: mobile-only full-width search row beneath the title/tools row. */}
+        <div className="mb-6 -mt-3 md:hidden">
+          <CollapsibleSearch
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder={t('markets.searchFeedPlaceholder')}
+            fullWidth
+          />
         </div>
 
         {/* Sub-tag bar — Polymarket's related-tags carousel under the title.

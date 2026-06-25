@@ -143,6 +143,27 @@ describe('BetSlip — shares model', () => {
     expect(rpcMock).not.toHaveBeenCalled();
   });
 
+  it('renders a two-line context header (market title + "Outcome · side")', () => {
+    const market = makeMarket([YES, NO]);
+
+    renderWithProviders(
+      <BetSlip
+        market={market}
+        outcome={YES}
+        availableBalance={500}
+        onClose={() => {}}
+        onSuccess={() => {}}
+      />
+    );
+
+    // Line 1: the market label (question, since group_label is null).
+    expect(screen.getByText('Will it rain tomorrow?')).toBeInTheDocument();
+    // Line 2: an "Outcome" label followed by the selected side name.
+    expect(screen.getByText(/outcome|תוצאה/i)).toBeInTheDocument();
+    // The selected side name renders in the header (and again in the selector).
+    expect(screen.getAllByText('Yes').length).toBeGreaterThan(0);
+  });
+
   it('shows the share price in cents and the shares to win', async () => {
     const market = makeMarket([YES, NO]);
 

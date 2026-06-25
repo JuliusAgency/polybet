@@ -71,7 +71,7 @@ export const EventMarketRow = ({
 
   return (
     <div
-      className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:gap-3"
+      className="flex flex-col gap-2 px-4 py-2.5 sm:flex-row sm:items-center sm:gap-3 sm:py-3"
       style={{
         borderTop: isFirst ? undefined : '1px solid var(--color-border-subtle)',
       }}

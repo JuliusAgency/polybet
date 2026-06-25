@@ -401,6 +401,7 @@
     "myBets": "My bets",
     "chance": "chance",
     "buy": "Buy",
+    "outcome": "Outcome",
     "volumeShort": "{{value}} Vol.",
     "showAll": "Show all markets",
     "showLess": "Show less"
@@ -429,6 +430,7 @@
     "showMoreMarkets": "Show {{count}} more",
     "showLessMarkets": "Show less",
     "rules": "Rules",
+    "outcomesLegend": "Outcomes",
     "tradePlaceholder": "Select an outcome to start trading"
   },
   "priceHistory": {

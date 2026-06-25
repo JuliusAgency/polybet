@@ -212,15 +212,20 @@ export const BetSlip = ({
                 {eventTitle}
               </p>
             )}
+            {/* B7: two-line context — market title on its own line, then the
+                "Outcome · <side>" line with the side tinted by its colour. */}
             <p
               className="truncate text-sm font-semibold"
               style={{ color: 'var(--color-text-primary)' }}
             >
               {marketLabel}
+            </p>
+            <p className="truncate text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+              {t('markets.outcome', { defaultValue: 'Outcome' })}
               <span className="mx-1" style={{ color: 'var(--color-text-muted)' }}>
                 ·
               </span>
-              <span style={{ color: outcomeColor }}>{selected.name}</span>
+              <span style={{ color: outcomeColor, fontWeight: 600 }}>{selected.name}</span>
             </p>
           </div>
         </div>
@@ -280,20 +285,22 @@ export const BetSlip = ({
               </div>
             )}
 
-            {/* Amount — label on the left, large $ figure on the right
-            (Polymarket-style). Grey when empty. */}
+            {/* Amount — B2: on mobile the inline label is hidden and the $-figure
+            reads as a big CENTERED anchor; at md+ the label/right-aligned layout
+            returns so the docked desktop column is unchanged. Same input node,
+            handlers, aria-label, disabled, and colours. Grey when empty. */}
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between gap-3">
                 <label
                   htmlFor="betslip-amount"
-                  className="text-base font-semibold"
+                  className="hidden text-base font-semibold md:block"
                   style={{ color: 'var(--color-text-primary)' }}
                 >
                   {t('markets.amount')}
                 </label>
-                <div className="flex min-w-0 items-baseline justify-end gap-0.5">
+                <div className="flex min-w-0 flex-1 items-baseline justify-center gap-0.5 md:flex-none md:justify-end">
                   <span
-                    className="shrink-0 text-3xl font-bold"
+                    className="shrink-0 text-5xl font-bold md:text-3xl"
                     style={{
                       color: amount ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
                     }}
@@ -309,7 +316,7 @@ export const BetSlip = ({
                     placeholder="0"
                     disabled={isUntradable}
                     aria-label={t('markets.amount')}
-                    className="w-full min-w-0 bg-transparent text-end text-3xl font-bold leading-tight outline-none"
+                    className="w-full min-w-0 bg-transparent text-center text-5xl font-bold leading-tight outline-none md:text-end md:text-3xl"
                     style={{
                       color: amount ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
                     }}
@@ -317,15 +324,21 @@ export const BetSlip = ({
                 </div>
               </div>
 
-              {/* Balance + max-bet hints sit quietly under the figure. */}
-              <div className="flex items-center justify-between text-xs">
+              {/* Balance + max-bet hints sit quietly under the figure — centered
+              on mobile with a separator, split left/right at md+. */}
+              <div className="flex items-center justify-center gap-2 text-xs md:justify-between">
                 <span className="min-w-0 truncate" style={{ color: 'var(--color-text-muted)' }}>
                   {t('markets.balance', { amount: availableBalance.toFixed(2) })}
                 </span>
                 {hasBetLimit && (
-                  <span className="min-w-0 truncate" style={{ color: 'var(--color-text-muted)' }}>
-                    {t('markets.maxBet', { amount: maxBetLimit })}
-                  </span>
+                  <>
+                    <span aria-hidden className="md:hidden" style={{ color: 'var(--color-text-muted)' }}>
+                      ·
+                    </span>
+                    <span className="min-w-0 truncate" style={{ color: 'var(--color-text-muted)' }}>
+                      {t('markets.maxBet', { amount: maxBetLimit })}
+                    </span>
+                  </>
                 )}
               </div>
 
@@ -439,8 +452,14 @@ export const BetSlip = ({
               </p>
             )}
 
-            {/* Single blue "Trade" CTA (Polymarket-style) + terms footer */}
-            <div className="flex flex-col gap-3">
+            {/* Single blue "Trade" CTA (Polymarket-style) + terms footer. B6: the
+            block carries a bottom safe-area pad so on the mobile bottom sheet the
+            button/Terms clear the iOS home indicator (env() is 0 on non-notched
+            and on the docked desktop column, so this is inert there). */}
+            <div
+              className="flex flex-col gap-3"
+              style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+            >
               <Button
                 variant="primary"
                 onClick={confirm}

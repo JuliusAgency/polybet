@@ -6,6 +6,13 @@ interface CollapsibleSearchProps {
   value: string;
   onChange: (value: string) => void;
   placeholder: string;
+  /**
+   * Always-expanded full-width pill variant (S1). Used on the mobile search row
+   * beneath the title: the field fills its row, the magnifier is a static
+   * adornment on the inline-start, and the input never collapses. The default
+   * (collapse-on-blur) variant is kept for the desktop H1 row.
+   */
+  fullWidth?: boolean;
 }
 
 /**
@@ -14,34 +21,54 @@ interface CollapsibleSearchProps {
  * an inline input that auto-focuses. It collapses again on blur only when empty,
  * so an active query keeps the field open across tab switches. The clear (×)
  * button wipes the query and keeps focus.
+ *
+ * With `fullWidth`, it renders as an always-open full-width pill instead (mobile
+ * search row) — the magnifier becomes a static start adornment.
  */
-export function CollapsibleSearch({ value, onChange, placeholder }: CollapsibleSearchProps) {
+export function CollapsibleSearch({
+  value,
+  onChange,
+  placeholder,
+  fullWidth = false,
+}: CollapsibleSearchProps) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // A non-empty query keeps the field open regardless of focus so switching to
   // My bets / Saved (or clicking away) never silently drops an active search.
-  const open = expanded || value.trim().length > 0;
+  // The full-width variant is always open.
+  const open = fullWidth || expanded || value.trim().length > 0;
 
   useEffect(() => {
     if (expanded) inputRef.current?.focus();
   }, [expanded]);
 
+  const rootClass = `feed-search${open ? ' feed-search--open' : ''}${
+    fullWidth ? ' feed-search--full' : ''
+  }`;
+
   return (
-    <div className={`feed-search${open ? ' feed-search--open' : ''}`}>
-      <button
-        type="button"
-        className="feed-search__icon"
-        aria-label={placeholder}
-        title={placeholder}
-        onClick={() => {
-          setExpanded(true);
-          inputRef.current?.focus();
-        }}
-      >
-        <SearchIcon />
-      </button>
+    <div className={rootClass}>
+      {fullWidth ? (
+        // Static magnifier adornment — not a button (the field is already open).
+        <span aria-hidden className="feed-search__icon">
+          <SearchIcon />
+        </span>
+      ) : (
+        <button
+          type="button"
+          className="feed-search__icon"
+          aria-label={placeholder}
+          title={placeholder}
+          onClick={() => {
+            setExpanded(true);
+            inputRef.current?.focus();
+          }}
+        >
+          <SearchIcon />
+        </button>
+      )}
       <input
         ref={inputRef}
         type="text"

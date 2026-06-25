@@ -246,6 +246,36 @@ describe('EventDetailPage', () => {
     ).toBeInTheDocument();
     // SingleMarketView surfaces the event description as the Rules section.
     expect(screen.getByText(/resolves to the winning nation/i)).toBeInTheDocument();
+    // E1: the binary detail shows the outcome ONCE via a compact row with the
+    // Buy Yes/No pills (no repeated feed card). The pills carry the "Buy" CTA.
+    expect(screen.getByRole('button', { name: /buy yes/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /buy no/i })).toBeInTheDocument();
+    // The inline Yes % (55% for the 0.55 Rain market) renders in the compact row.
+    expect(screen.getByText('55%')).toBeInTheDocument();
+    // E6: a binary event renders NO multi-outcome legend.
+    expect(screen.queryByLabelText(/outcomes|תוצאות/i)).not.toBeInTheDocument();
+  });
+
+  it('renders the inline outcome legend for a multi-outcome event (E6)', async () => {
+    eventByIdMock.mockReturnValue({
+      data: multiMarketEvent(),
+      isLoading: false,
+      isError: false,
+    });
+    const EventDetailPage = await loadPage();
+
+    renderWithProviders(<EventDetailPage />, {
+      initialRoute: '/events/evt-1',
+      authValue: signedInUser,
+    });
+
+    // The legend container is labelled by the eventDetail.outcomesLegend key.
+    const legend = screen.getByLabelText(/outcomes|תוצאות/i);
+    expect(legend).toBeInTheDocument();
+    // Each of the three markets contributes a labelled entry inside the legend.
+    expect(legend).toHaveTextContent('Argentina');
+    expect(legend).toHaveTextContent('France');
+    expect(legend).toHaveTextContent('Brazil');
   });
 
   it('does not auto-open the BetSlip without a deep-link on the overlay (non-desktop) layout', async () => {

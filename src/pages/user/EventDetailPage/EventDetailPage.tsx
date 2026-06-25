@@ -14,12 +14,13 @@ import { useArchiveMarket } from '@/features/admin/markets/useArchiveMarket';
 import { useAuth } from '@/shared/hooks/useAuth';
 import type { Role } from '@/shared/types';
 import type { Market, MarketOutcome } from '@/entities/market';
-import { sortMarketsByYesDesc, getYesOutcome } from '@/entities/market';
+import { sortMarketsByYesDesc, getYesOutcome, getChartOutcomes } from '@/entities/market';
 import { BetSlip, BETSLIP_DOCK_QUERY } from '@/widgets/BetSlip';
 import { MarketThumbnail } from '@/shared/ui/MarketThumbnail';
 import { Spinner } from '@/shared/ui/Spinner';
+import { pickOutcomeColor } from '@/shared/ui/PriceHistoryChart/priceHistoryPalette';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
-import { formatVolume } from '@/shared/utils';
+import { formatVolume, formatProbability } from '@/shared/utils';
 import { SimilarEventsList } from './components/SimilarEventsList';
 import { EventUserActivity } from './components/EventUserActivity';
 import { SingleMarketView } from './components/SingleMarketView';
@@ -37,6 +38,42 @@ function pickBettableOutcome(market: Market): MarketOutcome | null {
   const yes = getYesOutcome(market);
   if (yes?.polymarket_token_id != null) return yes;
   return market.market_outcomes.find((o) => o.polymarket_token_id != null) ?? null;
+}
+
+interface LegendEntry {
+  key: string;
+  name: string;
+  color: string;
+  pct: string | null;
+}
+
+// Build the inline outcome legend so its dot colours line up with the chart
+// lines. EventPriceHistoryChart plots the top-N markets by VOLUME desc, flattens
+// each to its chart outcomes, and colours line `idx` with pickOutcomeColor(idx).
+// We mirror that EXACT order/indexing here — same volume sort, same top-N, same
+// flat-list index — so dot ↔ line colours match. Presentation only; no fetch.
+function buildOutcomeLegend(markets: Market[], topN: number): LegendEntry[] {
+  const byVolumeDesc = [...markets].sort(
+    (a, b) => (typeof b.volume === 'number' ? b.volume : 0) - (typeof a.volume === 'number' ? a.volume : 0)
+  );
+  const entries: LegendEntry[] = [];
+  let globalIdx = 0;
+  byVolumeDesc.slice(0, topN).forEach((market) => {
+    const prefix = market.group_label ?? market.question;
+    const chartOutcomes = getChartOutcomes(market);
+    chartOutcomes.forEach((o) => {
+      // A lone chart line is named by the market label alone (matches the chart).
+      const name = chartOutcomes.length === 1 ? prefix : `${prefix}: ${o.name}`;
+      entries.push({
+        key: `${market.id}:${o.id}`,
+        name,
+        color: pickOutcomeColor(globalIdx),
+        pct: o.price != null ? formatProbability(o.price) : null,
+      });
+      globalIdx += 1;
+    });
+  });
+  return entries;
 }
 
 interface EventDetailPageProps {
@@ -220,6 +257,40 @@ const EventDetailPage = ({ readonly = false }: EventDetailPageProps = {}) => {
           >
             {event.title}
           </h1>
+          {/* E6: inline colored-dot legend whose colours match the chart lines.
+              Multi-outcome events only — a binary event already shows its % in
+              the compact SingleMarketView row. Presentation of plotted data. */}
+          {!isSingleMarket && markets.length > 1 && (
+            <div
+              className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1"
+              aria-label={t('eventDetail.outcomesLegend', { defaultValue: 'Outcomes' })}
+            >
+              {buildOutcomeLegend(markets, 3).map((entry) => (
+                <span key={entry.key} className="inline-flex items-center gap-1.5 text-xs">
+                  <span
+                    aria-hidden
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: 9999,
+                      backgroundColor: entry.color,
+                    }}
+                  />
+                  <span className="truncate" style={{ color: 'var(--color-text-secondary)' }}>
+                    {entry.name}
+                  </span>
+                  {entry.pct && (
+                    <span
+                      className="tabular-nums font-semibold"
+                      style={{ color: 'var(--color-text-primary)' }}
+                    >
+                      {entry.pct}
+                    </span>
+                  )}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </header>
 

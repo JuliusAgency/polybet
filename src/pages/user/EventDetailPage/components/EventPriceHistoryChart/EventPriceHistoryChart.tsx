@@ -85,12 +85,8 @@ export const EventPriceHistoryChart = ({
 
   return (
     <section
-      className="flex flex-col gap-3 p-4"
-      style={{
-        backgroundColor: 'var(--color-bg-surface)',
-        border: '1px solid var(--color-border)',
-        borderRadius: 'var(--radius-lg)',
-      }}
+      className="flex flex-col gap-3 md:rounded-[var(--radius-lg)] md:border md:bg-[var(--color-bg-surface)] md:p-4"
+      style={{ borderColor: 'var(--color-border)' }}
     >
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
