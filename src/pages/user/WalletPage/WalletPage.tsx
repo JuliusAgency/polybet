@@ -58,10 +58,7 @@ const WalletPage = () => {
           {balanceLoading ? (
             <Spinner size="sm" />
           ) : (
-            <p
-              className="text-2xl font-bold num"
-              style={{ color: 'var(--color-text-primary)' }}
-            >
+            <p className="text-2xl font-bold num" style={{ color: 'var(--color-text-primary)' }}>
               {available.toFixed(2)}
             </p>
           )}
@@ -75,10 +72,7 @@ const WalletPage = () => {
           {balanceLoading ? (
             <Spinner size="sm" />
           ) : (
-            <p
-              className="text-2xl font-bold num"
-              style={{ color: 'var(--color-text-primary)' }}
-            >
+            <p className="text-2xl font-bold num" style={{ color: 'var(--color-text-primary)' }}>
               {inPlay.toFixed(2)}
             </p>
           )}
@@ -201,17 +195,11 @@ const WalletPage = () => {
                       <td className="px-4 py-3" style={{ color: 'var(--color-text-primary)' }}>
                         {formatTransactionType(tx.type, t)}
                       </td>
-                      <td
-                        className="px-4 py-3 num font-semibold"
-                        style={{ color: amountColor }}
-                      >
+                      <td className="px-4 py-3 num font-semibold" style={{ color: amountColor }}>
                         {amountPrefix}
                         {Math.abs(tx.amount).toFixed(2)}
                       </td>
-                      <td
-                        className="px-4 py-3 num"
-                        style={{ color: 'var(--color-text-primary)' }}
-                      >
+                      <td className="px-4 py-3 num" style={{ color: 'var(--color-text-primary)' }}>
                         {tx.balance_after.toFixed(2)}
                       </td>
                       <td className="px-4 py-3" style={{ color: 'var(--color-text-muted)' }}>

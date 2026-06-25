@@ -247,9 +247,7 @@ export const BetSlip = ({
                   className="rounded-md px-4 py-1.5 text-sm font-semibold transition-colors"
                   style={{
                     backgroundColor: active ? 'var(--color-accent)' : 'transparent',
-                    color: active
-                      ? 'var(--color-accent-contrast)'
-                      : 'var(--color-text-secondary)',
+                    color: active ? 'var(--color-accent-contrast)' : 'var(--color-text-secondary)',
                     cursor: 'pointer',
                     border: 'none',
                     outline: 'none',
@@ -336,7 +334,11 @@ export const BetSlip = ({
                 </span>
                 {hasBetLimit && (
                   <>
-                    <span aria-hidden className="md:hidden" style={{ color: 'var(--color-text-muted)' }}>
+                    <span
+                      aria-hidden
+                      className="md:hidden"
+                      style={{ color: 'var(--color-text-muted)' }}
+                    >
                       ·
                     </span>
                     <span className="min-w-0 truncate" style={{ color: 'var(--color-text-muted)' }}>

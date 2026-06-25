@@ -149,93 +149,93 @@ const MyBetsPage = () => {
                 className="hidden overflow-x-auto rounded-xl border md:block"
                 style={{ borderColor: 'var(--color-border)' }}
               >
-              <table className="w-full text-sm">
-                <thead>
-                  <tr style={{ backgroundColor: 'var(--color-bg-surface)' }}>
-                    {[
-                      'portfolio.market',
-                      'portfolio.selection',
-                      'portfolio.shares',
-                      'portfolio.avgCost',
-                      'portfolio.value',
-                      'portfolio.pnl',
-                      'portfolio.actions',
-                    ].map((k) => (
-                      <th
-                        key={k}
-                        className="px-4 py-3 font-medium text-start"
-                        style={{ color: 'var(--color-text-secondary)' }}
-                      >
-                        {t(k)}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {open.map((p) => {
-                    const mark = markPrice(p);
-                    const value = p.shares * mark;
-                    const upl = positionUnrealizedPnl(p, mark);
-                    const uplPct = positionUnrealizedPnlPct(p, mark);
-                    const uplColor = upl >= 0 ? 'var(--color-win)' : 'var(--color-loss)';
-                    const sellable = Boolean(p.market_outcomes?.polymarket_token_id);
-                    return (
-                      <tr key={p.id} style={{ borderTop: '1px solid var(--color-border)' }}>
-                        <td className="px-4 py-3" style={{ color: 'var(--color-text-primary)' }}>
-                          <MarketCell position={p} />
-                        </td>
-                        <td className="px-4 py-3" style={{ color: 'var(--color-text-primary)' }}>
-                          {p.market_outcomes?.name ?? '—'}
-                        </td>
-                        <td
-                          className="px-4 py-3 num"
-                          style={{ color: 'var(--color-text-primary)' }}
-                        >
-                          {p.shares.toFixed(2)}
-                        </td>
-                        <td
-                          className="px-4 py-3 num"
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr style={{ backgroundColor: 'var(--color-bg-surface)' }}>
+                      {[
+                        'portfolio.market',
+                        'portfolio.selection',
+                        'portfolio.shares',
+                        'portfolio.avgCost',
+                        'portfolio.value',
+                        'portfolio.pnl',
+                        'portfolio.actions',
+                      ].map((k) => (
+                        <th
+                          key={k}
+                          className="px-4 py-3 font-medium text-start"
                           style={{ color: 'var(--color-text-secondary)' }}
                         >
-                          {formatSharePrice(p.avg_price)}
-                        </td>
-                        <td
-                          className="px-4 py-3 num"
-                          style={{ color: 'var(--color-text-primary)' }}
-                        >
-                          ${value.toFixed(2)}
-                          <span
-                            className="ms-1 text-xs"
-                            style={{ color: 'var(--color-text-muted)' }}
+                          {t(k)}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {open.map((p) => {
+                      const mark = markPrice(p);
+                      const value = p.shares * mark;
+                      const upl = positionUnrealizedPnl(p, mark);
+                      const uplPct = positionUnrealizedPnlPct(p, mark);
+                      const uplColor = upl >= 0 ? 'var(--color-win)' : 'var(--color-loss)';
+                      const sellable = Boolean(p.market_outcomes?.polymarket_token_id);
+                      return (
+                        <tr key={p.id} style={{ borderTop: '1px solid var(--color-border)' }}>
+                          <td className="px-4 py-3" style={{ color: 'var(--color-text-primary)' }}>
+                            <MarketCell position={p} />
+                          </td>
+                          <td className="px-4 py-3" style={{ color: 'var(--color-text-primary)' }}>
+                            {p.market_outcomes?.name ?? '—'}
+                          </td>
+                          <td
+                            className="px-4 py-3 num"
+                            style={{ color: 'var(--color-text-primary)' }}
                           >
-                            @{formatSharePrice(mark)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 num" style={{ color: uplColor }}>
-                          {upl >= 0 ? '+' : ''}
-                          {upl.toFixed(2)}
-                          {uplPct !== null && (
-                            <span className="ms-1 text-xs">
-                              ({upl >= 0 ? '+' : ''}
-                              {(uplPct * 100).toFixed(1)}%)
+                            {p.shares.toFixed(2)}
+                          </td>
+                          <td
+                            className="px-4 py-3 num"
+                            style={{ color: 'var(--color-text-secondary)' }}
+                          >
+                            {formatSharePrice(p.avg_price)}
+                          </td>
+                          <td
+                            className="px-4 py-3 num"
+                            style={{ color: 'var(--color-text-primary)' }}
+                          >
+                            ${value.toFixed(2)}
+                            <span
+                              className="ms-1 text-xs"
+                              style={{ color: 'var(--color-text-muted)' }}
+                            >
+                              @{formatSharePrice(mark)}
                             </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          <Button
-                            variant="secondary"
-                            className="text-xs"
-                            disabled={!sellable}
-                            onClick={() => setSelling(p)}
-                          >
-                            {t('portfolio.sell')}
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                          </td>
+                          <td className="px-4 py-3 num" style={{ color: uplColor }}>
+                            {upl >= 0 ? '+' : ''}
+                            {upl.toFixed(2)}
+                            {uplPct !== null && (
+                              <span className="ms-1 text-xs">
+                                ({upl >= 0 ? '+' : ''}
+                                {(uplPct * 100).toFixed(1)}%)
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Button
+                              variant="secondary"
+                              className="text-xs"
+                              disabled={!sellable}
+                              onClick={() => setSelling(p)}
+                            >
+                              {t('portfolio.sell')}
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
               {/* Mobile: one card per position so the financial fields never clip. */}
               <div className="flex flex-col gap-3 md:hidden">
@@ -260,73 +260,74 @@ const MyBetsPage = () => {
                 className="hidden overflow-x-auto rounded-xl border md:block"
                 style={{ borderColor: 'var(--color-border)' }}
               >
-              <table className="w-full text-sm">
-                <thead>
-                  <tr style={{ backgroundColor: 'var(--color-bg-surface)' }}>
-                    {[
-                      'portfolio.market',
-                      'portfolio.selection',
-                      'portfolio.shares',
-                      'portfolio.avgCost',
-                      'portfolio.realizedPnlCol',
-                      'portfolio.status',
-                      'portfolio.settled',
-                    ].map((k) => (
-                      <th
-                        key={k}
-                        className="px-4 py-3 font-medium text-start"
-                        style={{ color: 'var(--color-text-secondary)' }}
-                      >
-                        {t(k)}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {closed.map((p) => {
-                    const pnlColor = p.realized_pnl >= 0 ? 'var(--color-win)' : 'var(--color-loss)';
-                    return (
-                      <tr key={p.id} style={{ borderTop: '1px solid var(--color-border)' }}>
-                        <td className="px-4 py-3" style={{ color: 'var(--color-text-primary)' }}>
-                          <MarketCell position={p} />
-                        </td>
-                        <td className="px-4 py-3" style={{ color: 'var(--color-text-primary)' }}>
-                          {p.market_outcomes?.name ?? '—'}
-                        </td>
-                        <td
-                          className="px-4 py-3 num"
-                          style={{ color: 'var(--color-text-primary)' }}
-                        >
-                          {p.shares.toFixed(2)}
-                        </td>
-                        <td
-                          className="px-4 py-3 num"
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr style={{ backgroundColor: 'var(--color-bg-surface)' }}>
+                      {[
+                        'portfolio.market',
+                        'portfolio.selection',
+                        'portfolio.shares',
+                        'portfolio.avgCost',
+                        'portfolio.realizedPnlCol',
+                        'portfolio.status',
+                        'portfolio.settled',
+                      ].map((k) => (
+                        <th
+                          key={k}
+                          className="px-4 py-3 font-medium text-start"
                           style={{ color: 'var(--color-text-secondary)' }}
                         >
-                          {formatSharePrice(p.avg_price)}
-                        </td>
-                        <td className="px-4 py-3 num" style={{ color: pnlColor }}>
-                          {p.realized_pnl >= 0 ? '+' : ''}
-                          {p.realized_pnl.toFixed(2)}
-                        </td>
-                        <td className="px-4 py-3">
-                          <Badge variant={statusBadgeVariant(p.status)}>
-                            {statusLabel(t, p.status)}
-                          </Badge>
-                        </td>
-                        <td
-                          className="px-4 py-3 num text-xs"
-                          style={{ color: 'var(--color-text-secondary)' }}
-                        >
-                          {p.settled_at
-                            ? new Date(p.settled_at).toLocaleDateString(i18n.language)
-                            : new Date(p.updated_at).toLocaleDateString(i18n.language)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                          {t(k)}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {closed.map((p) => {
+                      const pnlColor =
+                        p.realized_pnl >= 0 ? 'var(--color-win)' : 'var(--color-loss)';
+                      return (
+                        <tr key={p.id} style={{ borderTop: '1px solid var(--color-border)' }}>
+                          <td className="px-4 py-3" style={{ color: 'var(--color-text-primary)' }}>
+                            <MarketCell position={p} />
+                          </td>
+                          <td className="px-4 py-3" style={{ color: 'var(--color-text-primary)' }}>
+                            {p.market_outcomes?.name ?? '—'}
+                          </td>
+                          <td
+                            className="px-4 py-3 num"
+                            style={{ color: 'var(--color-text-primary)' }}
+                          >
+                            {p.shares.toFixed(2)}
+                          </td>
+                          <td
+                            className="px-4 py-3 num"
+                            style={{ color: 'var(--color-text-secondary)' }}
+                          >
+                            {formatSharePrice(p.avg_price)}
+                          </td>
+                          <td className="px-4 py-3 num" style={{ color: pnlColor }}>
+                            {p.realized_pnl >= 0 ? '+' : ''}
+                            {p.realized_pnl.toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge variant={statusBadgeVariant(p.status)}>
+                              {statusLabel(t, p.status)}
+                            </Badge>
+                          </td>
+                          <td
+                            className="px-4 py-3 num text-xs"
+                            style={{ color: 'var(--color-text-secondary)' }}
+                          >
+                            {p.settled_at
+                              ? new Date(p.settled_at).toLocaleDateString(i18n.language)
+                              : new Date(p.updated_at).toLocaleDateString(i18n.language)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
               {/* Mobile: one card per closed position. */}
               <div className="flex flex-col gap-3 md:hidden">

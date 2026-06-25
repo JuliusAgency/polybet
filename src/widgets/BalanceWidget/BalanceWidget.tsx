@@ -56,10 +56,7 @@ export const BalanceWidget = ({
         <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
           {t('wallet.available')}
         </span>
-        <span
-          className="num text-sm font-semibold"
-          style={{ color: 'var(--color-text-primary)' }}
-        >
+        <span className="num text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
           {available.toFixed(2)}
         </span>
       </div>

@@ -65,7 +65,12 @@ interface Tab {
 }
 
 const TABS: Tab[] = [
-  { to: ROUTES.USER.MARKETS, labelKey: 'nav.allMarkets', Icon: MarketsIcon, match: ['/markets', '/events'] },
+  {
+    to: ROUTES.USER.MARKETS,
+    labelKey: 'nav.allMarkets',
+    Icon: MarketsIcon,
+    match: ['/markets', '/events'],
+  },
   { to: ROUTES.USER.MY_BETS, labelKey: 'nav.myBets', Icon: PortfolioIcon, match: ['/my-bets'] },
   { to: ROUTES.USER.WALLET, labelKey: 'nav.wallet', Icon: WalletIcon, match: ['/wallet'] },
   { to: ROUTES.USER.STATS, labelKey: 'nav.stats', Icon: StatsIcon, match: ['/stats'] },

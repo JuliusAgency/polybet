@@ -54,7 +54,8 @@ interface LegendEntry {
 // flat-list index — so dot ↔ line colours match. Presentation only; no fetch.
 function buildOutcomeLegend(markets: Market[], topN: number): LegendEntry[] {
   const byVolumeDesc = [...markets].sort(
-    (a, b) => (typeof b.volume === 'number' ? b.volume : 0) - (typeof a.volume === 'number' ? a.volume : 0)
+    (a, b) =>
+      (typeof b.volume === 'number' ? b.volume : 0) - (typeof a.volume === 'number' ? a.volume : 0)
   );
   const entries: LegendEntry[] = [];
   let globalIdx = 0;
@@ -240,9 +241,7 @@ const EventDetailPage = ({ readonly = false }: EventDetailPageProps = {}) => {
             style={{ color: 'var(--color-text-muted)' }}
           >
             {[
-              event.category ? (
-                <span key="cat">{event.category}</span>
-              ) : null,
+              event.category ? <span key="cat">{event.category}</span> : null,
               <span key="mc">{t('events.marketCount', { count: markets.length })}</span>,
               volumeLabel ? (
                 <span key="vol">{t('markets.volumeShort', { value: volumeLabel })}</span>

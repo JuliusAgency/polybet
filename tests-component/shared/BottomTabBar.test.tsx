@@ -23,6 +23,9 @@ describe('BottomTabBar', () => {
   it('keeps the Markets tab active on event-detail routes', () => {
     renderWithProviders(<BottomTabBar />, { initialRoute: '/events/abc-123' });
 
-    expect(screen.getByRole('link', { name: /All markets/i })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: /All markets/i })).toHaveAttribute(
+      'aria-current',
+      'page'
+    );
   });
 });

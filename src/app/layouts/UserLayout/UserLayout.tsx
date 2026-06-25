@@ -101,10 +101,7 @@ export const UserLayout = () => {
               {profile?.username ?? ''}
             </span>
             {balance != null && (
-              <span
-                className="num text-sm font-semibold"
-                style={{ color: 'var(--color-win)' }}
-              >
+              <span className="num text-sm font-semibold" style={{ color: 'var(--color-win)' }}>
                 {balance.available.toFixed(2)}
               </span>
             )}

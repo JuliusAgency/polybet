@@ -29,19 +29,28 @@ describe('TagFilter', () => {
       'true'
     );
     expect(screen.getByRole('button', { name: 'Crypto' })).toHaveAttribute('aria-pressed', 'false');
-    expect(screen.getByRole('button', { name: 'All categories' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'All categories' })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    );
   });
 
   it('marks the "All categories" link active when value is null', () => {
     renderWithProviders(<TagFilter value={null} onChange={() => {}} tags={TAGS} />);
-    expect(screen.getByRole('button', { name: 'All categories' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'All categories' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
   });
 
   it('does not mark any chip active when suppressActiveChip is set', () => {
     renderWithProviders(
       <TagFilter value={null} onChange={() => {}} tags={TAGS} suppressActiveChip />
     );
-    expect(screen.getByRole('button', { name: 'All categories' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'All categories' })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    );
     expect(screen.getByRole('button', { name: 'Politics' })).toHaveAttribute(
       'aria-pressed',
       'false'
