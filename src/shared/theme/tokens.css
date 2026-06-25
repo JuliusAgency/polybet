@@ -111,19 +111,20 @@
   --color-bg-surface: oklch(100% 0 0);
   --color-bg-elevated: oklch(96% 0.005 230);
 
-  /* Accent — deep brand blue, high chroma, same hue 230 */
-  --color-accent: oklch(52% 0.22 255);
-  --color-accent-hover: oklch(46% 0.22 255);
-  --color-accent-muted: oklch(52% 0.22 255 / 0.1);
+  /* Accent — PM-light parity (bright royal-blue ~#0075dd, less violet than before).
+     L kept at 56% so white-on-accent text stays WCAG AA (4.57:1) on Trade/Sign-up CTAs. */
+  --color-accent: oklch(56% 0.19 250);
+  --color-accent-hover: oklch(50% 0.19 250);
+  --color-accent-muted: oklch(56% 0.19 250 / 0.1);
   --color-accent-contrast: oklch(100% 0 0);
 
-  /* Win — deeper green for contrast on white */
-  --color-win: oklch(48% 0.16 150);
-  --color-win-muted: oklch(72% 0.14 150 / 0.16);
+  /* Win — crisp PM "Buy Yes" green (de-pastelled), saturated text on white */
+  --color-win: oklch(50% 0.17 155);
+  --color-win-muted: oklch(85% 0.10 155 / 0.45);
 
-  /* Loss — deeper red for contrast on white */
-  --color-loss: oklch(54% 0.22 25);
-  --color-loss-muted: oklch(66% 0.18 25 / 0.12);
+  /* Loss — crisp PM "Buy No" red (de-pastelled), saturated text on white */
+  --color-loss: oklch(55% 0.22 28);
+  --color-loss-muted: oklch(85% 0.12 28 / 0.40);
 
   /* Status */
   --color-pending: oklch(60% 0.16 70);
@@ -147,22 +148,22 @@
   --color-hover: oklch(18% 0.012 230 / 0.04);
   --color-active: oklch(18% 0.012 230 / 0.08);
 
-  /* Shadows — real drop shadows, tinted toward brand hue */
-  --shadow-sm: 0 1px 2px oklch(18% 0.012 230 / 0.06);
-  --shadow-md: 0 4px 12px oklch(18% 0.012 230 / 0.08);
-  --shadow-lg: 0 12px 32px oklch(18% 0.012 230 / 0.12);
+  /* Shadows — PM near-flat cards: sm/md flattened hard, lg keeps overlay depth */
+  --shadow-sm: 0 1px 1px oklch(18% 0.012 230 / 0.04);
+  --shadow-md: 0 2px 6px oklch(18% 0.012 230 / 0.05);
+  --shadow-lg: 0 8px 24px oklch(18% 0.012 230 / 0.10);
 
   /* Component states */
   --color-disabled: oklch(94% 0.003 230);
   --color-disabled-text: oklch(62% 0.01 230);
-  --color-focus-ring: oklch(52% 0.22 255 / 0.35);
-  --color-error: oklch(54% 0.22 25);
-  --color-error-muted: oklch(66% 0.2 25 / 0.1);
-  --color-success: oklch(48% 0.16 150);
-  --color-success-muted: oklch(72% 0.14 150 / 0.12);
+  --color-focus-ring: oklch(56% 0.19 250 / 0.35);
+  --color-error: oklch(55% 0.22 28);
+  --color-error-muted: oklch(66% 0.2 28 / 0.1);
+  --color-success: oklch(50% 0.17 155);
+  --color-success-muted: oklch(72% 0.14 155 / 0.12);
   --color-input-bg: oklch(100% 0 0);
   --color-input-border: oklch(91% 0.005 230);
-  --color-input-border-focus: oklch(52% 0.22 255);
+  --color-input-border-focus: oklch(56% 0.19 250);
 
   color-scheme: light;
 }
