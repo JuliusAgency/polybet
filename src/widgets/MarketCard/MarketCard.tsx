@@ -13,7 +13,6 @@ import { useMarketRefresh } from '@/features/bet';
 import { OutcomeButtons, type OutcomeButton } from '@/shared/ui/OutcomeButtons';
 import { MarketThumbnail } from '@/shared/ui/MarketThumbnail';
 import { BookmarkButton } from '@/features/favorites';
-import { ChanceGauge } from '@/shared/ui/ChanceGauge';
 import { BetMarker } from '@/shared/ui/BetMarker';
 import { MARKETS_STALE_THRESHOLD_MS } from '@/shared/config/markets';
 import { useTicker } from '@/shared/hooks/useTicker';
@@ -156,23 +155,18 @@ export const MarketCard = ({
       {/* Header: thumb + title on the start; probability gauge pinned to the
           inline-end so buttons below can span the full width. */}
       <header className="-mx-1 -mt-1 flex items-start gap-2.5 rounded-md p-1">
-        <div className="group/title flex min-w-0 flex-1 items-start gap-2.5">
-          <MarketCardHeaderContent market={market} withTitleHover={!!cardHref} />
+        <div className="flex min-w-0 flex-1 items-start gap-2.5">
+          <MarketCardHeaderContent market={market} />
         </div>
+        {/* Compact inline % at all widths — the arc gauge is dropped from the
+            feed card entirely (F3). ChanceGauge still renders on EventDetail. */}
         {yesProbability != null && (
-          <>
-            {/* Desktop keeps the arc gauge; mobile shows a compact inline % so the
-                binary card collapses to Polymarket-like density (F1). */}
-            <div className="hidden shrink-0 md:block">
-              <ChanceGauge value={yesProbability} size={64} />
-            </div>
-            <span
-              className="shrink-0 text-sm font-semibold tabular-nums md:hidden"
-              style={{ color: 'var(--color-text-primary)' }}
-            >
-              {yesPct}
-            </span>
-          </>
+          <span
+            className="shrink-0 self-center text-base font-semibold num"
+            style={{ color: 'var(--color-text-primary)' }}
+          >
+            {yesPct}
+          </span>
         )}
       </header>
 
@@ -185,7 +179,7 @@ export const MarketCard = ({
             outcomes={outcomeButtons}
             size="sm"
             disabled={!isInteractive}
-            appearance={outcomeAppearance}
+            appearance={outcomeAppearance === 'inactive' ? 'inactive' : 'fill'}
             showPercentage={false}
             hoverShowsPercentage
             onClick={handleOutcomeClick}
@@ -198,7 +192,7 @@ export const MarketCard = ({
             outcomes={outcomeButtons}
             size="xl"
             disabled={!isInteractive}
-            appearance={outcomeAppearance}
+            appearance={outcomeAppearance === 'inactive' ? 'inactive' : 'fill'}
             showPercentage={false}
             hoverShowsPercentage
             onClick={handleOutcomeClick}
@@ -213,10 +207,10 @@ export const MarketCard = ({
       >
         <div className="flex items-center gap-3">
           {volumeLabel && (
-            <span className="font-mono">{t('markets.volumeShort', { value: volumeLabel })}</span>
+            <span className="num">{t('markets.volumeShort', { value: volumeLabel })}</span>
           )}
           {showCloseDate && closesDate && (
-            <span className="font-mono">
+            <span className="num">
               {effectiveStatus === 'open' ? t('markets.closesAt') : t('markets.closedAt')}{' '}
               {closesDate}
             </span>
@@ -323,10 +317,9 @@ export const MarketCard = ({
 
 interface MarketCardHeaderContentProps {
   market: Market;
-  withTitleHover?: boolean;
 }
 
-function MarketCardHeaderContent({ market, withTitleHover = false }: MarketCardHeaderContentProps) {
+function MarketCardHeaderContent({ market }: MarketCardHeaderContentProps) {
   const { i18n } = useTranslation();
   const isHebrew = i18n.language === 'he';
   const category = market.category ?? market.event?.category ?? null;
@@ -336,9 +329,7 @@ function MarketCardHeaderContent({ market, withTitleHover = false }: MarketCardH
       <MarketThumbnail src={market.image_url} title={market.question} id={market.id} size="md" />
       <div className="min-w-0 flex-1">
         <h3
-          className={`line-clamp-2 text-sm font-semibold leading-snug underline-offset-2 decoration-1 ${
-            withTitleHover ? 'group-hover/title:underline' : ''
-          }`}
+          className="line-clamp-2 text-sm font-semibold leading-snug"
           style={{
             color: 'var(--color-text-primary)',
             fontFamily: 'var(--font-sans)',

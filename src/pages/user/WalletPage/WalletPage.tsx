@@ -59,7 +59,7 @@ const WalletPage = () => {
             <Spinner size="sm" />
           ) : (
             <p
-              className="text-2xl font-bold font-mono"
+              className="text-2xl font-bold num"
               style={{ color: 'var(--color-text-primary)' }}
             >
               {available.toFixed(2)}
@@ -76,7 +76,7 @@ const WalletPage = () => {
             <Spinner size="sm" />
           ) : (
             <p
-              className="text-2xl font-bold font-mono"
+              className="text-2xl font-bold num"
               style={{ color: 'var(--color-text-primary)' }}
             >
               {inPlay.toFixed(2)}
@@ -92,7 +92,7 @@ const WalletPage = () => {
           {balanceLoading ? (
             <Spinner size="sm" />
           ) : (
-            <p className="text-2xl font-bold font-mono" style={{ color: 'var(--color-accent)' }}>
+            <p className="text-2xl font-bold num" style={{ color: 'var(--color-accent)' }}>
               {totalEquity.toFixed(2)}
             </p>
           )}
@@ -187,7 +187,7 @@ const WalletPage = () => {
                   return (
                     <tr key={tx.id} style={{ borderTop: '1px solid var(--color-border)' }}>
                       <td
-                        className="px-4 py-3 font-mono text-xs"
+                        className="px-4 py-3 num text-xs"
                         style={{ color: 'var(--color-text-secondary)' }}
                       >
                         <div>{new Date(tx.created_at).toLocaleDateString(i18n.language)}</div>
@@ -202,14 +202,14 @@ const WalletPage = () => {
                         {formatTransactionType(tx.type, t)}
                       </td>
                       <td
-                        className="px-4 py-3 font-mono font-semibold"
+                        className="px-4 py-3 num font-semibold"
                         style={{ color: amountColor }}
                       >
                         {amountPrefix}
                         {Math.abs(tx.amount).toFixed(2)}
                       </td>
                       <td
-                        className="px-4 py-3 font-mono"
+                        className="px-4 py-3 num"
                         style={{ color: 'var(--color-text-primary)' }}
                       >
                         {tx.balance_after.toFixed(2)}
@@ -218,7 +218,7 @@ const WalletPage = () => {
                         {tx.note ?? '—'}
                       </td>
                       <td
-                        className="px-4 py-3 font-mono text-xs"
+                        className="px-4 py-3 num text-xs"
                         style={{ color: 'var(--color-text-secondary)' }}
                         title={tx.bet_id ?? undefined}
                       >

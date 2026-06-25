@@ -193,8 +193,8 @@ const MarketsFeedPage = () => {
   // Drop one feed column while the docked slip steals horizontal space so cards
   // don't get squeezed thin.
   const feedGridClass = dockSlip
-    ? 'grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3'
-    : 'grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
+    ? 'grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3'
+    : 'grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 

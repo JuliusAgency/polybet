@@ -54,8 +54,11 @@ interface OutcomeButtonsProps {
    *  - 'solid': Polymarket trade-panel look — the selected/winner side is filled
    *    solid with its win/loss colour and white text; the other side is a flat
    *    neutral grey. Used by the BetSlip side panel.
+   *  - 'fill': Polymarket feed look — BOTH sides solid-tinted (green Yes / red
+   *    No) regardless of winner, so an open binary card reads as filled inline
+   *    pills. Used by the feed/event cards (MarketCard, EventCard).
    */
-  appearance?: 'default' | 'inactive' | 'solid';
+  appearance?: 'default' | 'inactive' | 'solid' | 'fill';
 }
 
 const SIZE_STYLES: Record<ButtonSize, { padY: string; padX: string; name: string; odds: string }> =
@@ -64,19 +67,19 @@ const SIZE_STYLES: Record<ButtonSize, { padY: string; padX: string; name: string
       padY: 'py-3',
       padX: 'px-4',
       name: 'text-sm font-semibold',
-      odds: 'text-sm font-mono font-semibold',
+      odds: 'text-sm num font-semibold',
     },
     lg: {
       padY: 'py-2',
       padX: 'px-3',
       name: 'text-[13px] font-semibold',
-      odds: 'text-[13px] font-mono font-semibold',
+      odds: 'text-[13px] num font-semibold',
     },
     sm: {
       padY: 'py-1.5',
       padX: 'px-2.5',
       name: 'text-xs font-medium',
-      odds: 'text-xs font-mono font-semibold',
+      odds: 'text-xs num font-semibold',
     },
   };
 
@@ -84,7 +87,7 @@ function tintFor(
   index: number,
   isWinner: boolean,
   disabled: boolean,
-  appearance: 'default' | 'inactive' | 'solid' = 'default'
+  appearance: 'default' | 'inactive' | 'solid' | 'fill' = 'default'
 ): CSSProperties {
   const role = index === 0 ? 'win' : 'loss';
   const tintVar = role === 'win' ? 'var(--color-win)' : 'var(--color-loss)';
@@ -106,6 +109,19 @@ function tintFor(
     return {
       backgroundColor: `color-mix(in oklch, ${tintVar} 18%, var(--color-bg-base))`,
       borderColor: `color-mix(in oklch, ${tintVar} 55%, transparent)`,
+      color: tintVar,
+    };
+  }
+
+  // Feed look: BOTH sides solid-tinted (green Yes / red No) regardless of winner,
+  // so an open binary card reads as Polymarket's filled inline pills (F2). A
+  // stronger-than-default mix (16% vs default 8%) reads "filled" while keeping
+  // the green/red text legible in the light theme; white-text-on-100%-fill is
+  // the 'solid' selected look reserved for the BetSlip.
+  if (appearance === 'fill') {
+    return {
+      backgroundColor: `color-mix(in oklch, ${tintVar} 16%, var(--color-bg-base))`,
+      borderColor: `color-mix(in oklch, ${tintVar} 40%, transparent)`,
       color: tintVar,
     };
   }

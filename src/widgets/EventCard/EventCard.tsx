@@ -14,7 +14,6 @@ import type { MyBet } from '@/entities/bet';
 import { OutcomeButtons, type OutcomeButton } from '@/shared/ui/OutcomeButtons';
 import { MarketThumbnail } from '@/shared/ui/MarketThumbnail';
 import { EventBookmarkButton } from '@/features/favorites';
-import { ChanceGauge } from '@/shared/ui/ChanceGauge';
 import { BetMarker } from '@/shared/ui/BetMarker';
 import { formatVolume, formatProbability } from '@/shared/utils';
 
@@ -140,7 +139,7 @@ export const EventCard = ({
 
   return (
     <article
-      className="group/card relative flex h-full flex-col gap-3 p-3 transition-[transform,box-shadow] motion-reduce:transition-none hover:-translate-y-0.5 hover:[box-shadow:var(--shadow-md)] motion-reduce:hover:translate-y-0"
+      className="group/card relative flex h-full flex-col gap-2 p-2.5 transition-[transform,box-shadow] motion-reduce:transition-none hover:-translate-y-0.5 hover:[box-shadow:var(--shadow-md)] motion-reduce:hover:translate-y-0 md:gap-3 md:p-3"
       style={{
         backgroundColor: 'var(--color-bg-surface)',
         border: '1px solid var(--color-border)',
@@ -169,7 +168,7 @@ export const EventCard = ({
 
           <div className="min-w-0 flex-1">
             <h3
-              className="line-clamp-2 text-sm font-semibold leading-snug underline-offset-2 decoration-1 group-hover/card:underline"
+              className="line-clamp-2 text-sm font-semibold leading-snug"
               style={{
                 color: 'var(--color-text-primary)',
                 fontFamily: 'var(--font-sans)',
@@ -183,10 +182,15 @@ export const EventCard = ({
             </h3>
           </div>
         </div>
+        {/* Compact inline % at all widths — the arc gauge is dropped from the
+            feed card entirely (F3). ChanceGauge still renders on EventDetail. */}
         {singleYesProbability != null && (
-          <div className="shrink-0">
-            <ChanceGauge value={singleYesProbability} size={64} />
-          </div>
+          <span
+            className="shrink-0 self-center text-base font-semibold num"
+            style={{ color: 'var(--color-text-primary)' }}
+          >
+            {formatProbability(singleYesProbability)}
+          </span>
         )}
       </header>
 
@@ -198,7 +202,7 @@ export const EventCard = ({
               outcomes={singleOutcomeButtons}
               size="xl"
               disabled={!singleIsInteractive}
-              appearance={outcomeAppearance}
+              appearance={outcomeAppearance === 'inactive' ? 'inactive' : 'fill'}
               showPercentage={false}
               hoverShowsPercentage
               onClick={
@@ -250,7 +254,7 @@ export const EventCard = ({
       >
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           {volumeLabel && (
-            <span className="font-mono">{t('markets.volumeShort', { value: volumeLabel })}</span>
+            <span className="num">{t('markets.volumeShort', { value: volumeLabel })}</span>
           )}
           {statusLabel && (
             <span
@@ -325,7 +329,7 @@ function EventMarketRow({
   return (
     <div className="flex items-center gap-3 py-1.5">
       <span
-        className="min-w-0 flex-1 line-clamp-2 text-sm font-medium leading-snug underline-offset-2 decoration-1 group-hover/card:underline"
+        className="min-w-0 flex-1 line-clamp-2 text-sm font-medium leading-snug"
         style={{
           color: 'var(--color-text-primary)',
           ...(isHebrew && { direction: 'ltr' as const, textAlign: 'right' as const }),
@@ -336,7 +340,7 @@ function EventMarketRow({
 
       {yesPct && (
         <span
-          className="shrink-0 text-sm font-semibold tabular-nums"
+          className="shrink-0 text-sm font-semibold num"
           style={{ color: 'var(--color-text-primary)' }}
         >
           {yesPct}
@@ -348,7 +352,7 @@ function EventMarketRow({
           outcomes={outcomeButtons}
           size="sm"
           disabled={!isInteractive}
-          appearance={outcomeAppearance}
+          appearance={outcomeAppearance === 'inactive' ? 'inactive' : 'fill'}
           showPercentage={false}
           hoverShowsPercentage
           onClick={

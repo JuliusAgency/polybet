@@ -188,19 +188,19 @@ const MyBetsPage = () => {
                           {p.market_outcomes?.name ?? '—'}
                         </td>
                         <td
-                          className="px-4 py-3 font-mono"
+                          className="px-4 py-3 num"
                           style={{ color: 'var(--color-text-primary)' }}
                         >
                           {p.shares.toFixed(2)}
                         </td>
                         <td
-                          className="px-4 py-3 font-mono"
+                          className="px-4 py-3 num"
                           style={{ color: 'var(--color-text-secondary)' }}
                         >
                           {formatSharePrice(p.avg_price)}
                         </td>
                         <td
-                          className="px-4 py-3 font-mono"
+                          className="px-4 py-3 num"
                           style={{ color: 'var(--color-text-primary)' }}
                         >
                           ${value.toFixed(2)}
@@ -211,7 +211,7 @@ const MyBetsPage = () => {
                             @{formatSharePrice(mark)}
                           </span>
                         </td>
-                        <td className="px-4 py-3 font-mono" style={{ color: uplColor }}>
+                        <td className="px-4 py-3 num" style={{ color: uplColor }}>
                           {upl >= 0 ? '+' : ''}
                           {upl.toFixed(2)}
                           {uplPct !== null && (
@@ -294,18 +294,18 @@ const MyBetsPage = () => {
                           {p.market_outcomes?.name ?? '—'}
                         </td>
                         <td
-                          className="px-4 py-3 font-mono"
+                          className="px-4 py-3 num"
                           style={{ color: 'var(--color-text-primary)' }}
                         >
                           {p.shares.toFixed(2)}
                         </td>
                         <td
-                          className="px-4 py-3 font-mono"
+                          className="px-4 py-3 num"
                           style={{ color: 'var(--color-text-secondary)' }}
                         >
                           {formatSharePrice(p.avg_price)}
                         </td>
-                        <td className="px-4 py-3 font-mono" style={{ color: pnlColor }}>
+                        <td className="px-4 py-3 num" style={{ color: pnlColor }}>
                           {p.realized_pnl >= 0 ? '+' : ''}
                           {p.realized_pnl.toFixed(2)}
                         </td>
@@ -315,7 +315,7 @@ const MyBetsPage = () => {
                           </Badge>
                         </td>
                         <td
-                          className="px-4 py-3 font-mono text-xs"
+                          className="px-4 py-3 num text-xs"
                           style={{ color: 'var(--color-text-secondary)' }}
                         >
                           {p.settled_at
@@ -350,7 +350,7 @@ const SummaryStat = ({ label, value, color }: { label: string; value: string; co
       {label}
     </span>
     <span
-      className="font-mono text-lg font-semibold"
+      className="num text-lg font-semibold"
       style={{ color: color ?? 'var(--color-text-primary)' }}
     >
       {value}
@@ -358,8 +358,9 @@ const SummaryStat = ({ label, value, color }: { label: string; value: string; co
   </div>
 );
 
-/** One label/value pair inside a mobile position card. Mono by default to match
- *  the desktop table's numeric columns; pass mono={false} for text/badges. */
+/** One label/value pair inside a mobile position card. Numeric (sans +
+ *  tabular-nums via `.num`) by default to match the desktop table's numeric
+ *  columns; pass mono={false} for text/badges. */
 const Field = ({
   label,
   children,
@@ -375,7 +376,7 @@ const Field = ({
     <span className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
       {label}
     </span>
-    <span className={mono ? 'font-mono' : ''} style={{ color: color ?? 'var(--color-text-primary)' }}>
+    <span className={mono ? 'num' : ''} style={{ color: color ?? 'var(--color-text-primary)' }}>
       {children}
     </span>
   </div>

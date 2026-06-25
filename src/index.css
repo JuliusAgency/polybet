@@ -23,6 +23,14 @@ html[lang='he'] {
   direction: rtl;
 }
 
+/* Numbers in the sans UI font with tabular figures (G4 — Polymarket uses one
+   sans for text AND numbers; Geist Mono on numeric runs was the divergence).
+   Uses var(--font-sans) so Hebrew numbers fall to Heebo, not Liberation Mono. */
+.num {
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+
 body {
   margin: 0;
   min-height: 100vh;

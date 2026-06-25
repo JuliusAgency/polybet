@@ -57,7 +57,7 @@ export const BalanceWidget = ({
           {t('wallet.available')}
         </span>
         <span
-          className="font-mono text-sm font-semibold"
+          className="num text-sm font-semibold"
           style={{ color: 'var(--color-text-primary)' }}
         >
           {available.toFixed(2)}
@@ -88,7 +88,7 @@ export const BalanceWidget = ({
           {t('wallet.inPlay')}
         </span>
         <span
-          className="font-mono text-sm font-semibold"
+          className="num text-sm font-semibold"
           style={{ color: inPlay > 0 ? 'var(--color-accent)' : 'var(--color-text-primary)' }}
         >
           {inPlay.toFixed(2)}
