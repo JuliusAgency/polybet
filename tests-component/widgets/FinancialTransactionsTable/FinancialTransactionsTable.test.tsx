@@ -107,9 +107,24 @@ describe('FinancialTransactionsTable', () => {
     // so the running totals oldest→newest are 100, 70, 120. Displayed
     // newest-first that is row order: +50 (120), -30 (70), +100 (100).
     respondWith([
-      baseRow({ id: 'tx-newest', type: 'adjustment', amount: 50, created_at: '2026-06-03T10:00:00.000Z' }),
-      baseRow({ id: 'tx-middle', type: 'transfer', amount: -30, created_at: '2026-06-02T10:00:00.000Z' }),
-      baseRow({ id: 'tx-oldest', type: 'adjustment', amount: 100, created_at: '2026-06-01T10:00:00.000Z' }),
+      baseRow({
+        id: 'tx-newest',
+        type: 'adjustment',
+        amount: 50,
+        created_at: '2026-06-03T10:00:00.000Z',
+      }),
+      baseRow({
+        id: 'tx-middle',
+        type: 'transfer',
+        amount: -30,
+        created_at: '2026-06-02T10:00:00.000Z',
+      }),
+      baseRow({
+        id: 'tx-oldest',
+        type: 'adjustment',
+        amount: 100,
+        created_at: '2026-06-01T10:00:00.000Z',
+      }),
     ]);
 
     renderTable();
@@ -141,8 +156,18 @@ describe('FinancialTransactionsTable', () => {
     // Oldest→newest: +20, -80 => running totals 20, -60.
     // Displayed newest-first: -80 (running -60), +20 (running +20).
     respondWith([
-      baseRow({ id: 'tx-b', type: 'transfer', amount: -80, created_at: '2026-06-02T10:00:00.000Z' }),
-      baseRow({ id: 'tx-a', type: 'adjustment', amount: 20, created_at: '2026-06-01T10:00:00.000Z' }),
+      baseRow({
+        id: 'tx-b',
+        type: 'transfer',
+        amount: -80,
+        created_at: '2026-06-02T10:00:00.000Z',
+      }),
+      baseRow({
+        id: 'tx-a',
+        type: 'adjustment',
+        amount: 20,
+        created_at: '2026-06-01T10:00:00.000Z',
+      }),
     ]);
 
     renderTable();
@@ -168,7 +193,12 @@ describe('FinancialTransactionsTable', () => {
     // Withdrawals (transfer, abs): |−30| + |−45| = 75.00
     // Net profit: 175 - 75 = 100.00
     respondWith([
-      baseRow({ id: 'd1', type: 'adjustment', amount: 100, created_at: '2026-06-05T10:00:00.000Z' }),
+      baseRow({
+        id: 'd1',
+        type: 'adjustment',
+        amount: 100,
+        created_at: '2026-06-05T10:00:00.000Z',
+      }),
       baseRow({ id: 'w1', type: 'transfer', amount: -45, created_at: '2026-06-04T10:00:00.000Z' }),
       baseRow({ id: 'd2', type: 'adjustment', amount: 50, created_at: '2026-06-03T10:00:00.000Z' }),
       baseRow({ id: 'w2', type: 'transfer', amount: -30, created_at: '2026-06-02T10:00:00.000Z' }),
@@ -203,9 +233,19 @@ describe('FinancialTransactionsTable', () => {
     // total, so an amount can be asserted unambiguously within its row.
     // Oldest→newest: +5 (run +5), -7.5 (run -2.5), +12.5 (run +10).
     respondWith([
-      baseRow({ id: 'dep', type: 'adjustment', amount: 12.5, created_at: '2026-06-03T10:00:00.000Z' }),
+      baseRow({
+        id: 'dep',
+        type: 'adjustment',
+        amount: 12.5,
+        created_at: '2026-06-03T10:00:00.000Z',
+      }),
       baseRow({ id: 'wd', type: 'transfer', amount: -7.5, created_at: '2026-06-02T10:00:00.000Z' }),
-      baseRow({ id: 'seed', type: 'adjustment', amount: 5, created_at: '2026-06-01T10:00:00.000Z' }),
+      baseRow({
+        id: 'seed',
+        type: 'adjustment',
+        amount: 5,
+        created_at: '2026-06-01T10:00:00.000Z',
+      }),
     ]);
 
     renderTable();
