@@ -379,7 +379,10 @@ const MarketsFeedPage = () => {
           justify-between, title and tools auto-swap sides in RTL. */}
         <div className="mb-6 flex items-center justify-between gap-2">
           {!isWorldCup ? (
-            <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
+            <h1
+              className="text-lg font-bold md:text-2xl"
+              style={{ color: 'var(--color-text-primary)' }}
+            >
               {t('markets.allTitle')}
             </h1>
           ) : (

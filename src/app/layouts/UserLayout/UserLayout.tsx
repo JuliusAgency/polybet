@@ -54,9 +54,11 @@ export const UserLayout = () => {
       `}</style>
 
       <header
+        className="sticky top-0"
         style={{
           backgroundColor: 'var(--color-bg-surface)',
           borderBottom: '1px solid var(--color-border)',
+          zIndex: 'var(--z-sticky)',
         }}
       >
         <div className="max-w-[90rem] mx-auto px-4 h-14 flex items-center justify-between">
@@ -100,7 +102,7 @@ export const UserLayout = () => {
             </span>
             {balance != null && (
               <span
-                className="text-sm font-mono font-semibold"
+                className="num text-sm font-semibold"
                 style={{ color: 'var(--color-win)' }}
               >
                 {balance.available.toFixed(2)}
@@ -139,7 +141,7 @@ export const UserLayout = () => {
                     {t('wallet.inPlay')}
                   </span>
                   <span
-                    className="font-mono text-sm font-semibold"
+                    className="num text-sm font-semibold"
                     style={{
                       color: inPlay > 0 ? 'var(--color-accent)' : 'var(--color-text-primary)',
                     }}
@@ -212,7 +214,7 @@ export const UserLayout = () => {
                 border: 'none',
                 cursor: 'pointer',
               }}
-              aria-label={t('nav.menu')}
+              aria-label={t('nav.more')}
               aria-expanded={isMenuOpen}
             >
               {isMenuOpen ? <CloseIcon /> : <MenuIcon />}
@@ -224,21 +226,29 @@ export const UserLayout = () => {
             only holds the secondary controls (theme, language, sign out). */}
         {isMenuOpen && (
           <nav
-            className="flex items-center gap-3 border-t px-4 py-3 md:hidden"
+            className="flex flex-col gap-2 border-t px-4 py-3 md:hidden"
             style={{ borderColor: 'var(--color-border)' }}
           >
-            <ThemeSwitcher />
-            <LanguageSwitcher />
-            <button
-              onClick={() => {
-                setIsMenuOpen(false);
-                void signOut();
-              }}
-              className="ms-auto text-sm"
-              style={{ color: 'var(--color-text-secondary)' }}
+            <span
+              className="text-xs font-semibold uppercase tracking-wide"
+              style={{ color: 'var(--color-text-muted)' }}
             >
-              {t('auth.signOut')}
-            </button>
+              {t('nav.more')}
+            </span>
+            <div className="flex items-center gap-3">
+              <ThemeSwitcher />
+              <LanguageSwitcher />
+              <button
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  void signOut();
+                }}
+                className="ms-auto text-sm"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                {t('auth.signOut')}
+              </button>
+            </div>
           </nav>
         )}
       </header>

@@ -93,8 +93,9 @@ export function SubTagFilter({ subtags, value, onChange }: SubTagFilterProps) {
         key={slug ?? '__all__'}
         onClick={() => onChange(slug)}
         aria-pressed={isActive}
-        className="shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition-colors"
+        className="shrink-0 px-2.5 py-1 text-sm font-medium transition-colors"
         style={{
+          borderRadius: 'var(--radius-sm)',
           backgroundColor: isActive
             ? 'color-mix(in srgb, var(--color-accent) 12%, transparent)'
             : 'transparent',

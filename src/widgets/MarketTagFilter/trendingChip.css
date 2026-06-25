@@ -7,6 +7,18 @@
  * movement is through solid tokens and layered box-shadow.
  */
 
+/*
+ * Plain category links — flat text (no pill fill/border). Idle reads muted; the
+ * hover lift to the primary text colour mirrors the header nav-link intent.
+ * Active state (bold + accent) is set inline in TagFilter.tsx.
+ */
+.tag-link {
+  cursor: pointer;
+}
+.tag-link:hover {
+  color: var(--color-text-primary) !important;
+}
+
 .trending-chip {
   --trending-hue: color-mix(in oklch, var(--color-accent) 70%, oklch(78% 0.14 205));
 
@@ -14,57 +26,33 @@
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  padding: 0.125rem 0.7rem;
+  padding: 0.25rem 0.375rem;
   border-radius: 9999px;
-  font-size: 0.75rem;
-  line-height: 1rem;
-  font-weight: 600;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 500;
   letter-spacing: 0.01em;
   cursor: pointer;
   isolation: isolate;
 
-  color: color-mix(in srgb, var(--trending-hue) 78%, var(--color-text-primary));
-  background-color: color-mix(in srgb, var(--trending-hue) 8%, var(--color-bg-elevated));
-  border: 1px solid color-mix(in srgb, var(--trending-hue) 35%, var(--color-border));
-  box-shadow:
-    0 0 0 0 color-mix(in srgb, var(--trending-hue) 0%, transparent),
-    inset 0 0 0 0 color-mix(in srgb, var(--trending-hue) 0%, transparent);
+  color: var(--color-text-secondary);
+  background-color: transparent;
 
   transition:
-    background-color 180ms cubic-bezier(0.33, 1, 0.68, 1),
-    border-color 180ms cubic-bezier(0.33, 1, 0.68, 1),
-    color 180ms cubic-bezier(0.33, 1, 0.68, 1),
-    transform 180ms cubic-bezier(0.33, 1, 0.68, 1),
-    box-shadow 220ms cubic-bezier(0.33, 1, 0.68, 1);
+    color 180ms cubic-bezier(0.33, 1, 0.68, 1);
 }
 
 .trending-chip:hover {
-  background-color: color-mix(in srgb, var(--trending-hue) 14%, var(--color-bg-elevated));
-  border-color: color-mix(in srgb, var(--trending-hue) 55%, var(--color-border));
   color: color-mix(in srgb, var(--trending-hue) 92%, var(--color-text-primary));
-  transform: translateY(-0.5px);
-  box-shadow:
-    0 0 14px -4px color-mix(in srgb, var(--trending-hue) 45%, transparent),
-    inset 0 0 0 0 transparent;
-}
-
-.trending-chip:active {
-  transform: translateY(0);
 }
 
 .trending-chip--active {
-  color: var(--color-bg-base);
-  background-color: var(--trending-hue);
-  border-color: var(--trending-hue);
-  box-shadow:
-    0 0 18px -2px color-mix(in srgb, var(--trending-hue) 55%, transparent),
-    inset 0 0 0 1px color-mix(in srgb, white 22%, transparent);
+  color: var(--color-accent);
+  font-weight: 700;
 }
 
 .trending-chip--active:hover {
-  background-color: var(--trending-hue);
-  color: var(--color-bg-base);
-  transform: translateY(-0.5px);
+  color: var(--color-accent);
 }
 
 .trending-chip__flame {
