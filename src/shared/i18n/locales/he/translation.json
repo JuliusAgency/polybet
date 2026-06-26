@@ -431,7 +431,10 @@
     "showLessMarkets": "הצג פחות",
     "rules": "חוקים",
     "outcomesLegend": "תוצאות",
-    "tradePlaceholder": "בחרו תוצאה כדי להתחיל לסחור"
+    "tradePlaceholder": "בחרו תוצאה כדי להתחיל לסחור",
+    "priceHistory": "היסטוריית מחירים",
+    "tapToLoadChart": "בחרו טווח כדי להציג את הגרף",
+    "togglePriceHistory": "הצגה/הסתרה של גרף היסטוריית המחירים"
   },
   "priceHistory": {
     "empty": "אין עדיין היסטוריית מחירים"

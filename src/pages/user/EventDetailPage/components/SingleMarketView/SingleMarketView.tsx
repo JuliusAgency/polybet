@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Market, MarketOutcome } from '@/entities/market';
 import {
@@ -13,8 +13,13 @@ import { usePriceHistory } from '@/features/bet';
 import { Badge } from '@/shared/ui/Badge';
 import { MarketThumbnail } from '@/shared/ui/MarketThumbnail';
 import { OutcomeButtons, type OutcomeButton } from '@/shared/ui/OutcomeButtons';
-import { PriceHistoryChart, PriceHistoryWindowToggle } from '@/shared/ui/PriceHistoryChart';
+import {
+  PriceHistoryChart,
+  PriceHistorySection,
+  usePriceHistoryCollapse,
+} from '@/shared/ui/PriceHistoryChart';
 import { formatProbability } from '@/shared/utils';
+import { EventRules } from '../EventRules';
 
 interface SingleMarketViewProps {
   market: Market;
@@ -27,6 +32,9 @@ interface SingleMarketViewProps {
   /** Admin archive control for resolved markets (super_admin only). */
   onArchive?: (market: Market) => void;
   isArchiving?: boolean;
+  /** "Your activity on this event" block — rendered just below the chart
+   *  (Polymarket order) once the user has a bet. Omitted on read-only surfaces. */
+  activitySlot?: ReactNode;
 }
 
 export const SingleMarketView = ({
@@ -37,11 +45,20 @@ export const SingleMarketView = ({
   readonly = false,
   onArchive,
   isArchiving = false,
+  activitySlot,
 }: SingleMarketViewProps) => {
   const { t, i18n } = useTranslation();
   const isHebrew = i18n.language === 'he';
-  const [window, setWindow] = useState<PriceHistoryWindow>('ALL');
-  const { data: points = [], isLoading } = usePriceHistory(market.id, window, true);
+  // Named historyWindow (not `window`) so it never shadows the browser global.
+  const [historyWindow, setHistoryWindow] = useState<PriceHistoryWindow>('ALL');
+  // Collapsed by default on phones; only the timeframe chips show until opened.
+  const { open: isChartOpen, expand, toggle } = usePriceHistoryCollapse();
+  const handleWindowChange = (w: PriceHistoryWindow) => {
+    setHistoryWindow(w);
+    expand();
+  };
+  // Don't fetch price history until the chart is actually shown.
+  const { data: points = [], isLoading } = usePriceHistory(market.id, historyWindow, isChartOpen);
 
   // Compact selected-outcome row + Buy Yes/No, mirroring EventMarketRow — the
   // binary detail shows the outcome ONCE (no repeated feed card under the chart).
@@ -63,23 +80,24 @@ export const SingleMarketView = ({
   return (
     <div className="flex flex-col gap-4">
       {/* Price history — full-bleed on mobile (no card frame); the framed card
-          returns at md+ so the desktop look is unchanged. */}
-      <section
-        className="flex flex-col gap-3 md:rounded-[var(--radius-lg)] md:border md:bg-[var(--color-bg-surface)] md:p-4"
-        style={{ borderColor: 'var(--color-border)' }}
+          returns at md+ so the desktop look is unchanged. Collapsed by default
+          on phones (only the timeframe chips show until opened). */}
+      <PriceHistorySection
+        historyWindow={historyWindow}
+        onWindowChange={handleWindowChange}
+        open={isChartOpen}
+        onExpand={expand}
+        onToggle={toggle}
       >
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-            {t('eventDetail.priceHistory', { defaultValue: 'Price history' })}
-          </h3>
-          <PriceHistoryWindowToggle value={window} onChange={setWindow} />
-        </div>
         <PriceHistoryChart
           points={points}
           outcomes={getChartOutcomes(market)}
           isLoading={isLoading}
         />
-      </section>
+      </PriceHistorySection>
+
+      {/* Your activity sits right below the chart (Polymarket order). */}
+      {activitySlot}
 
       {/* Compact selected-outcome row — thumbnail + label + inline Yes %, then
           the Buy Yes/No pills beneath. Replaces the repeated feed card. */}
@@ -178,29 +196,9 @@ export const SingleMarketView = ({
         />
       </div>
 
-      {description && description.trim().length > 0 && (
-        <section
-          className="flex flex-col gap-2 p-4"
-          style={{
-            backgroundColor: 'var(--color-bg-surface)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-lg)',
-          }}
-        >
-          <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-            {t('eventDetail.rules', { defaultValue: 'Rules' })}
-          </h3>
-          <p
-            className="whitespace-pre-line text-sm leading-relaxed"
-            style={{
-              color: 'var(--color-text-secondary)',
-              ...(isHebrew && { direction: 'ltr' as const, textAlign: 'right' as const }),
-            }}
-          >
-            {description}
-          </p>
-        </section>
-      )}
+      {/* Rules / About — pinned to the bottom of the page (Polymarket order),
+          with long-URL-safe wrapping. EventRules no-ops on blank descriptions. */}
+      {description && <EventRules description={description} />}
     </div>
   );
 };

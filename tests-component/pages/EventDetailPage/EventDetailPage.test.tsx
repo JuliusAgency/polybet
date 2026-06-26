@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, fireEvent } from '@testing-library/react';
 import type { Market, MarketOutcome } from '@/entities/market';
 import type { MarketEvent } from '@/entities/event';
 import type { EventWithMarkets } from '@/features/bet';
@@ -376,6 +376,106 @@ describe('EventDetailPage', () => {
     const slip = await screen.findByTestId('betslip');
     expect(slip).toHaveAttribute('data-market', 'm-arg');
     expect(slip).toHaveAttribute('data-outcome', 'm-arg-y');
+  });
+
+  // --- Mobile QA fixes: collapsed chart, block order, long-text wrap --------
+
+  it('collapses the price-history chart by default on mobile, showing only the timeframe chips', async () => {
+    eventByIdMock.mockReturnValue({ data: multiMarketEvent(), isLoading: false, isError: false });
+    const EventDetailPage = await loadPage();
+
+    renderWithProviders(<EventDetailPage />, {
+      initialRoute: '/events/evt-1',
+      authValue: signedInUser,
+    });
+
+    // Collapsed: the tap-to-load placeholder replaces the chart...
+    expect(screen.getByText('Select a range to view the chart')).toBeInTheDocument();
+    // ...while the timeframe chips stay visible.
+    expect(screen.getByRole('radio', { name: 'ALL' })).toBeInTheDocument();
+  });
+
+  it('opens the chart when a timeframe chip is tapped on mobile (graph opens on chip click)', async () => {
+    eventByIdMock.mockReturnValue({ data: multiMarketEvent(), isLoading: false, isError: false });
+    const EventDetailPage = await loadPage();
+
+    renderWithProviders(<EventDetailPage />, {
+      initialRoute: '/events/evt-1',
+      authValue: signedInUser,
+    });
+
+    expect(screen.getByText('Select a range to view the chart')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('radio', { name: 'ALL' }));
+    // After tapping a range the placeholder is gone (the chart is revealed).
+    expect(screen.queryByText('Select a range to view the chart')).not.toBeInTheDocument();
+  });
+
+  it('shows the chart immediately (no collapse placeholder) on desktop', async () => {
+    mediaQueryMock.mockReturnValue(true); // >= md
+    eventByIdMock.mockReturnValue({ data: multiMarketEvent(), isLoading: false, isError: false });
+    const EventDetailPage = await loadPage();
+
+    renderWithProviders(<EventDetailPage />, {
+      initialRoute: '/events/evt-1',
+      authValue: signedInUser,
+    });
+
+    expect(screen.queryByText('Select a range to view the chart')).not.toBeInTheDocument();
+  });
+
+  it('orders the blocks Polymarket-style: Your activity above the markets list, Rules below it', async () => {
+    myBetsMock.mockReturnValue({
+      data: [
+        {
+          market_id: 'm-arg',
+          stake: 37.1,
+          potential_payout: 100,
+          status: 'open',
+          market_outcomes: { name: 'Yes' },
+        },
+      ],
+    });
+    eventByIdMock.mockReturnValue({ data: multiMarketEvent(), isLoading: false, isError: false });
+    const EventDetailPage = await loadPage();
+
+    renderWithProviders(<EventDetailPage />, {
+      initialRoute: '/events/evt-1',
+      authValue: signedInUser,
+    });
+
+    const activity = screen.getByRole('heading', { name: /your activity on this event/i });
+    const rules = screen.getByRole('heading', { name: /^rules$/i });
+    const firstBuy = screen.getAllByRole('button', { name: /buy yes/i })[0];
+
+    // Your activity precedes the markets list...
+    expect(
+      activity.compareDocumentPosition(firstBuy) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    // ...and Rules follows the markets list (pinned to the bottom).
+    expect(firstBuy.compareDocumentPosition(rules) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('wraps long unbreakable URLs in the Rules text so they stay inside the card', async () => {
+    eventByIdMock.mockReturnValue({
+      data: {
+        event: {
+          ...baseEvent,
+          description: 'See https://x.com/JustTrumpTruth/status/2062652114430500000?s=20',
+        },
+        markets: multiMarketEvent().markets,
+      },
+      isLoading: false,
+      isError: false,
+    });
+    const EventDetailPage = await loadPage();
+
+    renderWithProviders(<EventDetailPage />, {
+      initialRoute: '/events/evt-1',
+      authValue: signedInUser,
+    });
+
+    const rulesPara = screen.getByText(/2062652114430500000/);
+    expect(rulesPara.style.overflowWrap).toBe('anywhere');
   });
 
   it('read-only mode hides the BetSlip even on desktop and links back to the admin markets list', async () => {

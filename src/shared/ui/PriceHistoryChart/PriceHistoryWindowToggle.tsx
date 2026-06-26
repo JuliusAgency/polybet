@@ -4,15 +4,22 @@ interface PriceHistoryWindowToggleProps {
   value: PriceHistoryWindow;
   onChange: (value: PriceHistoryWindow) => void;
   disabled?: boolean;
+  /** Accessible name for the radiogroup (e.g. "Price history"). */
+  ariaLabel?: string;
 }
 
 export const PriceHistoryWindowToggle = ({
   value,
   onChange,
   disabled = false,
+  ariaLabel,
 }: PriceHistoryWindowToggleProps) => {
   return (
-    <div role="radiogroup" className="inline-flex items-center gap-2 sm:gap-3">
+    <div
+      role="radiogroup"
+      aria-label={ariaLabel}
+      className="inline-flex items-center gap-2 sm:gap-3"
+    >
       {PRICE_HISTORY_WINDOWS.map((w) => {
         const active = w === value;
         return (

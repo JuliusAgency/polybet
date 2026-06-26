@@ -23,6 +23,7 @@ import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { formatVolume, formatProbability } from '@/shared/utils';
 import { SimilarEventsList } from './components/SimilarEventsList';
 import { EventUserActivity } from './components/EventUserActivity';
+import { EventRules } from './components/EventRules';
 import { SingleMarketView } from './components/SingleMarketView';
 import { EventMarketRow } from './components/EventMarketRow';
 import { EventPriceHistoryChart } from './components/EventPriceHistoryChart';
@@ -220,7 +221,6 @@ const EventDetailPage = ({ readonly = false }: EventDetailPageProps = {}) => {
     : null;
 
   const isSingleMarket = markets.length === 1;
-  const isHebrew = i18n.language === 'he';
   // On desktop the slip lives in a sticky sidebar column; on narrower viewports
   // it falls back to the floating overlay opened on outcome click.
   const dockColumn = !readonly && isDesktop;
@@ -326,38 +326,18 @@ const EventDetailPage = ({ readonly = false }: EventDetailPageProps = {}) => {
                 isArchiving={
                   archiveMarket.isPending && archiveMarket.variables?.marketId === markets[0].id
                 }
+                activitySlot={
+                  !readonly ? <EventUserActivity markets={markets} bets={bets} /> : null
+                }
               />
             ) : (
               <>
                 <EventPriceHistoryChart markets={markets} />
-                {event.description && (
-                  <section
-                    className="flex flex-col gap-2 p-4"
-                    style={{
-                      backgroundColor: 'var(--color-bg-surface)',
-                      border: '1px solid var(--color-border)',
-                      borderRadius: 'var(--radius-lg)',
-                    }}
-                  >
-                    <h3
-                      className="text-sm font-semibold"
-                      style={{ color: 'var(--color-text-primary)' }}
-                    >
-                      {t('eventDetail.rules')}
-                    </h3>
-                    <p
-                      className="whitespace-pre-line text-sm leading-relaxed"
-                      style={{
-                        color: 'var(--color-text-secondary)',
-                        // Polymarket rules text is English; LTR flow + end-aligned
-                        // keeps punctuation correct inside the RTL layout.
-                        ...(isHebrew && { direction: 'ltr' as const, textAlign: 'right' as const }),
-                      }}
-                    >
-                      {event.description}
-                    </p>
-                  </section>
-                )}
+
+                {/* Your activity sits right below the chart (Polymarket order),
+                    above the markets list — only renders once the user has bet. */}
+                {!readonly && <EventUserActivity markets={markets} bets={bets} />}
+
                 <section
                   className="flex flex-col"
                   style={{
@@ -383,10 +363,12 @@ const EventDetailPage = ({ readonly = false }: EventDetailPageProps = {}) => {
                     />
                   ))}
                 </section>
+
+                {/* Rules / About — pinned to the bottom, below the markets list
+                    (Polymarket order), with long-URL-safe wrapping. */}
+                {event.description && <EventRules description={event.description} />}
               </>
             )}
-
-            {!readonly && <EventUserActivity markets={markets} bets={bets} />}
           </div>
 
           <div className="mt-10">

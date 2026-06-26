@@ -38,6 +38,15 @@ export class PriceDriftError extends Error {
 // sell_position raises the drift branch with ERRCODE P0002 (see migration
 // 20260602130622_quote_sell_and_sell_position.sql), mirroring place_bet.
 const PRICE_DRIFT_PG_ERRCODE = 'P0002';
+
+// Postgres deadlock (SQLSTATE 40P01) — see usePlaceBet for the rationale. A
+// sell can deadlock against a concurrent buy/settlement on the shared
+// market / balances / position row locks; sell_position is atomic so the
+// aborted side is safe to retry.
+const DEADLOCK_PG_ERRCODE = '40P01';
+const DEADLOCK_RETRIES = 2;
+const DEADLOCK_BACKOFF_MS = 150;
+
 const PRICE_DRIFT_RE = /Price changed.*?expected\s+([\d.]+).*?actual\s+([\d.]+)/i;
 
 function tryParseLatestPrice(message: string): number | null {
@@ -52,19 +61,25 @@ export function useSellPosition() {
 
   return useMutation({
     mutationFn: async (vars: SellPositionInput): Promise<SellPositionResult> => {
-      const { data, error } = await supabase.rpc('sell_position', {
-        p_position_id: vars.positionId,
-        p_shares: vars.shares,
-        p_expected_price: vars.expectedPrice,
-      });
+      for (let attempt = 0; ; attempt++) {
+        const { data, error } = await supabase.rpc('sell_position', {
+          p_position_id: vars.positionId,
+          p_shares: vars.shares,
+          p_expected_price: vars.expectedPrice,
+        });
 
-      if (error) {
-        if (error.code === PRICE_DRIFT_PG_ERRCODE || /Price changed/i.test(error.message)) {
-          throw new PriceDriftError(error.message, tryParseLatestPrice(error.message));
+        if (error) {
+          if (error.code === PRICE_DRIFT_PG_ERRCODE || /Price changed/i.test(error.message)) {
+            throw new PriceDriftError(error.message, tryParseLatestPrice(error.message));
+          }
+          if (error.code === DEADLOCK_PG_ERRCODE && attempt < DEADLOCK_RETRIES) {
+            await new Promise((r) => setTimeout(r, DEADLOCK_BACKOFF_MS * (attempt + 1)));
+            continue;
+          }
+          throw new Error(error.message);
         }
-        throw new Error(error.message);
+        return data as SellPositionResult;
       }
-      return data as SellPositionResult;
     },
     onSuccess: () => {
       // Balance + positions are not covered by realtime; invalidate explicitly.

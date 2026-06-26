@@ -60,8 +60,9 @@ async function fetchClobBook(tokenId: string): Promise<ClobBookResponse | null> 
     try {
       const res = await fetch(url, { signal: controller.signal });
       if (res.ok) return (await res.json()) as ClobBookResponse;
-      // Retry transient 5xx once; bail on 4xx (bad token id).
-      if (res.status < 500) return null;
+      // Retry transient 5xx and 429 (the shared-IP ~50 req/s rate limit) — both
+      // clear on a brief backoff. Bail only on other 4xx (bad/unknown token id).
+      if (res.status !== 429 && res.status < 500) return null;
     } catch {
       // Network / abort — fall through to retry.
     } finally {
@@ -154,29 +155,41 @@ Deno.serve(async (req: Request) => {
   // bookWriter and this edge function converge on the same flat numeric[]
   // representation, so subsequent place_bet → quote_bet_payout walks return
   // the same numbers we just computed and returned to the client.
-  const nowIso = new Date().toISOString();
   const asksFlat = serializeSide(book.asks, false);
   const bidsFlat = serializeSide(book.bids ?? [], true);
 
-  // Skip the write if the book is genuinely empty — there's nothing useful to
-  // cache, and writing zero-length arrays would just churn updated_at.
+  // Report freshness from the ACTUAL DB write, never from the in-memory walk.
+  // place_bet gates on market_outcome_books.updated_at (<=30s, DB clock); if we
+  // returned a non-null book_updated_at when the upsert silently failed (or never
+  // ran), the client would submit a bet the RPC then rejects with "Market book
+  // unavailable / stale" — the QA 400. So we read the row back and only claim a
+  // fresh book when (a) we cached buy-side (ask) depth and (b) the write landed.
+  // The returned value is the trigger-stamped updated_at (migration 20260609131610),
+  // i.e. exactly what place_bet's staleness guard compares against — no edge↔db skew.
+  let bookUpdatedAt: string | null = null;
   if (asksFlat.length > 0 || bidsFlat.length > 0) {
-    const { error: upsertErr } = await supabase.from('market_outcome_books').upsert(
-      {
-        polymarket_token_id: tokenId,
-        outcome_id: outcomeId,
-        asks: asksFlat,
-        bids: bidsFlat,
-        hash: book.hash ?? null,
-        // updated_at is stamped by the DB trigger trg_market_outcome_books_touch
-        // (migration 20260609131610) using the Postgres clock, so place_bet's
-        // staleness guard never sees edge↔db clock skew. Do not send it here.
-      },
-      { onConflict: 'polymarket_token_id' }
-    );
+    const { data: persisted, error: upsertErr } = await supabase
+      .from('market_outcome_books')
+      .upsert(
+        {
+          polymarket_token_id: tokenId,
+          outcome_id: outcomeId,
+          asks: asksFlat,
+          bids: bidsFlat,
+          hash: book.hash ?? null,
+        },
+        { onConflict: 'polymarket_token_id' }
+      )
+      .select('updated_at')
+      .maybeSingle();
     if (upsertErr) {
-      // Non-fatal: we still have a valid quote in memory. Log and move on.
+      // The write failed — do NOT claim a fresh book. The client treats
+      // book_updated_at=null as "unavailable, try again", which is the truth here.
       console.error('quote-bet: market_outcome_books upsert failed', upsertErr);
+    } else if (!persisted) {
+      console.error('quote-bet: market_outcome_books upsert returned no row');
+    } else if (asksFlat.length > 0 && typeof persisted.updated_at === 'string') {
+      bookUpdatedAt = persisted.updated_at;
     }
   }
 
@@ -186,7 +199,7 @@ Deno.serve(async (req: Request) => {
     avg_price: walk.avgPrice,
     effective_odds: walk.effectiveOdds,
     partial: walk.partial,
-    book_updated_at: asksFlat.length > 0 ? nowIso : null,
+    book_updated_at: bookUpdatedAt,
     available_stake: walk.availableStake,
   };
 

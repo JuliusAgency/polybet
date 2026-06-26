@@ -53,7 +53,9 @@ async function fetchClobBook(tokenId: string): Promise<ClobBookResponse | null> 
     try {
       const res = await fetch(url, { signal: controller.signal });
       if (res.ok) return (await res.json()) as ClobBookResponse;
-      if (res.status < 500) return null;
+      // Retry transient 5xx and 429 (the shared-IP ~50 req/s rate limit); bail
+      // only on other 4xx (bad/unknown token id).
+      if (res.status !== 429 && res.status < 500) return null;
     } catch {
       // Network / abort — fall through to retry.
     } finally {
@@ -138,26 +140,37 @@ Deno.serve(async (req: Request) => {
   // UPSERT the freshly-fetched top-N (both sides) as the canonical row, so the
   // subsequent sell_position -> quote_sell_proceeds walk returns the same
   // numbers we just computed and returned to the client.
-  const nowIso = new Date().toISOString();
   const asksFlat = serializeSide(book.asks ?? [], false);
   const bidsFlat = serializeSide(book.bids ?? [], true);
 
+  // Report freshness from the ACTUAL DB write, never from the in-memory walk —
+  // symmetric with quote-bet. sell_position gates on market_outcome_books.updated_at
+  // (<=30s, DB clock); claiming a fresh book when the upsert never landed makes
+  // sell_position reject with "Market book unavailable / stale". Read the row back
+  // and only claim freshness when (a) we cached sell-side (bid) depth and (b) the
+  // write landed. The returned value is the trigger-stamped updated_at.
+  let bookUpdatedAt: string | null = null;
   if (asksFlat.length > 0 || bidsFlat.length > 0) {
-    const { error: upsertErr } = await supabase.from('market_outcome_books').upsert(
-      {
-        polymarket_token_id: tokenId,
-        outcome_id: outcomeId,
-        asks: asksFlat,
-        bids: bidsFlat,
-        hash: book.hash ?? null,
-        // updated_at is stamped by the DB trigger trg_market_outcome_books_touch
-        // (migration 20260609131610) using the Postgres clock, so sell_position's
-        // staleness guard never sees edge↔db clock skew. Do not send it here.
-      },
-      { onConflict: 'polymarket_token_id' }
-    );
+    const { data: persisted, error: upsertErr } = await supabase
+      .from('market_outcome_books')
+      .upsert(
+        {
+          polymarket_token_id: tokenId,
+          outcome_id: outcomeId,
+          asks: asksFlat,
+          bids: bidsFlat,
+          hash: book.hash ?? null,
+        },
+        { onConflict: 'polymarket_token_id' }
+      )
+      .select('updated_at')
+      .maybeSingle();
     if (upsertErr) {
       console.error('quote-sell: market_outcome_books upsert failed', upsertErr);
+    } else if (!persisted) {
+      console.error('quote-sell: market_outcome_books upsert returned no row');
+    } else if (bidsFlat.length > 0 && typeof persisted.updated_at === 'string') {
+      bookUpdatedAt = persisted.updated_at;
     }
   }
 
@@ -166,8 +179,7 @@ Deno.serve(async (req: Request) => {
     filled_shares: walk.filledShares,
     avg_price: walk.avgPrice,
     partial: walk.partial,
-    // Only claim a fresh book when we actually cached bid depth.
-    book_updated_at: bidsFlat.length > 0 ? nowIso : null,
+    book_updated_at: bookUpdatedAt,
     available_shares: walk.availableShares,
   };
 

@@ -431,7 +431,10 @@
     "showLessMarkets": "Show less",
     "rules": "Rules",
     "outcomesLegend": "Outcomes",
-    "tradePlaceholder": "Select an outcome to start trading"
+    "tradePlaceholder": "Select an outcome to start trading",
+    "priceHistory": "Price history",
+    "tapToLoadChart": "Select a range to view the chart",
+    "togglePriceHistory": "Toggle price history chart"
   },
   "priceHistory": {
     "empty": "No price history yet"

@@ -98,7 +98,11 @@ export const SellForm = ({ position, onClose, onSuccess }: SellFormProps) => {
     }
 
     // Pre-submit refetch so the locked price matches the freshest bid the user
-    // could have seen (closes the poll→Confirm race). Falls back to last quote.
+    // could have seen (closes the poll→Confirm race; quote-sell re-UPSERTs the
+    // book). Falls back to the last observed quote — which is now safe because
+    // the edge function reports book_updated_at from the ACTUAL DB write (see
+    // quote-sell/index.ts), so a non-null book_updated_at can no longer claim a
+    // fresh book the DB doesn't have (the old QA-stale cause).
     setSubmitError(null);
     const roundedShares = Math.round(shares! * 1e4) / 1e4;
     const quoteKey = ['sell-quote', tokenId, roundedShares] as const;

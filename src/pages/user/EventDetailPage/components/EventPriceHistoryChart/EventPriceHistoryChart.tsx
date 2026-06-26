@@ -4,7 +4,11 @@ import type { Market, MarketOutcome } from '@/entities/market';
 import { getChartOutcomes } from '@/entities/market';
 import type { PriceHistoryPoint, PriceHistoryWindow } from '@/features/bet';
 import { useEventPriceHistory } from '@/features/bet';
-import { PriceHistoryChart, PriceHistoryWindowToggle } from '@/shared/ui/PriceHistoryChart';
+import {
+  PriceHistoryChart,
+  PriceHistorySection,
+  usePriceHistoryCollapse,
+} from '@/shared/ui/PriceHistoryChart';
 
 interface EventPriceHistoryChartProps {
   markets: Market[];
@@ -32,8 +36,16 @@ export const EventPriceHistoryChart = ({
   collapsedBadgesCount = 6,
 }: EventPriceHistoryChartProps) => {
   const { t } = useTranslation();
-  const [window, setWindow] = useState<PriceHistoryWindow>('ALL');
+  // Named historyWindow (not `window`) so it never shadows the browser global.
+  const [historyWindow, setHistoryWindow] = useState<PriceHistoryWindow>('ALL');
   const [isExpanded, setIsExpanded] = useState(false);
+  // Collapsed by default on phones; only the timeframe chips show until the user
+  // opens the chart. `open` is always true from md up.
+  const { open: isChartOpen, expand, toggle } = usePriceHistoryCollapse();
+  const handleWindowChange = (w: PriceHistoryWindow) => {
+    setHistoryWindow(w);
+    expand();
+  };
 
   const sortedMarkets = useMemo(
     () => [...markets].sort((a, b) => marketVolume(b) - marketVolume(a)),
@@ -46,7 +58,12 @@ export const EventPriceHistoryChart = ({
   });
 
   const marketIds = useMemo(() => sortedMarkets.map((m) => m.id), [sortedMarkets]);
-  const { pointsByMarketId, isLoading } = useEventPriceHistory(marketIds, window, true);
+  // Don't fetch price history until the chart is actually shown.
+  const { pointsByMarketId, isLoading } = useEventPriceHistory(
+    marketIds,
+    historyWindow,
+    isChartOpen
+  );
 
   const { outcomes, points } = useMemo(() => {
     const outcomesOut: MarketOutcome[] = [];
@@ -85,21 +102,19 @@ export const EventPriceHistoryChart = ({
 
   return (
     <>
-      <section
-        className="flex flex-col gap-3 md:rounded-[var(--radius-lg)] md:border md:bg-[var(--color-bg-surface)] md:p-4"
-        style={{ borderColor: 'var(--color-border)' }}
+      <PriceHistorySection
+        historyWindow={historyWindow}
+        onWindowChange={handleWindowChange}
+        open={isChartOpen}
+        onExpand={expand}
+        onToggle={toggle}
       >
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-            {t('eventDetail.priceHistory', { defaultValue: 'Price history' })}
-          </h3>
-          <PriceHistoryWindowToggle value={window} onChange={setWindow} />
-        </div>
-
         <PriceHistoryChart points={points} outcomes={outcomes} isLoading={isLoading} />
-      </section>
+      </PriceHistorySection>
 
-      {sortedMarkets.length > 1 &&
+      {/* Market selector badges only make sense once the chart is shown. */}
+      {isChartOpen &&
+        sortedMarkets.length > 1 &&
         (() => {
           const hasOverflow = sortedMarkets.length > collapsedBadgesCount;
           const visibleMarkets =

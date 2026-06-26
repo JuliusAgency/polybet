@@ -96,14 +96,19 @@ export function usePlaceBetWithRetry({
     const roundedStake = Math.round(stake! * 100) / 100;
     const quoteKey = ['bet-quote', selected.polymarket_token_id, roundedStake] as const;
 
-    // Refetch the live quote and return it, or null if the book came back
-    // unavailable (CLOB transient failure between debounce and Confirm) — the
-    // server has no mid-price fallback, so a null book means "cannot place".
+    // Re-warm the live book (quote-bet re-UPSERTs market_outcome_books on every
+    // call) and read the freshest quote back, or null if the book came back
+    // unavailable. The edge function now reports book_updated_at from the ACTUAL
+    // DB write (not the in-memory walk — see quote-bet/index.ts), so a non-null
+    // book_updated_at here means the server-side book is genuinely fresh and
+    // place_bet will accept it; null means "cannot place, try again". This is why
+    // falling back to the last observed quote is now safe — it can no longer
+    // claim a fresh book the DB doesn't actually have (the old QA-400 cause).
     const refreshQuote = async (): Promise<BetQuote | null> => {
       try {
         await queryClient.refetchQueries({ queryKey: quoteKey });
       } catch {
-        // Fall back to the last known quote below.
+        // Refetch threw (network / CLOB transient) — fall back to the last quote.
       }
       const next = queryClient.getQueryData<BetQuote | null>(quoteKey) ?? quote ?? null;
       return next && next.book_updated_at !== null ? next : null;

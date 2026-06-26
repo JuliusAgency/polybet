@@ -30,6 +30,15 @@ export class OddsDriftError extends Error {
 // raises with a distinct message.
 const ODDS_DRIFT_PG_ERRCODE = 'P0002';
 
+// Postgres deadlock (SQLSTATE 40P01). Concurrent buys/sells/settlement on the
+// same market take the markets / balances / positions row locks; under load the
+// loser of a lock-order race is aborted with 40P01. place_bet is atomic, so the
+// aborted side is always safe to retry — do so a couple times with a short
+// backoff before surfacing the raw error.
+const DEADLOCK_PG_ERRCODE = '40P01';
+const DEADLOCK_RETRIES = 2;
+const DEADLOCK_BACKOFF_MS = 150;
+
 const ODDS_DRIFT_RE = /Odds changed.*?expected\s+([\d.]+).*?actual\s+([\d.]+)/i;
 
 function tryParseLatestOdds(message: string): number | null {
@@ -44,20 +53,26 @@ export function usePlaceBet() {
 
   return useMutation({
     mutationFn: async (vars: PlaceBetInput): Promise<string> => {
-      const { data: betId, error } = await supabase.rpc('place_bet', {
-        p_market_id: vars.marketId,
-        p_outcome_id: vars.outcomeId,
-        p_stake: vars.stake,
-        p_expected_odds: vars.expectedOdds,
-      });
+      for (let attempt = 0; ; attempt++) {
+        const { data: betId, error } = await supabase.rpc('place_bet', {
+          p_market_id: vars.marketId,
+          p_outcome_id: vars.outcomeId,
+          p_stake: vars.stake,
+          p_expected_odds: vars.expectedOdds,
+        });
 
-      if (error) {
-        if (error.code === ODDS_DRIFT_PG_ERRCODE || /Odds changed/i.test(error.message)) {
-          throw new OddsDriftError(error.message, tryParseLatestOdds(error.message));
+        if (error) {
+          if (error.code === ODDS_DRIFT_PG_ERRCODE || /Odds changed/i.test(error.message)) {
+            throw new OddsDriftError(error.message, tryParseLatestOdds(error.message));
+          }
+          if (error.code === DEADLOCK_PG_ERRCODE && attempt < DEADLOCK_RETRIES) {
+            await new Promise((r) => setTimeout(r, DEADLOCK_BACKOFF_MS * (attempt + 1)));
+            continue;
+          }
+          throw new Error(error.message);
         }
-        throw new Error(error.message);
+        return betId as string;
       }
-      return betId as string;
     },
     onSuccess: () => {
       // Balance + positions/trades are not covered by realtime (positions is not
