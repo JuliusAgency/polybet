@@ -86,8 +86,10 @@ export const UserLayout = () => {
               <NavLink to={ROUTES.USER.STATS} className={navLinkClass}>
                 {t('nav.stats')}
               </NavLink>
-              {/* Polymarket-style persistent market search, adjacent to Stats. */}
-              <div className="ms-2">
+              {/* Polymarket-style persistent market search, adjacent to Stats.
+                  Deferred to xl so the bar isn't crammed at md/lg widths (the
+                  feed has its own in-page search; this is a convenience). */}
+              <div className="ms-2 hidden xl:block">
                 <NavMarketSearch buildEventHref={buildEventHref} />
               </div>
             </nav>
@@ -149,7 +151,7 @@ export const UserLayout = () => {
                   </span>
                   {openBetsCount > 0 && (
                     <span
-                      className="hidden rounded-full px-1.5 py-0.5 text-xs font-medium md:inline-flex"
+                      className="hidden whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium leading-none xl:inline-flex"
                       style={{
                         backgroundColor: 'var(--color-accent)',
                         color: 'var(--color-bg-base)',
