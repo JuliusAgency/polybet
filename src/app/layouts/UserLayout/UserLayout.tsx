@@ -94,8 +94,10 @@ export const UserLayout = () => {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Username is the least-essential chrome — defer it to xl so the
+                bar isn't crammed at md/lg widths (e.g. ~1100px). */}
             <span
-              className="hidden text-sm sm:inline"
+              className="hidden text-sm xl:inline"
               style={{ color: 'var(--color-text-secondary)' }}
             >
               {profile?.username ?? ''}
@@ -132,7 +134,7 @@ export const UserLayout = () => {
                   aria-label={t('wallet.inPlay')}
                 >
                   <span
-                    className="hidden text-xs md:inline"
+                    className="hidden whitespace-nowrap text-xs xl:inline"
                     style={{ color: 'var(--color-text-secondary)' }}
                   >
                     {t('wallet.inPlay')}

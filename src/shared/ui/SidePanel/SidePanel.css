@@ -3,7 +3,10 @@
  * Positioning uses CSS logical properties so the panel docks to the inline-end
  * of the page (right in LTR, left in RTL) without extra JS. */
 
-/* Desktop default: floating card pinned to the inline-end edge. */
+/* Base geometry — a safety fallback only. In practice the panel is always either
+ * the docked column (>=1024px) or the bottom-sheet popup (<=1023px, below), so a
+ * non-docked panel never actually renders at desktop width. Kept as a sane
+ * fallback if that ever changes. */
 .side-panel {
   position: fixed;
   inset-block-start: 5rem; /* below the app header */
@@ -25,11 +28,11 @@
   max-height: calc(100vh - 6rem);
 }
 
-/* Scrim behind the mobile bottom sheet. Hidden by default — the desktop
- * floating card and the docked column never dim the page (it stays interactive).
- * Shown only at the bottom-sheet breakpoint below; the panel only renders this
- * element when NOT docked (see SidePanel.tsx), so a docked column is never
- * dimmed even if it somehow lingers at a narrow width. */
+/* Scrim behind the bottom-sheet popup. Hidden by default — the docked column
+ * never dims the page (it stays interactive). Shown only below the dock
+ * breakpoint; the panel only renders this element when NOT docked (see
+ * SidePanel.tsx), so a docked column is never dimmed even if it somehow lingers
+ * at a narrow width. */
 .side-panel-backdrop {
   display: none;
   position: fixed;
@@ -37,15 +40,18 @@
   background-color: rgba(0, 0, 0, 0.6);
 }
 
-/* Grab handle — hidden by default (desktop floating card). Shown only on the
- * mobile bottom sheet (≤767px, non-docked) as a swipe-to-dismiss drag handle. */
+/* Grab handle — hidden by default (docked column). Shown only on the bottom-sheet
+ * popup (below the dock breakpoint, non-docked) as a swipe-to-dismiss handle. */
 .side-panel__grabber {
   display: none;
 }
 
-/* Mobile: full-width bottom sheet. Excludes the docked variant, which is only
- * ever mounted at desktop widths but stays in-flow if that ever changes. */
-@media (max-width: 767px) {
+/* Below the dock breakpoint: the panel is a bottom-sheet popup — there is NO
+ * floating-overlay middle mode. At >=1024px the panel is the docked column
+ * instead (see BETSLIP_DOCK_QUERY = min-width:1024px in widgets/BetSlip/const.ts;
+ * keep these two in sync). Excludes the docked variant. On wider screens (tablet)
+ * the sheet is capped and centered so its content never stretches edge-to-edge. */
+@media (max-width: 1023px) {
   .side-panel-backdrop {
     display: block;
     animation: side-panel-fade-in var(--duration-base) var(--ease-out-expo);
@@ -56,7 +62,10 @@
     inset-block-end: 0;
     inset-inline: 0;
     width: 100%;
-    max-width: 100%;
+    /* Full-width on phones; capped + centered on wider screens (tablet) so the
+     * popup reads as an intentional sheet rather than a stretched bar. */
+    max-width: 30rem;
+    margin-inline: auto;
     max-height: 85vh;
     /* round only the top edge when anchored to the bottom */
     border-radius: var(--radius-lg) var(--radius-lg) 0 0 !important;
