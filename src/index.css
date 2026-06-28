@@ -16,12 +16,14 @@ html {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Never allow horizontal page scroll. A stray few-px overflow at narrow
-     widths (≤320px) otherwise surfaces a horizontal scrollbar AND makes the
-     `position: fixed` bottom tab bar / bet sheet drift sideways on mobile.
-     `clip` (not `hidden`) does not establish a scroll container, so the sticky
-     app header keeps sticking to the viewport. */
-  overflow-x: clip;
+  /* Prevent horizontal page scroll. `overflow-x: hidden` on the root propagates
+     to the viewport (the sticky header still pins) and — unlike `overflow-x:
+     clip` — reliably suppresses horizontal scroll in WebKit / iOS Safari, where
+     root-level `clip` does not. Do NOT also set this on <body>: a body-level
+     overflow-x creates a nested scroll container that breaks the sticky header.
+     NOTE: this cannot contain `position: fixed` descendants (they escape root
+     overflow) — those must constrain their own width (see the sonner fix below). */
+  overflow-x: hidden;
 }
 
 html[lang='he'] {
@@ -40,7 +42,6 @@ html[lang='he'] {
 body {
   margin: 0;
   min-height: 100vh;
-  overflow-x: clip;
   background-color: var(--color-bg-base);
   /* Soften the switch — tokens retint their own descendants instantly, this masks the root repaint */
   transition: background-color var(--duration-base) var(--ease-out-expo),
@@ -64,6 +65,18 @@ input, textarea, select {
   left: 0 !important;
   right: auto !important;
   transform: translate(-35%, -35%) !important;
+}
+
+/* Sonner mobile fix: at ≤600px sonner pins the toaster with `width: 100%` AND a
+   left offset, so `right` is ignored and its right edge overflows the viewport by
+   --mobile-offset-left (~16px). Being position:fixed it escapes the root
+   overflow-x guard, so a horizontal scrollbar appears whenever a toast is on
+   screen. Let the left/right offsets size it (width:auto) so it always fits. */
+@media (max-width: 600px) {
+  [data-sonner-toaster] {
+    width: calc(100% - var(--mobile-offset-left, 16px) - var(--mobile-offset-right, 16px)) !important;
+    max-width: 100vw;
+  }
 }
 
 /* Scrollbar — token-driven so light/dark both look intentional */
