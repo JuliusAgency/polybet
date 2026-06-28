@@ -193,7 +193,7 @@ export const SidePanel = ({
         )}
 
         {!title && showClose && (
-          <div className="flex justify-end px-5 pt-4">
+          <div className="side-panel__close-row flex justify-end px-5 pt-4">
             <button
               onClick={onClose}
               disabled={closeDisabled}

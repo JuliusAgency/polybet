@@ -86,6 +86,13 @@
     border-radius: var(--radius-full);
     background-color: var(--color-border-strong);
   }
+
+  /* The bottom sheet is dismissed by swiping the grab handle or tapping the
+     backdrop, so the × is redundant here — hide it (it stays on the desktop
+     floating overlay, which has neither a grab handle nor a backdrop). */
+  .side-panel:not(.side-panel--docked) .side-panel__close-row {
+    display: none;
+  }
 }
 
 @keyframes side-panel-slide-up {

@@ -267,7 +267,17 @@ export function OutcomeButtons({
             key={o.id}
             type="button"
             aria-pressed={selectedId != null ? isSelected : undefined}
-            onClick={() => onClick(o.id)}
+            onClick={(e) => {
+              onClick(o.id);
+              // Clear the hover/focus highlight on tap so the pill doesn't stay
+              // stuck in its solid-fill "+%" state. On touch a tap both focuses
+              // the pill AND fires mouse-compat enter (with no matching leave),
+              // so we reset the state directly AND blur — otherwise the feed pill
+              // stays highlighted after the BetSlip is opened and then dismissed
+              // by swiping the sheet (which never blurs/leaves the trigger).
+              setHoveredId(null);
+              e.currentTarget.blur();
+            }}
             onMouseEnter={() => setHoveredId(o.id)}
             onMouseLeave={() => setHoveredId(null)}
             onFocus={() => setHoveredId(o.id)}
