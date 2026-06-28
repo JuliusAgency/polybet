@@ -200,7 +200,11 @@ export const ManagerLayout = () => {
         </>
       )}
 
-      <main className="flex-1 lg:min-h-0 lg:overflow-y-auto">
+      {/* min-w-0: as a flex child, main otherwise keeps its content's intrinsic
+          width (min-width:auto), so a wide table would push the whole page wider
+          than the viewport. min-w-0 lets it shrink so the table's own
+          overflow-x-auto scroll container takes over instead. */}
+      <main className="flex-1 min-w-0 lg:min-h-0 lg:overflow-y-auto">
         <Outlet />
       </main>
     </div>

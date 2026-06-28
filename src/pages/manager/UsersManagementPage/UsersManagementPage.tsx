@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Button } from '@/shared/ui/Button';
+import { ActionButton, type ActionTone } from '@/shared/ui/ActionButton';
 import { Badge } from '@/shared/ui/Badge';
 import { TableSkeleton } from '@/shared/ui/TableSkeleton';
 import { EditUserModal, type EditUserValues } from '@/shared/ui/EditUserModal';
@@ -16,6 +16,15 @@ import {
   type UserRow,
 } from '@/features/manager/users';
 import { CreateUserModal } from './components/CreateUserModal';
+import {
+  PlusIcon,
+  PencilIcon,
+  KeyIcon,
+  ArrowDownIcon,
+  ArrowUpIcon,
+  BanIcon,
+  CheckIcon,
+} from './components/actionIcons';
 
 interface ModalState {
   userId: string;
@@ -42,7 +51,8 @@ interface ResetTarget {
 interface RowAction {
   key: string;
   label: string;
-  variant: 'primary' | 'secondary' | 'danger';
+  tone: ActionTone;
+  icon: ReactNode;
   disabled?: boolean;
   onClick: () => void;
   /** Span both columns in the mobile card's 2-col action grid. */
@@ -131,7 +141,8 @@ const UsersManagementPage = () => {
       {
         key: 'edit',
         label: t('editUser.edit'),
-        variant: 'secondary',
+        tone: 'neutral',
+        icon: <PencilIcon />,
         onClick: () =>
           setEditTarget({
             userId: row.user_id,
@@ -144,20 +155,23 @@ const UsersManagementPage = () => {
       {
         key: 'reset',
         label: t('managerProfile.resetPwd'),
-        variant: 'secondary',
+        tone: 'neutral',
+        icon: <KeyIcon />,
         onClick: () => setResetTarget({ userId: row.user_id, username }),
       },
       {
         key: 'deposit',
         label: t('treasury.deposit'),
-        variant: 'primary',
+        tone: 'success',
+        icon: <ArrowDownIcon />,
         disabled: isInactive,
         onClick: () => setModalState({ userId: row.user_id, username, type: 'deposit' }),
       },
       {
         key: 'withdraw',
         label: t('treasury.withdraw'),
-        variant: 'secondary',
+        tone: 'warning',
+        icon: <ArrowUpIcon />,
         disabled: isInactive,
         onClick: () =>
           setModalState({
@@ -170,7 +184,8 @@ const UsersManagementPage = () => {
       {
         key: 'block',
         label: isInactive ? t('managerProfile.unblock') : t('managerProfile.block'),
-        variant: isInactive ? 'secondary' : 'danger',
+        tone: isInactive ? 'success' : 'danger',
+        icon: isInactive ? <CheckIcon /> : <BanIcon />,
         disabled: pendingUserId === row.user_id,
         onClick: () => handleToggleBlock(row.user_id, fullName, !isInactive),
         span2: true,
@@ -185,9 +200,14 @@ const UsersManagementPage = () => {
         <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
           {t('users.title')}
         </h1>
-        <Button variant="primary" onClick={() => setIsCreateOpen(true)}>
+        <ActionButton
+          tone="accent"
+          size="md"
+          icon={<PlusIcon />}
+          onClick={() => setIsCreateOpen(true)}
+        >
           {t('users.createUser')}
-        </Button>
+        </ActionButton>
       </div>
 
       {isLoading && <TableSkeleton rows={5} cols={6} />}
@@ -268,15 +288,17 @@ const UsersManagementPage = () => {
 
                 <div className="grid grid-cols-2 gap-2">
                   {rowActions(row).map((a) => (
-                    <Button
+                    <ActionButton
                       key={a.key}
-                      variant={a.variant}
+                      tone={a.tone}
+                      icon={a.icon}
+                      block
                       disabled={a.disabled}
                       onClick={a.onClick}
-                      className={`py-2 text-sm${a.span2 ? ' col-span-2' : ''}`}
+                      className={a.span2 ? 'col-span-2' : undefined}
                     >
                       {a.label}
-                    </Button>
+                    </ActionButton>
                   ))}
                 </div>
               </div>
@@ -346,15 +368,15 @@ const UsersManagementPage = () => {
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-2">
                         {rowActions(row).map((a) => (
-                          <Button
+                          <ActionButton
                             key={a.key}
-                            variant={a.variant}
+                            tone={a.tone}
+                            icon={a.icon}
                             disabled={a.disabled}
                             onClick={a.onClick}
-                            className="px-3 py-1 text-xs"
                           >
                             {a.label}
-                          </Button>
+                          </ActionButton>
                         ))}
                       </div>
                     </td>

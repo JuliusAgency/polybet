@@ -1,0 +1,130 @@
+/* ActionButton — a soft, semantic action button for table rows and compact
+ * toolbars. Sibling to Button (the solid CTA primitive); use this where a row
+ * has several actions and a wall of solid buttons would all shout at once.
+ *
+ * Vocabulary: quiet outline utilities (neutral), tinted money actions
+ * (success / warning), an accent CTA, and a destructive ghost that only
+ * commits to solid red on hover. All colours come from theme tokens so both
+ * themes track automatically. */
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out-expo),
+    border-color var(--duration-fast) var(--ease-out-expo),
+    color var(--duration-fast) var(--ease-out-expo);
+}
+
+.action-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-bg-surface), 0 0 0 4px var(--color-focus-ring);
+}
+
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.action-btn--block {
+  width: 100%;
+}
+
+.action-btn__icon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.action-btn__icon svg {
+  display: block;
+}
+
+/* Sizes */
+.action-btn--sm {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+}
+.action-btn--sm .action-btn__icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.action-btn--md {
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
+.action-btn--md .action-btn__icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Neutral — quiet outline utility (Edit, Reset Pwd) */
+.action-btn--neutral {
+  color: var(--color-text-secondary);
+  border-color: var(--color-border);
+  background-color: transparent;
+}
+.action-btn--neutral:not(:disabled):hover {
+  color: var(--color-text-primary);
+  border-color: var(--color-border-strong);
+  background-color: var(--color-hover);
+}
+.action-btn--neutral:not(:disabled):active {
+  background-color: var(--color-active);
+}
+
+/* Accent — the surface's primary CTA (Create User) */
+.action-btn--accent {
+  color: var(--color-accent-contrast);
+  background-color: var(--color-accent);
+  border-color: transparent;
+  box-shadow: var(--shadow-sm);
+}
+.action-btn--accent:not(:disabled):hover {
+  background-color: var(--color-accent-hover);
+}
+.action-btn--accent:not(:disabled):active {
+  background-color: var(--color-accent);
+  box-shadow: none;
+}
+
+/* Success — money in (Deposit) / Unblock */
+.action-btn--success {
+  color: var(--color-win);
+  background-color: var(--color-win-muted);
+  border-color: transparent;
+}
+.action-btn--success:not(:disabled):hover {
+  border-color: var(--color-win);
+}
+
+/* Warning — money out (Withdraw) */
+.action-btn--warning {
+  color: var(--color-pending);
+  background-color: var(--color-pending-muted);
+  border-color: transparent;
+}
+.action-btn--warning:not(:disabled):hover {
+  border-color: var(--color-pending);
+}
+
+/* Danger — destructive ghost that commits to solid on hover (Block) */
+.action-btn--danger {
+  color: var(--color-loss);
+  background-color: transparent;
+  border-color: var(--color-loss-muted);
+}
+.action-btn--danger:not(:disabled):hover {
+  color: var(--color-accent-contrast);
+  background-color: var(--color-loss);
+  border-color: var(--color-loss);
+}
