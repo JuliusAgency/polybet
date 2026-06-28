@@ -67,7 +67,7 @@ export function FeedGrid({
         return (
           <div
             key={item.key}
-            className="card-enter"
+            className="card-enter min-w-0"
             style={{
               contentVisibility: 'auto',
               containIntrinsicSize: 'auto 260px',

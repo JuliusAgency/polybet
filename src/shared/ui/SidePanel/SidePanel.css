@@ -25,8 +25,20 @@
   max-height: calc(100vh - 6rem);
 }
 
+/* Scrim behind the mobile bottom sheet. Hidden by default — the desktop
+ * floating card and the docked column never dim the page (it stays interactive).
+ * Shown only at the bottom-sheet breakpoint below; the panel only renders this
+ * element when NOT docked (see SidePanel.tsx), so a docked column is never
+ * dimmed even if it somehow lingers at a narrow width. */
+.side-panel-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+}
+
 /* Grab handle — hidden by default (desktop floating card). Shown only on the
- * mobile bottom sheet (≤767px, non-docked) as a presentational grabber. */
+ * mobile bottom sheet (≤767px, non-docked) as a swipe-to-dismiss drag handle. */
 .side-panel__grabber {
   display: none;
 }
@@ -34,6 +46,11 @@
 /* Mobile: full-width bottom sheet. Excludes the docked variant, which is only
  * ever mounted at desktop widths but stays in-flow if that ever changes. */
 @media (max-width: 767px) {
+  .side-panel-backdrop {
+    display: block;
+    animation: side-panel-fade-in var(--duration-base) var(--ease-out-expo);
+  }
+
   .side-panel:not(.side-panel--docked) {
     inset-block-start: auto;
     inset-block-end: 0;
@@ -43,6 +60,11 @@
     max-height: 85vh;
     /* round only the top edge when anchored to the bottom */
     border-radius: var(--radius-lg) var(--radius-lg) 0 0 !important;
+    /* Upward shadow + slide-up entrance so the sheet reads as a layer ABOVE the
+     * (now dimmed) page rather than part of it. !important beats the inline
+     * box-shadow set in SidePanel.tsx, matching the border-radius override. */
+    box-shadow: var(--shadow-sheet) !important;
+    animation: side-panel-slide-up var(--duration-base) var(--ease-out-expo);
     /* clear the iOS home indicator so the Trade CTA / terms are never flush
      * to the device edge (needs viewport-fit=cover in index.html to be > 0). */
     padding-block-end: env(safe-area-inset-bottom);
@@ -51,7 +73,11 @@
   .side-panel:not(.side-panel--docked) .side-panel__grabber {
     display: flex;
     justify-content: center;
-    padding-block: 8px 4px;
+    /* Generous vertical hit area so the thin bar is easy to grab; touch-action
+     * none lets the drag gesture move the sheet instead of scrolling the page. */
+    padding-block: 12px 6px;
+    touch-action: none;
+    cursor: grab;
   }
 
   .side-panel:not(.side-panel--docked) .side-panel__grabber > span {
@@ -59,5 +85,23 @@
     height: 4px;
     border-radius: var(--radius-full);
     background-color: var(--color-border-strong);
+  }
+}
+
+@keyframes side-panel-slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes side-panel-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }

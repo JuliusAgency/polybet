@@ -16,6 +16,12 @@ html {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Never allow horizontal page scroll. A stray few-px overflow at narrow
+     widths (≤320px) otherwise surfaces a horizontal scrollbar AND makes the
+     `position: fixed` bottom tab bar / bet sheet drift sideways on mobile.
+     `clip` (not `hidden`) does not establish a scroll container, so the sticky
+     app header keeps sticking to the viewport. */
+  overflow-x: clip;
 }
 
 html[lang='he'] {
@@ -34,6 +40,7 @@ html[lang='he'] {
 body {
   margin: 0;
   min-height: 100vh;
+  overflow-x: clip;
   background-color: var(--color-bg-base);
   /* Soften the switch — tokens retint their own descendants instantly, this masks the root repaint */
   transition: background-color var(--duration-base) var(--ease-out-expo),
