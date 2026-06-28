@@ -91,6 +91,8 @@ export const BottomTabBar = () => {
         zIndex: 30,
         backgroundColor: 'var(--color-bg-surface)',
         borderTop: '1px solid var(--color-border)',
+        // Upward shadow so the bar reads as a layer raised above the feed.
+        boxShadow: 'var(--shadow-nav)',
         paddingBottom: 'env(safe-area-inset-bottom)',
       }}
     >

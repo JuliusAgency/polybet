@@ -219,34 +219,54 @@ export const UserLayout = () => {
           </div>
         </div>
 
-        {/* Mobile "More" menu — primary nav now lives in the BottomTabBar, so this
-            only holds the secondary controls (theme, language, sign out). */}
+        {/* Mobile "More" menu — secondary controls (theme, language, sign out).
+            Floats as a dropdown OVER the feed (absolute, anchored to the sticky
+            header) instead of pushing the page down, with elevation so it reads
+            as a layer above the content. A transparent backdrop below the header
+            row closes it on an outside tap while leaving the row interactive. */}
         {isMenuOpen && (
-          <nav
-            className="flex flex-col gap-2 border-t px-4 py-3 md:hidden"
-            style={{ borderColor: 'var(--color-border)' }}
-          >
-            <span
-              className="text-xs font-semibold uppercase tracking-wide"
-              style={{ color: 'var(--color-text-muted)' }}
+          <>
+            <button
+              type="button"
+              aria-hidden
+              tabIndex={-1}
+              onClick={() => setIsMenuOpen(false)}
+              className="fixed inset-x-0 bottom-0 top-14 cursor-default md:hidden"
+              style={{ zIndex: 'var(--z-dropdown)', background: 'transparent', border: 'none' }}
+            />
+            <nav
+              className="absolute inset-x-0 top-full flex flex-col gap-2 border-b px-4 py-3 md:hidden"
+              style={{
+                zIndex: 'var(--z-dropdown)',
+                backgroundColor: 'var(--color-bg-elevated)',
+                borderColor: 'var(--color-border)',
+                borderBottomLeftRadius: 'var(--radius-lg)',
+                borderBottomRightRadius: 'var(--radius-lg)',
+                boxShadow: 'var(--shadow-lg)',
+              }}
             >
-              {t('nav.more')}
-            </span>
-            <div className="flex items-center gap-3">
-              <ThemeSwitcher />
-              <LanguageSwitcher />
-              <button
-                onClick={() => {
-                  setIsMenuOpen(false);
-                  void signOut();
-                }}
-                className="ms-auto text-sm"
-                style={{ color: 'var(--color-text-secondary)' }}
+              <span
+                className="text-xs font-semibold uppercase tracking-wide"
+                style={{ color: 'var(--color-text-muted)' }}
               >
-                {t('auth.signOut')}
-              </button>
-            </div>
-          </nav>
+                {t('nav.more')}
+              </span>
+              <div className="flex items-center gap-3">
+                <ThemeSwitcher />
+                <LanguageSwitcher />
+                <button
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    void signOut();
+                  }}
+                  className="ms-auto text-sm"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
+                  {t('auth.signOut')}
+                </button>
+              </div>
+            </nav>
+          </>
         )}
       </header>
 
