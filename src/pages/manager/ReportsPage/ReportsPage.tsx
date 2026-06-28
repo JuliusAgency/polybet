@@ -70,7 +70,7 @@ const ReportsPage = () => {
   ];
 
   return (
-    <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--color-bg-base)' }}>
+    <div className="min-h-screen p-4 sm:p-6" style={{ backgroundColor: 'var(--color-bg-base)' }}>
       {/* Page title */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
@@ -148,21 +148,21 @@ const ReportsPage = () => {
 
       {/* Filters */}
       <div
-        className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border p-4"
+        className="mb-4 flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:flex-wrap sm:items-end"
         style={{
           backgroundColor: 'var(--color-bg-surface)',
           borderColor: 'var(--color-border)',
         }}
       >
         {/* Month dropdown */}
-        <div className="flex flex-col gap-1">
+        <div className="flex w-full flex-col gap-1 sm:w-auto">
           <label className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
             {t('globalLog.month')}
           </label>
           <select
             value={month ?? ''}
             onChange={(e) => setMonth(e.target.value === '' ? undefined : Number(e.target.value))}
-            className="rounded-lg border px-3 py-2 text-sm outline-none"
+            className="w-full rounded-lg border px-3 py-2 text-sm outline-none sm:w-auto"
             style={selectStyle}
           >
             <option value="">{t('globalLog.allMonths')}</option>
@@ -175,14 +175,14 @@ const ReportsPage = () => {
         </div>
 
         {/* Year dropdown */}
-        <div className="flex flex-col gap-1">
+        <div className="flex w-full flex-col gap-1 sm:w-auto">
           <label className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
             {t('globalLog.year')}
           </label>
           <select
             value={year ?? ''}
             onChange={(e) => setYear(e.target.value === '' ? undefined : Number(e.target.value))}
-            className="rounded-lg border px-3 py-2 text-sm outline-none"
+            className="w-full rounded-lg border px-3 py-2 text-sm outline-none sm:w-auto"
             style={selectStyle}
           >
             <option value="">{t('globalLog.allYears')}</option>
@@ -195,14 +195,14 @@ const ReportsPage = () => {
         </div>
 
         {/* User dropdown */}
-        <div className="flex flex-col gap-1">
+        <div className="flex w-full flex-col gap-1 sm:w-auto">
           <label className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
             {t('globalLog.user')}
           </label>
           <select
             value={selectedUserId}
             onChange={(e) => setSelectedUserId(e.target.value)}
-            className="rounded-lg border px-3 py-2 text-sm outline-none"
+            className="w-full rounded-lg border px-3 py-2 text-sm outline-none sm:w-auto"
             style={selectStyle}
           >
             <option value="">{t('reports.allUsers')}</option>
@@ -214,7 +214,7 @@ const ReportsPage = () => {
           </select>
         </div>
 
-        <Button variant="secondary" onClick={handleClearFilters}>
+        <Button variant="secondary" onClick={handleClearFilters} className="w-full sm:w-auto">
           {t('globalLog.clearFilters')}
         </Button>
       </div>
@@ -225,100 +225,197 @@ const ReportsPage = () => {
           <Spinner size="md" />
         </div>
       ) : (
-        <div
-          className="overflow-hidden rounded-xl border"
-          style={{
-            backgroundColor: 'var(--color-bg-surface)',
-            borderColor: 'var(--color-border)',
-          }}
-        >
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b" style={{ borderColor: 'var(--color-border)' }}>
-                {columns.map((h) => (
-                  <th
-                    key={h}
-                    className="px-4 py-3 font-medium text-start"
-                    style={{ color: 'var(--color-text-secondary)' }}
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredTransactions.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={columns.length}
-                    className="px-4 py-6 text-center"
-                    style={{ color: 'var(--color-text-secondary)' }}
-                  >
-                    {t('financialTable.noTransactions')}
-                  </td>
-                </tr>
-              ) : (
-                filteredTransactions.map((tx) => (
-                  <tr
-                    key={tx.id}
-                    className="border-b last:border-0"
-                    style={{ borderColor: 'var(--color-border)' }}
-                  >
-                    {/* Date */}
-                    <td
-                      className="px-4 py-3 font-mono text-xs"
-                      style={{ color: 'var(--color-text-secondary)' }}
-                    >
-                      <div>{new Date(tx.created_at).toLocaleDateString(i18n.language)}</div>
-                      <div>
-                        {new Date(tx.created_at).toLocaleTimeString(i18n.language, {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          second: '2-digit',
-                        })}
-                      </div>
-                    </td>
-
-                    {/* User */}
-                    <td className="px-4 py-3" style={{ color: 'var(--color-text-primary)' }}>
-                      @{tx.user_username}
-                    </td>
-
-                    {/* Type */}
-                    <td className="px-4 py-3" style={{ color: 'var(--color-text-secondary)' }}>
-                      {tx.type === 'adjustment'
-                        ? t('financialTable.deposit')
-                        : t('financialTable.withdrawal')}
-                    </td>
-
-                    {/* Amount */}
-                    <td
-                      className="px-4 py-3 font-mono"
+        <>
+          {/* Mobile / tablet-portrait: a card per transaction (the table does not
+              fit below md). */}
+          <div className="flex flex-col gap-3 md:hidden">
+            {filteredTransactions.length === 0 ? (
+              <p
+                className="rounded-xl border px-4 py-6 text-center text-sm"
+                style={{
+                  backgroundColor: 'var(--color-bg-surface)',
+                  borderColor: 'var(--color-border)',
+                  color: 'var(--color-text-secondary)',
+                }}
+              >
+                {t('financialTable.noTransactions')}
+              </p>
+            ) : (
+              filteredTransactions.map((tx) => (
+                <div
+                  key={tx.id}
+                  className="flex flex-col gap-3 rounded-xl border p-4"
+                  style={{
+                    backgroundColor: 'var(--color-bg-surface)',
+                    borderColor: 'var(--color-border)',
+                  }}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p
+                        className="truncate font-medium"
+                        style={{ color: 'var(--color-text-primary)' }}
+                      >
+                        @{tx.user_username}
+                      </p>
+                      <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                        {tx.type === 'adjustment'
+                          ? t('financialTable.deposit')
+                          : t('financialTable.withdrawal')}
+                      </p>
+                    </div>
+                    <p
+                      className="font-mono text-base font-semibold"
                       style={{
                         color: tx.type === 'adjustment' ? 'var(--color-win)' : 'var(--color-error)',
                       }}
                     >
                       {tx.amount.toFixed(2)}
-                    </td>
+                    </p>
+                  </div>
 
-                    {/* Balance After */}
-                    <td
-                      className="px-4 py-3 font-mono"
-                      style={{ color: 'var(--color-text-primary)' }}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                        {t('wallet.runningBalance')}
+                      </p>
+                      <p
+                        className="font-mono text-sm"
+                        style={{ color: 'var(--color-text-primary)' }}
+                      >
+                        {tx.balance_after.toFixed(2)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                        {t('financialTable.date')}
+                      </p>
+                      <p
+                        className="font-mono text-xs"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        {new Date(tx.created_at).toLocaleDateString(i18n.language)}{' '}
+                        {new Date(tx.created_at).toLocaleTimeString(i18n.language, {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </p>
+                    </div>
+                  </div>
+
+                  {tx.note && (
+                    <div>
+                      <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                        {t('managerProfile.noteCol')}
+                      </p>
+                      <p className="text-sm" style={{ color: 'var(--color-text-primary)' }}>
+                        {tx.note}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop: the full table. overflow-x-auto keeps a too-wide table
+              scrolling inside its card instead of breaking the page. */}
+          <div
+            className="hidden overflow-x-auto rounded-xl border md:block"
+            style={{
+              backgroundColor: 'var(--color-bg-surface)',
+              borderColor: 'var(--color-border)',
+            }}
+          >
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b" style={{ borderColor: 'var(--color-border)' }}>
+                  {columns.map((h) => (
+                    <th
+                      key={h}
+                      className="px-4 py-3 font-medium text-start"
+                      style={{ color: 'var(--color-text-secondary)' }}
                     >
-                      {tx.balance_after.toFixed(2)}
-                    </td>
-
-                    {/* Note */}
-                    <td className="px-4 py-3" style={{ color: 'var(--color-text-secondary)' }}>
-                      {tx.note ?? '—'}
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredTransactions.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={columns.length}
+                      className="px-4 py-6 text-center"
+                      style={{ color: 'var(--color-text-secondary)' }}
+                    >
+                      {t('financialTable.noTransactions')}
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ) : (
+                  filteredTransactions.map((tx) => (
+                    <tr
+                      key={tx.id}
+                      className="border-b last:border-0"
+                      style={{ borderColor: 'var(--color-border)' }}
+                    >
+                      {/* Date */}
+                      <td
+                        className="px-4 py-3 font-mono text-xs"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        <div>{new Date(tx.created_at).toLocaleDateString(i18n.language)}</div>
+                        <div>
+                          {new Date(tx.created_at).toLocaleTimeString(i18n.language, {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                          })}
+                        </div>
+                      </td>
+
+                      {/* User */}
+                      <td className="px-4 py-3" style={{ color: 'var(--color-text-primary)' }}>
+                        @{tx.user_username}
+                      </td>
+
+                      {/* Type */}
+                      <td className="px-4 py-3" style={{ color: 'var(--color-text-secondary)' }}>
+                        {tx.type === 'adjustment'
+                          ? t('financialTable.deposit')
+                          : t('financialTable.withdrawal')}
+                      </td>
+
+                      {/* Amount */}
+                      <td
+                        className="px-4 py-3 font-mono"
+                        style={{
+                          color:
+                            tx.type === 'adjustment' ? 'var(--color-win)' : 'var(--color-error)',
+                        }}
+                      >
+                        {tx.amount.toFixed(2)}
+                      </td>
+
+                      {/* Balance After */}
+                      <td
+                        className="px-4 py-3 font-mono"
+                        style={{ color: 'var(--color-text-primary)' }}
+                      >
+                        {tx.balance_after.toFixed(2)}
+                      </td>
+
+                      {/* Note */}
+                      <td className="px-4 py-3" style={{ color: 'var(--color-text-secondary)' }}>
+                        {tx.note ?? '—'}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );

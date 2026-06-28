@@ -13,6 +13,7 @@ import {
   useManagerUpdateUser,
   useManagerResetPassword,
   useMyUsers,
+  type UserRow,
 } from '@/features/manager/users';
 import { CreateUserModal } from './components/CreateUserModal';
 
@@ -34,6 +35,18 @@ interface EditTarget {
 interface ResetTarget {
   userId: string;
   username: string;
+}
+
+// One descriptor per row action — single source of truth so the desktop table
+// cell and the mobile card render the exact same set without drifting.
+interface RowAction {
+  key: string;
+  label: string;
+  variant: 'primary' | 'secondary' | 'danger';
+  disabled?: boolean;
+  onClick: () => void;
+  /** Span both columns in the mobile card's 2-col action grid. */
+  span2?: boolean;
 }
 
 const UsersManagementPage = () => {
@@ -109,10 +122,66 @@ const UsersManagementPage = () => {
     }
   };
 
+  const rowActions = (row: UserRow): RowAction[] => {
+    const isInactive = row.profiles?.is_active === false;
+    const username = row.profiles?.username ?? '';
+    const fullName = row.profiles?.full_name ?? username;
+
+    return [
+      {
+        key: 'edit',
+        label: t('editUser.edit'),
+        variant: 'secondary',
+        onClick: () =>
+          setEditTarget({
+            userId: row.user_id,
+            username,
+            firstName: row.profiles?.first_name ?? '',
+            lastName: row.profiles?.last_name ?? '',
+            phone: row.profiles?.phone ?? '',
+          }),
+      },
+      {
+        key: 'reset',
+        label: t('managerProfile.resetPwd'),
+        variant: 'secondary',
+        onClick: () => setResetTarget({ userId: row.user_id, username }),
+      },
+      {
+        key: 'deposit',
+        label: t('treasury.deposit'),
+        variant: 'primary',
+        disabled: isInactive,
+        onClick: () => setModalState({ userId: row.user_id, username, type: 'deposit' }),
+      },
+      {
+        key: 'withdraw',
+        label: t('treasury.withdraw'),
+        variant: 'secondary',
+        disabled: isInactive,
+        onClick: () =>
+          setModalState({
+            userId: row.user_id,
+            username,
+            type: 'withdrawal',
+            available: row.balances?.available,
+          }),
+      },
+      {
+        key: 'block',
+        label: isInactive ? t('managerProfile.unblock') : t('managerProfile.block'),
+        variant: isInactive ? 'secondary' : 'danger',
+        disabled: pendingUserId === row.user_id,
+        onClick: () => handleToggleBlock(row.user_id, fullName, !isInactive),
+        span2: true,
+      },
+    ];
+  };
+
   return (
-    <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--color-bg-base)' }}>
+    <div className="min-h-screen p-4 sm:p-6" style={{ backgroundColor: 'var(--color-bg-base)' }}>
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex items-center justify-between gap-3">
         <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
           {t('users.title')}
         </h1>
@@ -128,53 +197,124 @@ const UsersManagementPage = () => {
         </p>
       )}
 
-      {data && (
-        <div
-          className="overflow-hidden rounded-xl border"
+      {data && data.length === 0 && (
+        <p
+          className="rounded-xl border px-4 py-6 text-center text-sm"
           style={{
             backgroundColor: 'var(--color-bg-surface)',
             borderColor: 'var(--color-border)',
+            color: 'var(--color-text-secondary)',
           }}
         >
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b" style={{ borderColor: 'var(--color-border)' }}>
-                {[
-                  t('managers.fullName'),
-                  t('managers.username'),
-                  t('users.available'),
-                  t('users.inPlay'),
-                  t('managers.status'),
-                  t('managerProfile.actions'),
-                ].map((h) => (
-                  <th
-                    key={h}
-                    className="px-4 py-3 font-medium text-start"
-                    style={{ color: 'var(--color-text-secondary)' }}
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {data.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={6}
-                    className="px-4 py-6 text-center"
-                    style={{ color: 'var(--color-text-secondary)' }}
-                  >
-                    {t('users.noUsers')}
-                  </td>
-                </tr>
-              )}
-              {data.map((row) => {
-                const isInactive = row.profiles?.is_active === false;
-                const username = row.profiles?.username ?? '';
-                const fullName = row.profiles?.full_name ?? username;
+          {t('users.noUsers')}
+        </p>
+      )}
 
-                return (
+      {data && data.length > 0 && (
+        <>
+          {/* Mobile / tablet-portrait: a card per user (the wide action table does
+              not fit below md). */}
+          <div className="flex flex-col gap-3 md:hidden">
+            {data.map((row) => (
+              <div
+                key={row.user_id}
+                className="flex flex-col gap-3 rounded-xl border p-4"
+                style={{
+                  backgroundColor: 'var(--color-bg-surface)',
+                  borderColor: 'var(--color-border)',
+                }}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p
+                      className="truncate font-semibold"
+                      style={{ color: 'var(--color-text-primary)' }}
+                    >
+                      {row.profiles?.full_name ?? '—'}
+                    </p>
+                    <p
+                      className="truncate text-sm"
+                      style={{ color: 'var(--color-text-secondary)' }}
+                    >
+                      @{row.profiles?.username ?? '—'}
+                    </p>
+                  </div>
+                  <Badge variant={row.profiles?.is_active ? 'win' : 'loss'}>
+                    {row.profiles?.is_active ? t('common.active') : t('common.blocked')}
+                  </Badge>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                      {t('users.available')}
+                    </p>
+                    <p className="font-mono text-sm" style={{ color: 'var(--color-text-primary)' }}>
+                      {row.balances?.available.toFixed(2) ?? '—'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                      {t('users.inPlay')}
+                    </p>
+                    <p
+                      className="font-mono text-sm"
+                      style={{ color: 'var(--color-text-secondary)' }}
+                    >
+                      {row.balances?.in_play.toFixed(2) ?? '—'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {rowActions(row).map((a) => (
+                    <Button
+                      key={a.key}
+                      variant={a.variant}
+                      disabled={a.disabled}
+                      onClick={a.onClick}
+                      className={`py-2 text-sm${a.span2 ? ' col-span-2' : ''}`}
+                    >
+                      {a.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: the full table. overflow-x-auto keeps a too-wide table
+              scrolling inside its card instead of breaking the page. */}
+          <div
+            className="hidden overflow-x-auto rounded-xl border md:block"
+            style={{
+              backgroundColor: 'var(--color-bg-surface)',
+              borderColor: 'var(--color-border)',
+            }}
+          >
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b" style={{ borderColor: 'var(--color-border)' }}>
+                  {[
+                    t('managers.fullName'),
+                    t('managers.username'),
+                    t('users.available'),
+                    t('users.inPlay'),
+                    t('managers.status'),
+                    t('managerProfile.actions'),
+                  ].map((h) => (
+                    <th
+                      key={h}
+                      className="px-4 py-3 font-medium text-start"
+                      style={{ color: 'var(--color-text-secondary)' }}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {data.map((row) => (
                   <tr
                     key={row.user_id}
                     className="border-b last:border-0"
@@ -205,69 +345,25 @@ const UsersManagementPage = () => {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-2">
-                        <Button
-                          variant="secondary"
-                          className="px-3 py-1 text-xs"
-                          onClick={() =>
-                            setEditTarget({
-                              userId: row.user_id,
-                              username,
-                              firstName: row.profiles?.first_name ?? '',
-                              lastName: row.profiles?.last_name ?? '',
-                              phone: row.profiles?.phone ?? '',
-                            })
-                          }
-                        >
-                          {t('editUser.edit')}
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          className="px-3 py-1 text-xs"
-                          onClick={() => setResetTarget({ userId: row.user_id, username })}
-                        >
-                          {t('managerProfile.resetPwd')}
-                        </Button>
-                        <Button
-                          variant="primary"
-                          className="px-3 py-1 text-xs"
-                          disabled={isInactive}
-                          onClick={() =>
-                            setModalState({ userId: row.user_id, username, type: 'deposit' })
-                          }
-                        >
-                          {t('treasury.deposit')}
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          className="px-3 py-1 text-xs"
-                          disabled={isInactive}
-                          onClick={() =>
-                            setModalState({
-                              userId: row.user_id,
-                              username,
-                              type: 'withdrawal',
-                              available: row.balances?.available,
-                            })
-                          }
-                        >
-                          {t('treasury.withdraw')}
-                        </Button>
-                        <Button
-                          variant={isInactive ? 'secondary' : 'danger'}
-                          className="px-3 py-1 text-xs"
-                          disabled={pendingUserId === row.user_id}
-                          onClick={() => handleToggleBlock(row.user_id, fullName, !isInactive)}
-                        >
-                          {isInactive ? t('managerProfile.unblock') : t('managerProfile.block')}
-                        </Button>
+                        {rowActions(row).map((a) => (
+                          <Button
+                            key={a.key}
+                            variant={a.variant}
+                            disabled={a.disabled}
+                            onClick={a.onClick}
+                            className="px-3 py-1 text-xs"
+                          >
+                            {a.label}
+                          </Button>
+                        ))}
                       </div>
                     </td>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       <CreateUserModal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} />
