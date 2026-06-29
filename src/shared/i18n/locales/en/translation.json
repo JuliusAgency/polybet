@@ -263,6 +263,11 @@
     "orderBook": "Order Book",
     "draw": "Draw",
     "noLine": "—",
+    "live": "Live",
+    "final": "Final",
+    "upcoming": "Upcoming",
+    "viewFinished": "View finished",
+    "hideFinished": "Hide finished",
     "map": {
       "title": "Odds & predictions",
       "updated": "Updated {{date}}",

@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import type { Market, MarketOutcome } from '@/entities/market';
 import type { MarketEvent } from '@/entities/event';
 import { GamesList } from '@/widgets/GamesList';
-import { readableTextColor, toGameView } from '@/widgets/GamesList/helpers';
+import { readableTextColor, toGameView, gameStatus } from '@/widgets/GamesList/helpers';
 import { groupGames, type WorldCupGame } from '@/features/bet';
 import { renderWithProviders } from '../../helpers/render';
 
@@ -284,6 +284,103 @@ describe('toGameView', () => {
     const view = toGameView(buildSwissBosniaGame());
     expect(view.draw?.market.id).toBe('m-draw');
     expect(view.draw?.outcome.price).toBe(0.235);
+  });
+});
+
+// A finished game: same France vs. Senegal card but with closed moneyline
+// markets (the game has been played) — used by the "View finished" surface.
+function buildFinishedGame(): WorldCupGame {
+  const closed = (id: string, label: string, price: number): Market => ({
+    ...market(id, label, price),
+    status: 'closed',
+  });
+  return groupGames([
+    closed('m-fra', 'France', 0.665),
+    closed('m-draw', 'Draw (France vs. Senegal)', 0.125),
+    closed('m-sen', 'Senegal', 0.21),
+  ])[0];
+}
+
+describe('gameStatus', () => {
+  const now = Date.parse('2026-06-29T12:00:00Z');
+
+  it("is 'live' when a moneyline market is open and kickoff has passed", () => {
+    // buildGame kicks off 2026-06-16 (before `now`) with open markets.
+    expect(gameStatus(buildGame(), now)).toBe('live');
+  });
+
+  it("is 'upcoming' when open and kickoff is in the future", () => {
+    const futureEvent = { ...event, id: 'evt-fut', game_start_time: '2026-07-01T19:00:00Z' };
+    const game = groupGames([
+      { ...market('m-fut', 'France', 0.5), event_id: 'evt-fut', event: futureEvent },
+    ])[0];
+    expect(gameStatus(game, now)).toBe('upcoming');
+  });
+
+  it("is 'final' when no moneyline market is open", () => {
+    expect(gameStatus(buildFinishedGame(), now)).toBe('final');
+  });
+});
+
+describe('GamesList — finished games + View finished toggle', () => {
+  it('marks a finished game Final and disables its bet buttons', () => {
+    renderWithProviders(
+      <GamesList
+        games={[buildFinishedGame()]}
+        isLoading={false}
+        isError={false}
+        onOutcomeClick={vi.fn()}
+        buildEventHref={buildEventHref}
+      />
+    );
+    expect(screen.getByText(/final/i)).toBeInTheDocument();
+    const buttons = screen.getAllByRole('button');
+    expect(buttons).toHaveLength(3);
+    for (const btn of buttons) expect(btn).toBeDisabled();
+  });
+
+  it('renders the "View finished" control and invokes the toggle when clicked', async () => {
+    const onToggleFinished = vi.fn();
+    renderWithProviders(
+      <GamesList
+        games={[buildGame()]}
+        isLoading={false}
+        isError={false}
+        onOutcomeClick={vi.fn()}
+        buildEventHref={buildEventHref}
+        onToggleFinished={onToggleFinished}
+      />
+    );
+    await userEvent.click(screen.getByRole('button', { name: /view finished/i }));
+    expect(onToggleFinished).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows "Hide finished" while finished games are revealed', () => {
+    renderWithProviders(
+      <GamesList
+        games={[buildGame()]}
+        isLoading={false}
+        isError={false}
+        onOutcomeClick={vi.fn()}
+        buildEventHref={buildEventHref}
+        showFinished
+        onToggleFinished={vi.fn()}
+      />
+    );
+    expect(screen.getByRole('button', { name: /hide finished/i })).toBeInTheDocument();
+  });
+
+  it('hides the toggle when no handler is provided', () => {
+    renderWithProviders(
+      <GamesList
+        games={[buildGame()]}
+        isLoading={false}
+        isError={false}
+        onOutcomeClick={vi.fn()}
+        buildEventHref={buildEventHref}
+      />
+    );
+    expect(screen.queryByRole('button', { name: /finished/i })).not.toBeInTheDocument();
   });
 });
 

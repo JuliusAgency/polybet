@@ -263,6 +263,11 @@
     "orderBook": "ספר פקודות",
     "draw": "תיקו",
     "noLine": "—",
+    "live": "חי",
+    "final": "הסתיים",
+    "upcoming": "עתידי",
+    "viewFinished": "הצג שהסתיימו",
+    "hideFinished": "הסתר שהסתיימו",
     "map": {
       "title": "יחסים ותחזיות",
       "updated": "עודכן {{date}}",

@@ -65,6 +65,8 @@ const MarketsFeedPage = () => {
   // World Cup tab sub-navigation. Games is the default landing sub-tab; Props
   // holds the actual market feed, Games/Map are placeholders for now.
   const [worldCupTab, setWorldCupTab] = useState<WorldCupTab>('games');
+  // Games sub-tab: whether recently-finished games are revealed ("View finished").
+  const [showFinishedGames, setShowFinishedGames] = useState(false);
   const debouncedSearch = useDebounce(searchQuery, 300);
 
   const { data: allowedTags = [] } = useAllowedCategoryTags();
@@ -97,7 +99,7 @@ const MarketsFeedPage = () => {
     data: worldCupGames = [],
     isLoading: isLoadingGames,
     isError: isErrorGames,
-  } = useWorldCupGames(worldCupGamesEnabled);
+  } = useWorldCupGames(worldCupGamesEnabled, showFinishedGames);
 
   // World Cup Props sub-tab: every world-cup-tagged open event (tournament props
   // AND individual matches) rendered one card per event, ordered by event volume.
@@ -476,6 +478,8 @@ const MarketsFeedPage = () => {
                 : null
             }
             buildEventHref={buildEventHref}
+            showFinished={showFinishedGames}
+            onToggleFinished={() => setShowFinishedGames((v) => !v)}
           />
         )}
 

@@ -4,7 +4,13 @@ import type { Market, MarketOutcome } from '@/entities/market';
 import type { GameTeam } from '@/entities/event';
 import { formatVolume } from '@/shared/utils';
 import type { WorldCupGame } from '@/features/bet';
-import { toGameView, formatOddCents, readableTextColor, type MoneylineSlot } from './helpers';
+import {
+  toGameView,
+  formatOddCents,
+  readableTextColor,
+  gameStatus,
+  type MoneylineSlot,
+} from './helpers';
 
 export interface GameCardProps {
   game: WorldCupGame;
@@ -106,6 +112,8 @@ function TeamRow({ team }: { team: GameTeam }) {
 export function GameCard({ game, onOutcomeClick, selected, buildEventHref }: GameCardProps) {
   const { t, i18n } = useTranslation();
   const view = toGameView(game);
+  const status = gameStatus(game);
+  const isFinal = status === 'final';
   const kickoff = formatKickoff(game.event.game_start_time, i18n.language);
   const volumeLabel = formatVolume(game.event.volume ?? null);
 
@@ -144,7 +152,7 @@ export function GameCard({ game, onOutcomeClick, selected, buildEventHref }: Gam
         backgroundColor={slot.team.color || 'var(--color-accent)'}
         color={readableTextColor(slot.team.color)}
         active={isActive(market, outcome)}
-        disabled={false}
+        disabled={isFinal}
         onClick={() => onOutcomeClick(market, outcome)}
       />
     );
@@ -164,6 +172,29 @@ export function GameCard({ game, onOutcomeClick, selected, buildEventHref }: Gam
           className="flex items-center gap-2 text-xs"
           style={{ color: 'var(--color-text-secondary)' }}
         >
+          {status === 'live' && (
+            <span
+              className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase"
+              style={{ backgroundColor: 'var(--color-error)', color: 'var(--color-bg-base)' }}
+            >
+              <span
+                className="inline-block h-1.5 w-1.5 rounded-full"
+                style={{ backgroundColor: 'currentColor' }}
+              />
+              {t('worldCup.live')}
+            </span>
+          )}
+          {status === 'final' && (
+            <span
+              className="rounded px-1.5 py-0.5 text-[10px] font-bold uppercase"
+              style={{
+                backgroundColor: 'var(--color-bg-elevated)',
+                color: 'var(--color-text-muted)',
+              }}
+            >
+              {t('worldCup.final')}
+            </span>
+          )}
           {kickoff && <span className="font-medium">{kickoff}</span>}
           {volumeLabel && (
             <span className="font-mono">{t('markets.volumeShort', { value: volumeLabel })}</span>
@@ -195,7 +226,7 @@ export function GameCard({ game, onOutcomeClick, selected, buildEventHref }: Gam
             backgroundColor="var(--color-bg-elevated)"
             color="var(--color-text-primary)"
             active={isActive(view.draw.market, view.draw.outcome)}
-            disabled={false}
+            disabled={isFinal}
             onClick={() => onOutcomeClick(view.draw!.market, view.draw!.outcome)}
           />
         )}

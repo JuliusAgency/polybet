@@ -150,6 +150,22 @@ export function toGameView(game: WorldCupGame): GameView {
   return { game, teams, teamSlots, draw };
 }
 
+/** Game lifecycle state for the Games tab badge + bet gating. */
+export type GameStatus = 'live' | 'upcoming' | 'final';
+
+/**
+ * Classify a game. It is bettable while any of its moneyline markets is still
+ * open: open + kickoff in the future => 'upcoming'; open + kickoff already
+ * passed => 'live'; no open market => 'final'. `now` is injectable for tests.
+ */
+export function gameStatus(game: WorldCupGame, now: number = Date.now()): GameStatus {
+  const open = game.moneyline.some((m) => m.status === 'open');
+  if (!open) return 'final';
+  const iso = game.event.game_start_time;
+  const kickoff = iso ? Date.parse(iso) : NaN;
+  return Number.isFinite(kickoff) && kickoff <= now ? 'live' : 'upcoming';
+}
+
 /** A day-bucket of games for the Games feed (date header + its games). */
 export interface GameDateGroup {
   /** ISO date key (YYYY-MM-DD in the viewer's locale) used for React keys. */
