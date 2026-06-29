@@ -93,6 +93,12 @@
   position: relative;
   /* Clip the zoomed globe + any flag chips the zoom pushes past the edge. */
   overflow: hidden;
+  /* Form a stacking context so the high z-indexes inside the globe (markers up
+     to 200, zoom buttons 300) stay LOCAL to the stage. Without this they resolve
+     in the root stacking context and paint over the fixed BottomTabBar (z 30) —
+     so on mobile the flag chips and +/- buttons bled on top of the bottom nav as
+     the globe scrolled down. Isolating keeps the whole stage below the nav. */
+  isolation: isolate;
 }
 
 .wc-map__globe-canvas {
