@@ -55,7 +55,15 @@
 /* Two columns from lg up: globe on the start side, list on the end side. */
 .wc-map__body {
   display: grid;
-  grid-template-columns: 1fr;
+  /* minmax(0, 1fr) — NOT a bare `1fr`. A bare `1fr` is `minmax(auto, 1fr)`, whose
+     `auto` floor is the min-content of the fixed-size globe stage (up to 620px).
+     When the viewport shrinks from desktop to mobile (e.g. Chrome responsive),
+     that floor pins the column at the globe's width, the column never reflows
+     narrower, and the ResizeObserver — reading the stuck-wide container — never
+     shrinks the globe. The card then overflows the screen, clipped to ~half.
+     minmax(0, 1fr) lets the column shrink below the stage so the globe re-sizes
+     down. The desktop 2-column rule below already uses minmax(0, 1fr) for this. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.25rem;
   align-items: start;
 }
