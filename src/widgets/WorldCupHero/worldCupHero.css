@@ -189,6 +189,52 @@
   color: var(--color-text-muted);
 }
 
+/* ---- Mobile ( ≤640px ) ----------------------------------------------------
+ * The wheel is sized for a wide viewport: a 740px disc that occupies one half
+ * of the band while the title takes the other. On a phone that disc is wider
+ * than the whole screen, so its flags sweep straight across the title and the
+ * band reads as broken/cluttered. Fix: shrink the disc (~0.6×) and tuck its arc
+ * into the bottom corner on the wheel side (end side), so only a small arc peeks
+ * in, well clear of the title's half. The inherited edge-fade mask already
+ * dissolves the wheel-side edge (right in LTR, left in RTL) — exactly where the
+ * shrunk wheel sits — so the mask is intentionally left untouched here (NB: the
+ * mask applies to the whole hero, title child included, so it must never fade
+ * the title side).
+ */
+@media (max-width: 640px) {
+  /* Pin the title to the TOP so it and the wheel occupy separate vertical bands.
+     With the block vertically centred, a wrapping title/subtitle grows downward
+     into the wheel's rising arc on narrow phones; top-anchoring keeps the heading
+     clear of the bottom-anchored arc regardless of how many lines it wraps to. */
+  .wc-hero {
+    height: clamp(184px, 52vw, 230px);
+    align-items: flex-start;
+  }
+
+  .wc-hero__wheel-layer {
+    left: 92%;
+    bottom: -540px;
+    transform: translateX(-50%) scale(0.6);
+  }
+
+  [dir='rtl'] .wc-hero__wheel-layer {
+    left: 8%;
+    transform: translateX(-50%) scaleX(-1) scale(0.6);
+  }
+
+  .wc-hero__title-layer {
+    max-width: 72%;
+    padding-block: 0.85rem 0;
+  }
+
+  /* Smaller heading on phones so "World Cup" / "גביע העולם" wraps to fewer lines,
+     keeping the top title band short and well clear of the arc below. */
+  .wc-hero__title {
+    font-size: clamp(2.25rem, 9vw, 3rem);
+    letter-spacing: -1px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   /* Auto-rotation is suppressed in JS; nothing else animates. */
   .wc-wheel {
