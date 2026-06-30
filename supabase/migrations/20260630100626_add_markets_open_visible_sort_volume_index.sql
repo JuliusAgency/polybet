@@ -1,0 +1,33 @@
+-- Partial composite index for the market-tracker's WebSocket subscription query
+-- (and the same-shaped feed query): top visible+OPEN markets by rolled-up volume.
+--
+-- BUG (prod 2026-06-30): the tracker subscribed to only ~44 tokens (just the
+-- open-position markets) instead of the top MAX_TRACKED_VISIBLE_MARKETS (~5000
+-- tokens), so ~96% of tradable markets had no continuously-fresh order book and
+-- users hit "Live order book is unavailable" / place_bet 400 on most markets.
+--
+-- ROOT CAUSE: fetchTopVisibleOpenMarkets runs
+--   WHERE is_visible = true AND status = 'open'
+--   ORDER BY sort_volume DESC, created_at DESC, id DESC
+-- but the only matching index, idx_markets_visible_sort_volume, is partial on
+-- (is_visible = true) WITHOUT status. The planner walked that index in
+-- sort_volume order and FILTERED status='open', removing ~13,400 non-open rows
+-- to find the first page — ~2.85s for page 1, worse for later offset pages.
+-- Under PostgREST's 8s statement_timeout (authenticator role) and any DB load,
+-- the query timed out; the tracker treated the empty result as "nothing
+-- trackable" and its reconcile loop unsubscribed the live token set, collapsing
+-- coverage to the position-only markets.
+--
+-- FIX: a partial index whose predicate includes status='open', so the ordered
+-- scan returns the top-N open+visible markets directly with NO filter-removal
+-- (measured: offset-2000 page 2.85s+ -> ~290ms; page 1 ~10ms). The tracker query
+-- can no longer time out, so the subscription stays at the full cap.
+--
+-- NOTE: prod already has this index — it was created out-of-band with
+-- CREATE INDEX CONCURRENTLY (non-blocking on the live 27k-row table) on
+-- 2026-06-30. This migration is for fresh `db reset` / other environments; the
+-- non-concurrent build is instant on an empty table and IF NOT EXISTS makes the
+-- eventual `db push` against prod a no-op.
+CREATE INDEX IF NOT EXISTS idx_markets_open_visible_sort_volume
+  ON public.markets (sort_volume DESC, created_at DESC, id DESC)
+  WHERE is_visible = true AND status = 'open';
