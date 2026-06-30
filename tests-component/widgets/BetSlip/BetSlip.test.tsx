@@ -263,6 +263,39 @@ describe('BetSlip — shares model', () => {
     expect(rpcMock).not.toHaveBeenCalled();
   });
 
+  it('shows a retryable notice (not a dead end) when the book is unavailable; Try again refetches', async () => {
+    // Book momentarily unavailable + a refetch we can assert on.
+    const refetchSpy = vi.fn().mockResolvedValue({});
+    quoteMock.mockReturnValue({
+      ...bookQuote({ book_updated_at: null, available_stake: null }),
+      refetch: refetchSpy,
+    });
+    const market = makeMarket([YES, NO]);
+
+    renderWithProviders(
+      <BetSlip
+        market={market}
+        outcome={YES}
+        availableBalance={500}
+        onClose={() => {}}
+        onSuccess={() => {}}
+      />
+    );
+
+    await userEvent.type(screen.getByLabelText(/amount/i), '25');
+
+    // The unavailable state offers an explicit, recoverable retry — the slip is
+    // not broken — and Trade stays disabled until a fresh quote arrives.
+    const retry = screen.getByRole('button', { name: /try again|נסה שוב/i });
+    expect(retry).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /trade/i })).toBeDisabled();
+
+    await userEvent.click(retry);
+    expect(refetchSpy).toHaveBeenCalled();
+    // Clicking retry never fires a bet.
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
+
   it('renders Buy/Sell as a contained segmented pill (B4)', () => {
     const market = makeMarket([YES, NO]);
 
@@ -309,6 +342,30 @@ describe('BetSlip — shares model', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /^sell$/i }));
     expect(screen.getByText(/shares to sell|מניות .*למכירה/i)).toBeInTheDocument();
+  });
+
+  it('amount cluster stays growable+shrinkable (no flex-none, no wide input size) so the value is visible — regression', () => {
+    const market = makeMarket([YES, NO]);
+    renderWithProviders(
+      <BetSlip
+        market={market}
+        outcome={YES}
+        availableBalance={500}
+        onClose={() => {}}
+        onSuccess={() => {}}
+      />
+    );
+    // The amount input's parent is the $-cluster wrapper. It must fill a bounded
+    // width (flex-1 + min-w-0), never flex-none — and the input must not impose a
+    // wide intrinsic `size`. Either failure clips/overflows the typed amount in
+    // the 360px docked Trade column (QA 2026-06-30).
+    const input = screen.getByLabelText(/amount/i);
+    const wrapper = input.parentElement!;
+    expect(wrapper.className).toContain('flex-1');
+    expect(wrapper.className).not.toContain('flex-none');
+    expect(input.className).toContain('w-full');
+    expect(input.className).toContain('min-w-0');
+    expect(input.getAttribute('size')).toBeNull();
   });
 
   it('surfaces the drift error when the RPC rejects with P0002', async () => {

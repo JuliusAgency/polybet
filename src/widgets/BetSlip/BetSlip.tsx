@@ -4,6 +4,7 @@ import { SidePanel } from '@/shared/ui/SidePanel';
 import { Button } from '@/shared/ui/Button';
 import { Spinner } from '@/shared/ui/Spinner';
 import { OutcomeButtons, type OutcomeButton } from '@/shared/ui/OutcomeButtons';
+import { QuoteRetryNotice } from '@/shared/ui/QuoteRetryNotice';
 import {
   usePlaceBetWithRetry,
   useBetQuote,
@@ -110,7 +111,11 @@ export const BetSlip = ({
   // token, so switching sides automatically refetches the right book. The same
   // RPC backs place_bet so what the user sees is what gets locked in.
   const quoteEnabled = isValidStake && !isInsufficient && Boolean(selected.polymarket_token_id);
-  const { data: quote, isFetching: quoteFetching } = useBetQuote({
+  const {
+    data: quote,
+    isFetching: quoteFetching,
+    refetch: refetchQuote,
+  } = useBetQuote({
     tokenId: selected.polymarket_token_id,
     stake: isValidStake ? stake! : null,
     enabled: quoteEnabled,
@@ -300,7 +305,7 @@ export const BetSlip = ({
                 >
                   {t('markets.amount')}
                 </label>
-                <div className="flex min-w-0 flex-1 items-baseline justify-center gap-0.5 md:flex-none md:justify-end">
+                <div className="flex min-w-0 flex-1 items-baseline justify-center gap-0.5 md:justify-end">
                   <span
                     className="shrink-0 text-5xl font-bold md:text-3xl"
                     style={{
@@ -431,11 +436,19 @@ export const BetSlip = ({
               </div>
             )}
 
-            {/* Book unavailable: explain why the CTA is disabled. */}
+            {/* Book momentarily unavailable: present it as a transient, retryable
+            state (auto-retry spinner + manual "Try again") instead of a terminal
+            error — the slip stays open and recovers when the quote refreshes. */}
             {isQuoteUnavailable && !isQuoteLoading && (
-              <div className="rounded-lg border p-3 text-sm" style={warningBoxStyle}>
-                {t('markets.quoteUnavailable')}
-              </div>
+              <QuoteRetryNotice
+                message={t('markets.quoteUnavailable')}
+                retryLabel={t('common.tryAgain')}
+                isRetrying={quoteFetching}
+                onRetry={() => {
+                  setSubmitError(null);
+                  void refetchQuote();
+                }}
+              />
             )}
 
             {/* Quote is loading and we don't have a payout to render yet */}

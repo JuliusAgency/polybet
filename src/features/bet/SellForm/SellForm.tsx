@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/shared/ui/Button';
 import { Spinner } from '@/shared/ui/Spinner';
+import { QuoteRetryNotice } from '@/shared/ui/QuoteRetryNotice';
 import { useSellPosition, PriceDriftError } from '../useSellPosition';
 import { useSellQuote, type SellQuote } from '../useSellQuote';
 import type { Position } from '@/entities/position';
@@ -52,7 +53,11 @@ export const SellForm = ({ position, onClose, onSuccess }: SellFormProps) => {
   const { mutateAsync: sell, isPending } = useSellPosition();
 
   const quoteEnabled = isValid && !isOverHeld && Boolean(tokenId);
-  const { data: quote, isFetching: quoteFetching } = useSellQuote({
+  const {
+    data: quote,
+    isFetching: quoteFetching,
+    refetch: refetchSellQuote,
+  } = useSellQuote({
     tokenId,
     shares: isValid ? shares! : null,
     enabled: quoteEnabled,
@@ -300,9 +305,15 @@ export const SellForm = ({ position, onClose, onSuccess }: SellFormProps) => {
       )}
 
       {isQuoteUnavailable && !isQuoteLoading && (
-        <div className="rounded-lg border p-3 text-sm" style={warningBoxStyle}>
-          {t('portfolio.sellQuoteUnavailable')}
-        </div>
+        <QuoteRetryNotice
+          message={t('portfolio.sellQuoteUnavailable')}
+          retryLabel={t('common.tryAgain')}
+          isRetrying={quoteFetching}
+          onRetry={() => {
+            setSubmitError(null);
+            void refetchSellQuote();
+          }}
+        />
       )}
 
       {isQuoteLoading && proceeds === null && (
