@@ -28,6 +28,7 @@ const renderShell = () =>
         }
       >
         <Route index element={<div>OUTLET_CONTENT</div>} />
+        <Route path="alpha" element={<div>ALPHA_CONTENT</div>} />
       </Route>
     </Routes>,
     { initialRoute: '/' }
@@ -70,5 +71,23 @@ describe('AdminShell', () => {
 
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.getByRole('button', { name: /menu/i })).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('navigates and auto-closes the drawer when a drawer link is selected', () => {
+    renderShell();
+
+    // Open the drawer, then click its copy of the nav link. The drawer copy is
+    // the one wired with onNavigate (the always-mounted desktop sidebar copy is
+    // not), and it is rendered last in the DOM.
+    fireEvent.click(screen.getByRole('button', { name: /menu/i }));
+    const drawerLink = screen.getAllByRole('link', { name: /Alpha/i }).at(-1)!;
+    fireEvent.click(drawerLink);
+
+    // It routed to /alpha …
+    expect(screen.getByText('ALPHA_CONTENT')).toBeInTheDocument();
+    // … and the drawer auto-closed (onNavigate → closeDrawer): the hamburger
+    // reads collapsed and the drawer-only close button is unmounted.
+    expect(screen.getByRole('button', { name: /menu/i })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('button', { name: /close/i })).not.toBeInTheDocument();
   });
 });
