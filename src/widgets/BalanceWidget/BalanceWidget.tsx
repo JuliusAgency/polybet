@@ -6,7 +6,12 @@ export interface BalanceWidgetProps {
   inPlay: number;
   openBetsCount: number;
   isLoading: boolean;
-  onOpenDrawer: () => void;
+  /** Toggles the active-bets drawer: opens it when closed, closes it when open
+   *  (re-tapping the In-Play amount must dismiss it, same as the header). */
+  onToggleDrawer: () => void;
+  /** Whether the active-bets drawer is currently open — drives the disclosure
+   *  state (aria-expanded + chevron rotation). */
+  drawerOpen?: boolean;
   onOpenSaved?: () => void;
   /** When true, the Saved button renders with an active (filled) style so the
    *  user can tell the markets feed below is currently filtered to saved-only. */
@@ -22,7 +27,8 @@ export const BalanceWidget = ({
   inPlay,
   openBetsCount,
   isLoading,
-  onOpenDrawer,
+  onToggleDrawer,
+  drawerOpen = false,
   onOpenSaved,
   savedActive = false,
   clickableCount,
@@ -66,7 +72,8 @@ export const BalanceWidget = ({
 
       {/* In-play balance — clickable */}
       <button
-        onClick={onOpenDrawer}
+        onClick={onToggleDrawer}
+        aria-expanded={drawerOpen}
         className="flex items-center gap-2 rounded-md px-2 py-1 transition-colors"
         style={{
           background: 'none',
@@ -101,7 +108,7 @@ export const BalanceWidget = ({
             {t('markets.activeBets_other', { count: openBetsCount })}
           </span>
         )}
-        {/* chevron-down icon */}
+        {/* chevron — points down when closed, flips up when the drawer is open */}
         <svg
           width="12"
           height="12"
@@ -111,7 +118,11 @@ export const BalanceWidget = ({
           strokeWidth="2.5"
           strokeLinecap="round"
           strokeLinejoin="round"
-          style={{ color: 'var(--color-text-muted)' }}
+          style={{
+            color: 'var(--color-text-muted)',
+            transform: drawerOpen ? 'rotate(180deg)' : 'none',
+            transition: 'transform var(--duration-fast) var(--ease-out-expo)',
+          }}
         >
           <polyline points="6 9 12 15 18 9" />
         </svg>

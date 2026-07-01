@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Outlet, NavLink, Link } from 'react-router-dom';
+import { Outlet, NavLink, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { ROUTES, buildPath } from '@/app/router/routes';
@@ -26,6 +26,21 @@ export const UserLayout = () => {
   // Mobile nav menu (hamburger) — the inline nav links + controls collapse into
   // this below the md breakpoint so the header fits from 320px up.
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  // UserLayout persists across route changes, so any header overlay it owns
+  // (the full-screen In-Play drawer, the mobile "More" menu) would otherwise
+  // stay mounted over the next page and trap the user. Dismiss both whenever
+  // the path changes so the logo, nav links, and bottom tab bar all return to a
+  // clean page instead of a masked one. This adjusts state during render off a
+  // previous-path guard — React's recommended alternative to a
+  // setState-in-effect (which the react-compiler lint rule forbids).
+  const location = useLocation();
+  const [overlayPathname, setOverlayPathname] = useState(location.pathname);
+  if (overlayPathname !== location.pathname) {
+    setOverlayPathname(location.pathname);
+    setIsDrawerOpen(false);
+    setIsMenuOpen(false);
+  }
 
   // Mount globally so settlement notifications fire on any page
   useBetResultNotifications();
@@ -63,9 +78,16 @@ export const UserLayout = () => {
       >
         <div className="max-w-[90rem] mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3 md:gap-6">
-            {/* Logo returns to the All-markets home from every page. */}
+            {/* Logo returns to the All-markets home from every page. Closing the
+                overlays here (not only via the route-change effect) guarantees a
+                clean landing even when already on the home route, where the path
+                does not change and the effect above would not fire. */}
             <Link
               to={ROUTES.USER.MARKETS}
+              onClick={() => {
+                setIsDrawerOpen(false);
+                setIsMenuOpen(false);
+              }}
               className="text-lg font-bold"
               style={{ color: 'var(--color-text-primary)', textDecoration: 'none' }}
             >
@@ -124,7 +146,7 @@ export const UserLayout = () => {
                   }}
                 />
                 <button
-                  onClick={() => setIsDrawerOpen(true)}
+                  onClick={() => setIsDrawerOpen((open) => !open)}
                   className="flex items-center gap-1.5 rounded-md px-2 py-1 transition-colors"
                   style={{ background: 'none', border: 'none', cursor: 'pointer', outline: 'none' }}
                   onMouseEnter={(e) => {
@@ -134,6 +156,7 @@ export const UserLayout = () => {
                     e.currentTarget.style.backgroundColor = 'transparent';
                   }}
                   aria-label={t('wallet.inPlay')}
+                  aria-expanded={isDrawerOpen}
                 >
                   <span
                     className="hidden whitespace-nowrap text-xs xl:inline"
@@ -169,7 +192,11 @@ export const UserLayout = () => {
                     strokeWidth="2.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    style={{ color: 'var(--color-text-muted)' }}
+                    style={{
+                      color: 'var(--color-text-muted)',
+                      transform: isDrawerOpen ? 'rotate(180deg)' : 'none',
+                      transition: 'transform var(--duration-fast) var(--ease-out-expo)',
+                    }}
                   >
                     <polyline points="6 9 12 15 18 9" />
                   </svg>

@@ -39,10 +39,16 @@ export const ActiveBetsDrawer = ({ isOpen, onClose }: ActiveBetsDrawerProps) => 
         onClick={onClose}
       />
 
-      {/* Drawer panel */}
+      {/* Drawer panel. Starts below the sticky app header (h-14 = 3.5rem): that
+          header sits at a much higher stacking level (--z-sticky) than this
+          drawer, so a panel anchored at top:0 would have its close (×) button
+          hidden underneath it — leaving no tap target on mobile, where the
+          full-width panel also covers the backdrop. Anchoring below the header
+          keeps the × visible and tappable on every viewport. */}
       <div
-        className="fixed top-0 bottom-0 flex flex-col"
+        className="fixed bottom-0 flex flex-col"
         style={{
+          insetBlockStart: '3.5rem',
           insetInlineEnd: 0,
           zIndex: 41,
           width: '100%',

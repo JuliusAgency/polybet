@@ -126,7 +126,8 @@ const SavedMarketsPage = () => {
           inPlay={inPlay}
           openBetsCount={openBetsCount}
           isLoading={!balance}
-          onOpenDrawer={() => setIsDrawerOpen(true)}
+          drawerOpen={isDrawerOpen}
+          onToggleDrawer={() => setIsDrawerOpen((open) => !open)}
           onOpenSaved={() => navigate(ROUTES.USER.MARKETS)}
           clickableCount={feedItems.length}
         />
