@@ -128,8 +128,14 @@ export const LimitEditor = ({ value, onSave, isSaving }: LimitEditorProps) => {
           type="button"
           onClick={() => void onSave(null)}
           disabled={isSaving}
-          className="text-xs opacity-0 transition-opacity group-hover:opacity-100 disabled:opacity-30"
-          style={{ color: 'var(--color-loss)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+          className="text-xs transition-opacity disabled:opacity-30 [@media(hover:hover)and(pointer:fine)]:opacity-0 [@media(hover:hover)and(pointer:fine)]:group-hover:opacity-100"
+          style={{
+            color: 'var(--color-loss)',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: 0,
+          }}
           aria-label={t('betLimits.reset')}
           title={t('betLimits.reset')}
         >

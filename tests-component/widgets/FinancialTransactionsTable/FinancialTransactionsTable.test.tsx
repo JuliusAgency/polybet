@@ -129,8 +129,13 @@ describe('FinancialTransactionsTable', () => {
 
     renderTable();
 
-    // Wait for the data to land (skeleton -> table).
-    await waitFor(() => expect(screen.getByText('+50.00')).toBeInTheDocument());
+    // Wait for the data to land (skeleton -> table). The widget renders a mobile
+    // card list AND the desktop table (jsdom shows both), so every value appears
+    // twice; assert on the <table> to disambiguate. getAllByRole('row') only
+    // returns table <tr>s (cards are <div>s), so row scoping stays valid.
+    // TableSkeleton also renders a (headerless) <table> while loading, so wait
+    // on a columnheader — only the real data table has <th>s.
+    await waitFor(() => expect(screen.getAllByRole('columnheader').length).toBeGreaterThan(0));
 
     const rows = screen.getAllByRole('row');
     // header row + 3 body rows
@@ -172,10 +177,11 @@ describe('FinancialTransactionsTable', () => {
 
     renderTable();
 
-    // Anchor on a unique cell (the truncated action id) so the wait isn't
-    // ambiguous: -60.00 appears in both the row's running total and the net
-    // profit summary.
-    await waitFor(() => expect(screen.getByText('tx-b')).toBeInTheDocument());
+    // Wait for the table (card + table both render every value, so a bare
+    // getByText('tx-b') would match twice).
+    // TableSkeleton also renders a (headerless) <table> while loading, so wait
+    // on a columnheader — only the real data table has <th>s.
+    await waitFor(() => expect(screen.getAllByRole('columnheader').length).toBeGreaterThan(0));
 
     // Scope to the body row: the amount also surfaces in the totals summary, so
     // a document-wide getByText('-80.00') would match more than one node.
@@ -250,7 +256,9 @@ describe('FinancialTransactionsTable', () => {
 
     renderTable();
 
-    await waitFor(() => expect(screen.getByText('Withdrawal')).toBeInTheDocument());
+    // TableSkeleton also renders a (headerless) <table> while loading, so wait
+    // on a columnheader — only the real data table has <th>s.
+    await waitFor(() => expect(screen.getAllByRole('columnheader').length).toBeGreaterThan(0));
 
     // Newest-first: dep at rows[1], wd at rows[2]. Scope amounts to the body
     // rows since figures also appear in the totals summary.
@@ -306,11 +314,15 @@ describe('FinancialTransactionsTable', () => {
   });
 
   it('keeps RTL-safe text-start on every column header', async () => {
-    respondWith([]);
+    // Needs ≥1 row: the empty state renders a centered message instead of the
+    // table, so an empty response would have no column headers to assert on.
+    respondWith([baseRow({ id: 'h1', type: 'adjustment', amount: 10 })]);
 
     renderTable();
 
-    await waitFor(() => expect(screen.getByText('No transactions found')).toBeInTheDocument());
+    // TableSkeleton also renders a (headerless) <table> while loading, so wait
+    // on a columnheader — only the real data table has <th>s.
+    await waitFor(() => expect(screen.getAllByRole('columnheader').length).toBeGreaterThan(0));
     const headers = screen.getAllByRole('columnheader');
     expect(headers.length).toBeGreaterThan(0);
     // text-start must live directly on each <th>, not only on the parent <tr>,

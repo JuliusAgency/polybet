@@ -181,37 +181,44 @@ export const TestLabPage = () => {
   const canSettle = settleMarketId && settleOutcomeId && !settleLoading;
 
   return (
-    <div className="p-6" style={{ backgroundColor: 'var(--color-bg-base)', minHeight: '100%' }}>
-      <div className="mb-6 flex items-center gap-4">
+    <div
+      className="p-4 sm:p-6"
+      style={{ backgroundColor: 'var(--color-bg-base)', minHeight: '100%' }}
+    >
+      {/* Title + demo-creation actions. The action group drops below the title on
+          phones (flex-col) so the two buttons never collide with the heading. */}
+      <div className="mb-6 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-4">
         <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
           {t('testLab.title')}
         </h1>
-        <button
-          disabled={creatingMarket}
-          onClick={() => void handleCreateMarket()}
-          className="rounded-lg px-3 py-1.5 text-xs font-semibold"
-          style={{
-            backgroundColor: 'var(--color-bg-surface)',
-            border: '1px solid var(--color-border)',
-            color: 'var(--color-text-secondary)',
-            cursor: creatingMarket ? 'default' : 'pointer',
-            opacity: creatingMarket ? 0.7 : 1,
-          }}
-        >
-          {creatingMarket ? <Spinner size="sm" /> : '+ Create Demo Market'}
-        </button>
-        <button
-          onClick={() => setShowEventModal(true)}
-          className="rounded-lg px-3 py-1.5 text-xs font-semibold"
-          style={{
-            backgroundColor: 'var(--color-accent)',
-            border: 'none',
-            color: '#fff',
-            cursor: 'pointer',
-          }}
-        >
-          + Create Demo Event
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            disabled={creatingMarket}
+            onClick={() => void handleCreateMarket()}
+            className="rounded-lg px-3 py-1.5 text-xs font-semibold"
+            style={{
+              backgroundColor: 'var(--color-bg-surface)',
+              border: '1px solid var(--color-border)',
+              color: 'var(--color-text-secondary)',
+              cursor: creatingMarket ? 'default' : 'pointer',
+              opacity: creatingMarket ? 0.7 : 1,
+            }}
+          >
+            {creatingMarket ? <Spinner size="sm" /> : '+ Create Demo Market'}
+          </button>
+          <button
+            onClick={() => setShowEventModal(true)}
+            className="rounded-lg px-3 py-1.5 text-xs font-semibold"
+            style={{
+              backgroundColor: 'var(--color-accent)',
+              border: 'none',
+              color: '#fff',
+              cursor: 'pointer',
+            }}
+          >
+            + Create Demo Event
+          </button>
+        </div>
       </div>
 
       <CreateDemoEventModal

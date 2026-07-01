@@ -106,7 +106,7 @@ export const BetLimitsPage = () => {
       {/* Managers table */}
       {data && !isLoading && (
         <div
-          className="overflow-hidden rounded-xl border"
+          className="overflow-x-auto rounded-xl border"
           style={{ backgroundColor: 'var(--color-bg-surface)', borderColor: 'var(--color-border)' }}
         >
           {/* Search bar inside table header */}

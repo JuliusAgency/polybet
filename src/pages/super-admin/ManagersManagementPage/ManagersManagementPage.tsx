@@ -18,9 +18,9 @@ export const ManagersManagementPage = () => {
   const [showSuccess, setShowSuccess] = useState(false);
 
   return (
-    <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--color-bg-base)' }}>
+    <div className="min-h-screen p-4 sm:p-6" style={{ backgroundColor: 'var(--color-bg-base)' }}>
       {/* Header row */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
           {t('managers.title')}
         </h1>
@@ -60,84 +60,146 @@ export const ManagersManagementPage = () => {
         </p>
       )}
 
-      {data && (
-        <div
-          className="overflow-hidden rounded-xl border"
+      {data && data.length === 0 && (
+        <p
+          className="rounded-xl border px-4 py-6 text-center text-sm"
           style={{
             backgroundColor: 'var(--color-bg-surface)',
             borderColor: 'var(--color-border)',
+            color: 'var(--color-text-secondary)',
           }}
         >
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-start" style={{ borderColor: 'var(--color-border)' }}>
-                {[
-                  t('managers.fullName'),
-                  t('managers.username'),
-                  t('managers.balance'),
-                  t('managers.status'),
-                  '',
-                ].map((h, i) => (
-                  <th
-                    key={i}
-                    className="px-4 py-3 font-medium text-start"
-                    style={{ color: 'var(--color-text-secondary)' }}
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {data.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="px-4 py-6 text-center"
-                    style={{ color: 'var(--color-text-secondary)' }}
-                  >
-                    {t('managers.noManagers')}
-                  </td>
-                </tr>
-              )}
-              {data.map(({ profile, manager }) => (
-                <tr
-                  key={profile.id}
-                  className="border-b last:border-0"
-                  style={{ borderColor: 'var(--color-border)' }}
-                >
-                  <td className="px-4 py-3" style={{ color: 'var(--color-text-primary)' }}>
-                    {profile.full_name}
-                  </td>
-                  <td className="px-4 py-3" style={{ color: 'var(--color-text-secondary)' }}>
-                    @{profile.username}
-                  </td>
-                  <td
-                    className="px-4 py-3 font-mono"
-                    style={{ color: 'var(--color-text-primary)' }}
-                  >
-                    {manager.balance.toFixed(2)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge variant={profile.is_active ? 'win' : 'loss'}>
-                      {profile.is_active ? t('common.active') : t('common.blocked')}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Button
-                      variant="secondary"
-                      onClick={() =>
-                        navigate(buildPath(ROUTES.ADMIN.MANAGER_PROFILE, { id: profile.id }))
-                      }
+          {t('managers.noManagers')}
+        </p>
+      )}
+
+      {data && data.length > 0 && (
+        <>
+          {/* Mobile / tablet-portrait: a card per manager — the wide action table
+              (with the Profile button) does not fit below md. */}
+          <div className="flex flex-col gap-3 md:hidden">
+            {data.map(({ profile, manager }) => (
+              <div
+                key={profile.id}
+                className="flex flex-col gap-3 rounded-xl border p-4"
+                style={{
+                  backgroundColor: 'var(--color-bg-surface)',
+                  borderColor: 'var(--color-border)',
+                }}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p
+                      className="truncate font-semibold"
+                      style={{ color: 'var(--color-text-primary)' }}
                     >
-                      {t('common.profile')}
-                    </Button>
-                  </td>
+                      {profile.full_name}
+                    </p>
+                    <p
+                      className="truncate text-sm"
+                      style={{ color: 'var(--color-text-secondary)' }}
+                    >
+                      @{profile.username}
+                    </p>
+                  </div>
+                  <Badge variant={profile.is_active ? 'win' : 'loss'}>
+                    {profile.is_active ? t('common.active') : t('common.blocked')}
+                  </Badge>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                      {t('managers.balance')}
+                    </p>
+                    <p className="font-mono text-sm" style={{ color: 'var(--color-text-primary)' }}>
+                      {manager.balance.toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+
+                <Button
+                  variant="secondary"
+                  className="w-full"
+                  onClick={() =>
+                    navigate(buildPath(ROUTES.ADMIN.MANAGER_PROFILE, { id: profile.id }))
+                  }
+                >
+                  {t('common.profile')}
+                </Button>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: the full table. overflow-x-auto keeps a too-wide table
+              scrolling inside its card instead of breaking the page. */}
+          <div
+            className="hidden overflow-x-auto rounded-xl border md:block"
+            style={{
+              backgroundColor: 'var(--color-bg-surface)',
+              borderColor: 'var(--color-border)',
+            }}
+          >
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-start" style={{ borderColor: 'var(--color-border)' }}>
+                  {[
+                    t('managers.fullName'),
+                    t('managers.username'),
+                    t('managers.balance'),
+                    t('managers.status'),
+                    '',
+                  ].map((h, i) => (
+                    <th
+                      key={i}
+                      className="px-4 py-3 font-medium text-start"
+                      style={{ color: 'var(--color-text-secondary)' }}
+                    >
+                      {h}
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {data.map(({ profile, manager }) => (
+                  <tr
+                    key={profile.id}
+                    className="border-b last:border-0"
+                    style={{ borderColor: 'var(--color-border)' }}
+                  >
+                    <td className="px-4 py-3" style={{ color: 'var(--color-text-primary)' }}>
+                      {profile.full_name}
+                    </td>
+                    <td className="px-4 py-3" style={{ color: 'var(--color-text-secondary)' }}>
+                      @{profile.username}
+                    </td>
+                    <td
+                      className="px-4 py-3 font-mono"
+                      style={{ color: 'var(--color-text-primary)' }}
+                    >
+                      {manager.balance.toFixed(2)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge variant={profile.is_active ? 'win' : 'loss'}>
+                        {profile.is_active ? t('common.active') : t('common.blocked')}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3 text-end">
+                      <Button
+                        variant="secondary"
+                        onClick={() =>
+                          navigate(buildPath(ROUTES.ADMIN.MANAGER_PROFILE, { id: profile.id }))
+                        }
+                      >
+                        {t('common.profile')}
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       <CreateManagerModal

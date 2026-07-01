@@ -191,41 +191,161 @@ const GlobalBetLogPage = () => {
           {/* Table */}
           {betLoading ? (
             <TableSkeleton rows={6} cols={9} />
-          ) : (
-            <div
-              className="overflow-hidden rounded-xl border"
+          ) : betRows.length === 0 ? (
+            <p
+              className="rounded-xl border px-4 py-6 text-center text-sm"
               style={{
                 backgroundColor: 'var(--color-bg-surface)',
                 borderColor: 'var(--color-border)',
+                color: 'var(--color-text-secondary)',
               }}
             >
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b" style={{ borderColor: 'var(--color-border)' }}>
-                    {betLogColumns.map((h) => (
-                      <th
-                        key={h}
-                        className="px-4 py-3 font-medium text-start"
-                        style={{ color: 'var(--color-text-secondary)' }}
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {betRows.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={9}
-                        className="px-4 py-6 text-center"
-                        style={{ color: 'var(--color-text-secondary)' }}
-                      >
-                        {t('common.noData')}
-                      </td>
+              {t('common.noData')}
+            </p>
+          ) : (
+            <>
+              {/* Mobile / tablet-portrait: a card per bet — the wide record table
+                  does not fit below md. */}
+              <div className="flex flex-col gap-3 md:hidden">
+                {betRows.map((row) => {
+                  const marketLabel =
+                    row.market_description.length > 40
+                      ? `${row.market_description.slice(0, 40)}…`
+                      : row.market_description;
+                  return (
+                    <div
+                      key={row.id}
+                      className="flex flex-col gap-3 rounded-xl border p-4"
+                      style={{
+                        backgroundColor: 'var(--color-bg-surface)',
+                        borderColor: 'var(--color-border)',
+                      }}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p
+                            className="truncate font-semibold"
+                            style={{ color: 'var(--color-text-primary)' }}
+                          >
+                            {row.polymarket_event_slug ? (
+                              <ExternalLink
+                                href={polymarketMarketUrl(
+                                  row.polymarket_event_slug,
+                                  row.polymarket_slug
+                                )}
+                                aria-label={`${t('globalLog.openInPolymarket')}: ${row.market_description}`}
+                              >
+                                {marketLabel}
+                              </ExternalLink>
+                            ) : (
+                              marketLabel
+                            )}
+                          </p>
+                          <p
+                            className="truncate text-sm"
+                            style={{ color: 'var(--color-text-secondary)' }}
+                          >
+                            {row.outcome_name}
+                          </p>
+                          <p
+                            className="truncate text-xs"
+                            style={{ color: 'var(--color-text-secondary)' }}
+                          >
+                            @{row.user_username}
+                            {' · '}
+                            {row.manager_username ? `@${row.manager_username}` : '—'}
+                          </p>
+                        </div>
+                        <div className="flex flex-shrink-0 flex-col items-end gap-1">
+                          <Badge variant={row.side === 'buy' ? 'win' : 'loss'}>
+                            {t(row.side === 'buy' ? 'markets.buyTab' : 'markets.sellTab')}
+                          </Badge>
+                          <Badge variant={betStatusVariant(row.status)}>
+                            {t(`bet.${row.status}`)}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                            {t('myBets.wager')}
+                          </p>
+                          <p
+                            className="font-mono text-sm"
+                            style={{ color: 'var(--color-text-primary)' }}
+                          >
+                            {row.stake.toFixed(2)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                            {t('globalLog.price')}
+                          </p>
+                          <p
+                            className="font-mono text-sm"
+                            style={{ color: 'var(--color-text-secondary)' }}
+                          >
+                            {formatSharePrice(row.avg_price)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                            {t('globalLog.shares')}
+                          </p>
+                          <p
+                            className="font-mono text-sm"
+                            style={{ color: 'var(--color-text-primary)' }}
+                          >
+                            {row.shares.toFixed(2)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                            {t('globalLog.date')}
+                          </p>
+                          <p
+                            className="font-mono text-xs"
+                            style={{ color: 'var(--color-text-secondary)' }}
+                          >
+                            {new Date(row.placed_at).toLocaleDateString(i18n.language)}{' '}
+                            {new Date(row.placed_at).toLocaleTimeString(i18n.language, {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              second: '2-digit',
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop: the full record table. */}
+              <div
+                className="hidden overflow-x-auto rounded-xl border md:block"
+                style={{
+                  backgroundColor: 'var(--color-bg-surface)',
+                  borderColor: 'var(--color-border)',
+                }}
+              >
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b" style={{ borderColor: 'var(--color-border)' }}>
+                      {betLogColumns.map((h) => (
+                        <th
+                          key={h}
+                          className="px-4 py-3 font-medium text-start"
+                          style={{ color: 'var(--color-text-secondary)' }}
+                        >
+                          {h}
+                        </th>
+                      ))}
                     </tr>
-                  ) : (
-                    betRows.map((row) => (
+                  </thead>
+                  <tbody>
+                    {betRows.map((row) => (
                       <tr
                         key={row.id}
                         className="border-b last:border-0"
@@ -313,11 +433,11 @@ const GlobalBetLogPage = () => {
                           </div>
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       )}

@@ -61,110 +61,208 @@ export const FinancialTransactionsTable = ({
 
   return (
     <div className="flex flex-col gap-4">
-      <div
-        className="overflow-hidden rounded-xl border"
-        style={{
-          backgroundColor: 'var(--color-bg-surface)',
-          borderColor: 'var(--color-border)',
-        }}
-      >
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b text-start" style={{ borderColor: 'var(--color-border)' }}>
-              {[
-                t('financialTable.actionId'),
-                t('financialTable.manager'),
-                t('financialTable.userTarget'),
-                t('financialTable.type'),
-                t('financialTable.amount'),
-                t('financialTable.totalProfitCalc'),
-                t('financialTable.note'),
-                t('financialTable.date'),
-              ].map((h) => (
-                <th
-                  key={h}
-                  className="px-4 py-3 font-medium text-start"
-                  style={{ color: 'var(--color-text-secondary)' }}
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {transactions.length === 0 && (
-              <tr>
-                <td
-                  colSpan={8}
-                  className="px-4 py-8 text-center"
-                  style={{ color: 'var(--color-text-secondary)' }}
-                >
-                  {t('financialTable.noTransactions')}
-                </td>
-              </tr>
-            )}
-            {transactions.map((tx) => (
-              <tr
-                key={tx.id}
-                className="border-b last:border-0"
-                style={{ borderColor: 'var(--color-border)' }}
-              >
-                <td
-                  className="px-4 py-3 font-mono text-xs"
-                  style={{ color: 'var(--color-text-secondary)' }}
-                  title={tx.id}
-                >
-                  {tx.id.slice(0, 8)}
-                </td>
-                <td className="px-4 py-3" style={{ color: 'var(--color-text-primary)' }}>
-                  {formatInitiatorName(tx.initiator_role, tx.manager_username, t)}
-                </td>
-                <td className="px-4 py-3" style={{ color: 'var(--color-text-primary)' }}>
-                  {tx.user_username}
-                </td>
-                <td className="px-4 py-3">
-                  {tx.type === 'adjustment' ? (
-                    <Badge variant="win">{t('financialTable.deposit')}</Badge>
-                  ) : (
-                    <Badge variant="loss">{t('financialTable.withdrawal')}</Badge>
-                  )}
-                </td>
-                <td
-                  className="px-4 py-3 font-mono"
+      {transactions.length === 0 ? (
+        <p
+          className="rounded-xl border px-4 py-6 text-center text-sm"
+          style={{
+            backgroundColor: 'var(--color-bg-surface)',
+            borderColor: 'var(--color-border)',
+            color: 'var(--color-text-secondary)',
+          }}
+        >
+          {t('financialTable.noTransactions')}
+        </p>
+      ) : (
+        <>
+          {/* Mobile / tablet-portrait: a card per transaction — the wide ledger
+              table does not fit below md. */}
+          <div className="flex flex-col gap-3 md:hidden">
+            {transactions.map((tx) => {
+              const { date, time } = formatDate(tx.created_at, i18n.language);
+              return (
+                <div
+                  key={tx.id}
+                  className="flex flex-col gap-3 rounded-xl border p-4"
                   style={{
-                    color: tx.type === 'adjustment' ? 'var(--color-win)' : 'var(--color-loss)',
+                    backgroundColor: 'var(--color-bg-surface)',
+                    borderColor: 'var(--color-border)',
                   }}
                 >
-                  {formatAmount(tx.amount, tx.type)}
-                </td>
-                <td
-                  className="px-4 py-3 font-mono"
-                  style={{
-                    color: tx.total_profit_calc >= 0 ? 'var(--color-win)' : 'var(--color-loss)',
-                  }}
-                >
-                  {formatRunningTotal(tx.total_profit_calc)}
-                </td>
-                <td
-                  className="px-4 py-3 text-xs max-w-[180px]"
-                  style={{ color: 'var(--color-text-muted)' }}
-                >
-                  {/* line-clamp needs display:-webkit-box; apply it on an inner div,
-                      not the <td>, so it survives the cell's display:table-cell. */}
-                  <div className="break-words line-clamp-2">{tx.note ?? '—'}</div>
-                </td>
-                <td
-                  className="px-4 py-3 font-mono text-xs"
-                  style={{ color: 'var(--color-text-secondary)' }}
-                >
-                  <div>{formatDate(tx.created_at, i18n.language).date}</div>
-                  <div>{formatDate(tx.created_at, i18n.language).time}</div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      {tx.type === 'adjustment' ? (
+                        <Badge variant="win">{t('financialTable.deposit')}</Badge>
+                      ) : (
+                        <Badge variant="loss">{t('financialTable.withdrawal')}</Badge>
+                      )}
+                      <p
+                        className="mt-1 truncate text-xs"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        {formatInitiatorName(tx.initiator_role, tx.manager_username, t)}
+                        {' → '}
+                        {tx.user_username}
+                      </p>
+                    </div>
+                    <p
+                      className="font-mono text-sm font-semibold"
+                      style={{
+                        color: tx.type === 'adjustment' ? 'var(--color-win)' : 'var(--color-loss)',
+                      }}
+                    >
+                      {formatAmount(tx.amount, tx.type)}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                        {t('financialTable.totalProfitCalc')}
+                      </p>
+                      <p
+                        className="font-mono text-sm"
+                        style={{
+                          color:
+                            tx.total_profit_calc >= 0 ? 'var(--color-win)' : 'var(--color-loss)',
+                        }}
+                      >
+                        {formatRunningTotal(tx.total_profit_calc)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                        {t('financialTable.date')}
+                      </p>
+                      <p
+                        className="font-mono text-xs"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        {date} {time}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                        {t('financialTable.actionId')}
+                      </p>
+                      <p
+                        className="font-mono text-xs"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                        title={tx.id}
+                      >
+                        {tx.id.slice(0, 8)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                      {t('financialTable.note')}
+                    </p>
+                    <p className="break-words text-sm" style={{ color: 'var(--color-text-muted)' }}>
+                      {tx.note ?? '—'}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop: the full ledger table. */}
+          <div
+            className="hidden overflow-x-auto rounded-xl border md:block"
+            style={{
+              backgroundColor: 'var(--color-bg-surface)',
+              borderColor: 'var(--color-border)',
+            }}
+          >
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-start" style={{ borderColor: 'var(--color-border)' }}>
+                  {[
+                    t('financialTable.actionId'),
+                    t('financialTable.manager'),
+                    t('financialTable.userTarget'),
+                    t('financialTable.type'),
+                    t('financialTable.amount'),
+                    t('financialTable.totalProfitCalc'),
+                    t('financialTable.note'),
+                    t('financialTable.date'),
+                  ].map((h) => (
+                    <th
+                      key={h}
+                      className="px-4 py-3 font-medium text-start"
+                      style={{ color: 'var(--color-text-secondary)' }}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {transactions.map((tx) => (
+                  <tr
+                    key={tx.id}
+                    className="border-b last:border-0"
+                    style={{ borderColor: 'var(--color-border)' }}
+                  >
+                    <td
+                      className="px-4 py-3 font-mono text-xs"
+                      style={{ color: 'var(--color-text-secondary)' }}
+                      title={tx.id}
+                    >
+                      {tx.id.slice(0, 8)}
+                    </td>
+                    <td className="px-4 py-3" style={{ color: 'var(--color-text-primary)' }}>
+                      {formatInitiatorName(tx.initiator_role, tx.manager_username, t)}
+                    </td>
+                    <td className="px-4 py-3" style={{ color: 'var(--color-text-primary)' }}>
+                      {tx.user_username}
+                    </td>
+                    <td className="px-4 py-3">
+                      {tx.type === 'adjustment' ? (
+                        <Badge variant="win">{t('financialTable.deposit')}</Badge>
+                      ) : (
+                        <Badge variant="loss">{t('financialTable.withdrawal')}</Badge>
+                      )}
+                    </td>
+                    <td
+                      className="px-4 py-3 font-mono"
+                      style={{
+                        color: tx.type === 'adjustment' ? 'var(--color-win)' : 'var(--color-loss)',
+                      }}
+                    >
+                      {formatAmount(tx.amount, tx.type)}
+                    </td>
+                    <td
+                      className="px-4 py-3 font-mono"
+                      style={{
+                        color: tx.total_profit_calc >= 0 ? 'var(--color-win)' : 'var(--color-loss)',
+                      }}
+                    >
+                      {formatRunningTotal(tx.total_profit_calc)}
+                    </td>
+                    <td
+                      className="px-4 py-3 text-xs max-w-[180px]"
+                      style={{ color: 'var(--color-text-muted)' }}
+                    >
+                      {/* line-clamp needs display:-webkit-box; apply it on an inner div,
+                          not the <td>, so it survives the cell's display:table-cell. */}
+                      <div className="break-words line-clamp-2">{tx.note ?? '—'}</div>
+                    </td>
+                    <td
+                      className="px-4 py-3 font-mono text-xs"
+                      style={{ color: 'var(--color-text-secondary)' }}
+                    >
+                      <div>{formatDate(tx.created_at, i18n.language).date}</div>
+                      <div>{formatDate(tx.created_at, i18n.language).time}</div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
 
       {/* Totals summary */}
       <div

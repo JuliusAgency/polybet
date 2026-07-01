@@ -192,7 +192,7 @@ export const ManagerProfilePage = () => {
   };
 
   return (
-    <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--color-bg-base)' }}>
+    <div className="min-h-screen p-4 sm:p-6" style={{ backgroundColor: 'var(--color-bg-base)' }}>
       <div className="mb-6">
         {managerLoading ? (
           <div

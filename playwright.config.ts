@@ -8,6 +8,8 @@ const PORT = 5173;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const USER1_STATE = path.resolve(__dirname, 'e2e/.auth/user1.json');
+const ADMIN_STATE = path.resolve(__dirname, 'e2e/.auth/admin.json');
+const MANAGER_STATE = path.resolve(__dirname, 'e2e/.auth/manager.json');
 
 // Pull live keys from `supabase status -o env` so the E2E stack is decoupled
 // from the developer's local .env file. The Supabase CLI keeps publishable/
@@ -77,6 +79,28 @@ export default defineConfig({
         storageState: USER1_STATE,
       },
       testMatch: /authed\/.*\.spec\.ts$/,
+      dependencies: ['setup'],
+    },
+    // Responsive admin sweeps — one project per admin role. Each test drives its
+    // own viewport via page.setViewportSize(); the device preset only supplies a
+    // Chromium baseline. The actual Supabase session is injected from the role's
+    // sessionStorage snapshot inside the sweep fixture (see e2e/responsive/sweep.ts).
+    {
+      name: 'admin-responsive',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: ADMIN_STATE,
+      },
+      testMatch: /responsive\/admin\..*\.spec\.ts$/,
+      dependencies: ['setup'],
+    },
+    {
+      name: 'manager-responsive',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: MANAGER_STATE,
+      },
+      testMatch: /responsive\/manager\..*\.spec\.ts$/,
       dependencies: ['setup'],
     },
   ],

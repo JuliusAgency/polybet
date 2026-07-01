@@ -49,3 +49,10 @@ setup('authenticate as admin', async ({ page }) => {
   await page.context().storageState({ path: storageStatePath('admin') });
   await saveSessionStorage(page, 'admin');
 });
+
+setup('authenticate as manager', async ({ page }) => {
+  await signInAs(page, 'manager');
+  await expect(page).not.toHaveURL(/sign-in/);
+  await page.context().storageState({ path: storageStatePath('manager') });
+  await saveSessionStorage(page, 'manager');
+});

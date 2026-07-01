@@ -148,7 +148,7 @@ export function ReadOnlyMarketsFeed({
   const feedError = savedOnly ? (errorSavedMarkets ?? errorSavedEvents) : error;
 
   return (
-    <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--color-bg-base)' }}>
+    <div className="min-h-screen p-4 sm:p-6" style={{ backgroundColor: 'var(--color-bg-base)' }}>
       {/* Category bar — Polymarket-style scrollable category chips, identical to
         the user feed. */}
       <div className="mb-4">

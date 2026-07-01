@@ -312,7 +312,7 @@ const AgentsDashboardPage = () => {
           {t('agentsDashboard.title')}
         </h1>
         <div
-          className="flex min-w-[17rem] flex-col gap-1.5 rounded-xl border px-3 py-2"
+          className="flex w-full flex-col gap-1.5 rounded-xl border px-3 py-2 sm:w-auto sm:min-w-[17rem]"
           style={{
             borderColor: 'var(--color-border)',
             backgroundColor: 'var(--color-bg-surface)',
@@ -507,80 +507,169 @@ const AgentsDashboardPage = () => {
         <div className="flex justify-center py-12">
           <Spinner size="md" />
         </div>
-      ) : (
-        <div
-          className="overflow-hidden rounded-xl border"
+      ) : filtered.length === 0 ? (
+        <p
+          className="rounded-xl border px-4 py-6 text-center text-sm"
           style={{
             backgroundColor: 'var(--color-bg-surface)',
             borderColor: 'var(--color-border)',
+            color: 'var(--color-text-secondary)',
           }}
         >
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b" style={{ borderColor: 'var(--color-border)' }}>
-                <th
-                  className="cursor-pointer select-none px-4 py-3 font-medium text-start"
-                  style={{ color: 'var(--color-text-secondary)' }}
-                  onClick={() => handleSort('username')}
-                >
-                  {t('agentsDashboard.agentCol')}
-                  {sortIndicator('username')}
-                </th>
-                <th
-                  className="cursor-pointer select-none px-4 py-3 font-medium text-start"
-                  style={{ color: 'var(--color-text-secondary)' }}
-                  onClick={() => handleSort('monthly_deposits')}
-                >
-                  {t('agentsDashboard.monthlyDeposits')}
-                  {sortIndicator('monthly_deposits')}
-                </th>
-                <th
-                  className="cursor-pointer select-none px-4 py-3 font-medium text-start"
-                  style={{ color: 'var(--color-text-secondary)' }}
-                  onClick={() => handleSort('monthly_withdrawals')}
-                >
-                  {t('agentsDashboard.monthlyWithdrawals')}
-                  {sortIndicator('monthly_withdrawals')}
-                </th>
-                <th
-                  className="cursor-pointer select-none px-4 py-3 font-medium text-start"
-                  style={{ color: 'var(--color-text-secondary)' }}
-                  onClick={() => handleSort('current_system_balance')}
-                >
-                  {t('agentsDashboard.currentBalance')}
-                  {sortIndicator('current_system_balance')}
-                </th>
-                <th
-                  className="cursor-pointer select-none px-4 py-3 font-medium text-start"
-                  style={{ color: 'var(--color-text-secondary)' }}
-                  onClick={() => handleSort('monthly_pnl')}
-                >
-                  {t('agentsDashboard.monthlyPnl')}
-                  {sortIndicator('monthly_pnl')}
-                </th>
-                <th
-                  className="cursor-pointer select-none px-4 py-3 font-medium text-start"
-                  style={{ color: 'var(--color-text-secondary)' }}
-                  onClick={() => handleSort('is_active')}
-                >
-                  {t('agentsDashboard.statusCol')}
-                  {sortIndicator('is_active')}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={6}
-                    className="px-4 py-6 text-center"
+          {t('common.noData')}
+        </p>
+      ) : (
+        <>
+          {/* Mobile / tablet-portrait: a card per agent — the wide sortable table
+              does not fit below md. */}
+          <div className="flex flex-col gap-3 md:hidden">
+            {filtered.map((agent) => (
+              <div
+                key={agent.agent_id}
+                className="flex flex-col gap-3 rounded-xl border p-4"
+                style={{
+                  backgroundColor: 'var(--color-bg-surface)',
+                  borderColor: 'var(--color-border)',
+                }}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <button
+                      onClick={() =>
+                        navigate(buildPath(ROUTES.ADMIN.MANAGER_PROFILE, { id: agent.agent_id }))
+                      }
+                      className="cursor-pointer truncate text-start font-semibold underline-offset-2 hover:underline"
+                      style={{
+                        color: 'var(--color-accent)',
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
+                      }}
+                    >
+                      @{agent.username}
+                    </button>
+                    {agent.full_name && (
+                      <div
+                        className="truncate text-xs"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        {agent.full_name}
+                      </div>
+                    )}
+                  </div>
+                  {agent.is_active ? (
+                    <Badge variant="open">{t('common.active')}</Badge>
+                  ) : (
+                    <Badge variant="loss">{t('common.blocked')}</Badge>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                      {t('agentsDashboard.monthlyDeposits')}
+                    </p>
+                    <p className="font-mono text-sm" style={{ color: 'var(--color-win)' }}>
+                      {agent.monthly_deposits.toFixed(2)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                      {t('agentsDashboard.monthlyWithdrawals')}
+                    </p>
+                    <p className="font-mono text-sm" style={{ color: 'var(--color-error)' }}>
+                      {agent.monthly_withdrawals.toFixed(2)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                      {t('agentsDashboard.currentBalance')}
+                    </p>
+                    <p className="font-mono text-sm" style={{ color: 'var(--color-text-primary)' }}>
+                      {agent.current_system_balance.toFixed(2)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                      {t('agentsDashboard.monthlyPnl')}
+                    </p>
+                    <p
+                      className="font-mono text-sm"
+                      style={{
+                        color: agent.monthly_pnl >= 0 ? 'var(--color-win)' : 'var(--color-error)',
+                      }}
+                    >
+                      {agent.monthly_pnl.toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: the full sortable table. */}
+          <div
+            className="hidden overflow-x-auto rounded-xl border md:block"
+            style={{
+              backgroundColor: 'var(--color-bg-surface)',
+              borderColor: 'var(--color-border)',
+            }}
+          >
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b" style={{ borderColor: 'var(--color-border)' }}>
+                  <th
+                    className="cursor-pointer select-none px-4 py-3 font-medium text-start"
                     style={{ color: 'var(--color-text-secondary)' }}
+                    onClick={() => handleSort('username')}
                   >
-                    {t('common.noData')}
-                  </td>
+                    {t('agentsDashboard.agentCol')}
+                    {sortIndicator('username')}
+                  </th>
+                  <th
+                    className="cursor-pointer select-none px-4 py-3 font-medium text-start"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                    onClick={() => handleSort('monthly_deposits')}
+                  >
+                    {t('agentsDashboard.monthlyDeposits')}
+                    {sortIndicator('monthly_deposits')}
+                  </th>
+                  <th
+                    className="cursor-pointer select-none px-4 py-3 font-medium text-start"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                    onClick={() => handleSort('monthly_withdrawals')}
+                  >
+                    {t('agentsDashboard.monthlyWithdrawals')}
+                    {sortIndicator('monthly_withdrawals')}
+                  </th>
+                  <th
+                    className="cursor-pointer select-none px-4 py-3 font-medium text-start"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                    onClick={() => handleSort('current_system_balance')}
+                  >
+                    {t('agentsDashboard.currentBalance')}
+                    {sortIndicator('current_system_balance')}
+                  </th>
+                  <th
+                    className="cursor-pointer select-none px-4 py-3 font-medium text-start"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                    onClick={() => handleSort('monthly_pnl')}
+                  >
+                    {t('agentsDashboard.monthlyPnl')}
+                    {sortIndicator('monthly_pnl')}
+                  </th>
+                  <th
+                    className="cursor-pointer select-none px-4 py-3 font-medium text-start"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                    onClick={() => handleSort('is_active')}
+                  >
+                    {t('agentsDashboard.statusCol')}
+                    {sortIndicator('is_active')}
+                  </th>
                 </tr>
-              ) : (
-                filtered.map((agent) => (
+              </thead>
+              <tbody>
+                {filtered.map((agent) => (
                   <tr
                     key={agent.agent_id}
                     className="border-b last:border-0"
@@ -646,11 +735,11 @@ const AgentsDashboardPage = () => {
                       )}
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );

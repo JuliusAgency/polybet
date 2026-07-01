@@ -58,7 +58,7 @@ export const CredentialCard = ({ username, password, onDone }: CredentialCardPro
     <div className="flex flex-col gap-4">
       {/* Username row */}
       <div
-        className="flex items-center justify-between rounded-lg border px-4 py-3 gap-3"
+        className="flex flex-col gap-2 rounded-lg border px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
         style={{
           backgroundColor: 'var(--color-bg-surface)',
           borderColor: 'var(--color-border)',
@@ -86,7 +86,7 @@ export const CredentialCard = ({ username, password, onDone }: CredentialCardPro
 
       {/* Password row */}
       <div
-        className="flex items-center justify-between rounded-lg border px-4 py-3 gap-3"
+        className="flex flex-col gap-2 rounded-lg border px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
         style={{
           backgroundColor: 'var(--color-bg-surface)',
           borderColor: 'var(--color-border)',
