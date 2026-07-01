@@ -154,16 +154,38 @@ export function toGameView(game: WorldCupGame): GameView {
 export type GameStatus = 'live' | 'upcoming' | 'final';
 
 /**
- * Classify a game. It is bettable while any of its moneyline markets is still
- * open: open + kickoff in the future => 'upcoming'; open + kickoff already
- * passed => 'live'; no open market => 'final'. `now` is injectable for tests.
+ * Upper bound on how long after the *scheduled* kickoff a game can still be
+ * "live". Sized for the worst realistic case so a genuinely in-play match is
+ * never prematurely flipped to 'final' (which would disable betting mid-game):
+ * a knockout going the distance — 90' regulation + ~15' halftime + stoppage +
+ * 30' extra time + break/stoppage + a penalty shootout ≈ 3h of play — plus a
+ * buffer for pre-kickoff delays (the timestamp is the *scheduled* start). Erring
+ * long is safe: once the sync closes the market the `!open` check flips it to
+ * 'final' immediately; this bound only catches games the sync left stale-open.
+ */
+export const LIVE_WINDOW_MS = 4.5 * 60 * 60 * 1000;
+
+/**
+ * Classify a game for the Live/Closed badge + bet gating. A game is 'live' ONLY
+ * while it is actually being played — kickoff has passed and we are still within
+ * the play window. Before kickoff it is 'upcoming'; with no open market, or once
+ * the play window has elapsed (even if a stale market is still nominally open),
+ * it is 'final'. This upper bound is what stops a finished game whose markets the
+ * sync has not yet closed from showing "Live" indefinitely. `now` is injectable
+ * for tests.
  */
 export function gameStatus(game: WorldCupGame, now: number = Date.now()): GameStatus {
   const open = game.moneyline.some((m) => m.status === 'open');
   if (!open) return 'final';
+
   const iso = game.event.game_start_time;
   const kickoff = iso ? Date.parse(iso) : NaN;
-  return Number.isFinite(kickoff) && kickoff <= now ? 'live' : 'upcoming';
+  // Unknown kickoff: we cannot assert the game is playing in real time, so it is
+  // never 'live'.
+  if (!Number.isFinite(kickoff)) return 'upcoming';
+  if (now < kickoff) return 'upcoming';
+  if (now < kickoff + LIVE_WINDOW_MS) return 'live';
+  return 'final';
 }
 
 /** A day-bucket of games for the Games feed (date header + its games). */

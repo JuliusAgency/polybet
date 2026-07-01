@@ -1,10 +1,15 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { Market, MarketOutcome } from '@/entities/market';
 import type { MarketEvent } from '@/entities/event';
 import { GamesList } from '@/widgets/GamesList';
-import { readableTextColor, toGameView, gameStatus } from '@/widgets/GamesList/helpers';
+import {
+  readableTextColor,
+  toGameView,
+  gameStatus,
+  LIVE_WINDOW_MS,
+} from '@/widgets/GamesList/helpers';
 import { groupGames, type WorldCupGame } from '@/features/bet';
 import { renderWithProviders } from '../../helpers/render';
 
@@ -94,6 +99,18 @@ function buildGame(): WorldCupGame {
 
 // Mirrors the real ROUTES.USER.EVENT_DETAIL shape the parent page injects.
 const buildEventHref = (id: string) => `/events/${id}`;
+
+// A rendered GameCard reads Date.now() internally (via gameStatus), and
+// buildGame kicks off 2026-06-16T19:00Z. Pin "now" to just after that kickoff so
+// buildGame renders as a live, bettable game. Only Date.now is stubbed —
+// setTimeout stays real, so userEvent keeps working.
+const NOW_LIVE = Date.parse('2026-06-16T20:00:00Z');
+beforeEach(() => {
+  vi.spyOn(Date, 'now').mockReturnValue(NOW_LIVE);
+});
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe('GamesList', () => {
   it('renders team rows with moneyline prices in cents and a draw button', () => {
@@ -302,11 +319,24 @@ function buildFinishedGame(): WorldCupGame {
 }
 
 describe('gameStatus', () => {
-  const now = Date.parse('2026-06-29T12:00:00Z');
+  // buildGame kicks off 2026-06-16T19:00:00Z with open markets.
+  const KICKOFF = Date.parse('2026-06-16T19:00:00Z');
+  const HOUR = 60 * 60 * 1000;
 
-  it("is 'live' when a moneyline market is open and kickoff has passed", () => {
-    // buildGame kicks off 2026-06-16 (before `now`) with open markets.
-    expect(gameStatus(buildGame(), now)).toBe('live');
+  it("is 'live' when a market is open and kickoff just passed (within the play window)", () => {
+    expect(gameStatus(buildGame(), KICKOFF + HOUR)).toBe('live');
+  });
+
+  it("treats the window as half-open: 'live' exactly at kickoff, 'final' exactly at window end", () => {
+    expect(gameStatus(buildGame(), KICKOFF)).toBe('live');
+    expect(gameStatus(buildGame(), KICKOFF + LIVE_WINDOW_MS)).toBe('final');
+  });
+
+  it("is 'final' once the play window elapses, even if a market is still open (stale sync)", () => {
+    // The bug this fixes: a game hours/days past kickoff whose markets the sync
+    // had not yet closed kept reading as 'live'. It must be treated as over.
+    expect(gameStatus(buildGame(), KICKOFF + 5 * HOUR)).toBe('final');
+    expect(gameStatus(buildGame(), Date.parse('2026-06-29T12:00:00Z'))).toBe('final');
   });
 
   it("is 'upcoming' when open and kickoff is in the future", () => {
@@ -314,16 +344,44 @@ describe('gameStatus', () => {
     const game = groupGames([
       { ...market('m-fut', 'France', 0.5), event_id: 'evt-fut', event: futureEvent },
     ])[0];
-    expect(gameStatus(game, now)).toBe('upcoming');
+    expect(gameStatus(game, KICKOFF + HOUR)).toBe('upcoming');
+  });
+
+  it("is 'upcoming' (never 'live') when the kickoff time is unknown", () => {
+    const noTime = { ...event, id: 'evt-not', game_start_time: null };
+    const game = groupGames([
+      { ...market('m-not', 'France', 0.5), event_id: 'evt-not', event: noTime },
+    ])[0];
+    expect(gameStatus(game, KICKOFF + HOUR)).toBe('upcoming');
   });
 
   it("is 'final' when no moneyline market is open", () => {
-    expect(gameStatus(buildFinishedGame(), now)).toBe('final');
+    expect(gameStatus(buildFinishedGame(), KICKOFF + HOUR)).toBe('final');
   });
 });
 
 describe('GamesList — finished games + View finished toggle', () => {
-  it('marks a finished game Final and disables its bet buttons', () => {
+  it('marks a finished game Closed and disables its bet buttons (under View finished)', () => {
+    renderWithProviders(
+      <GamesList
+        games={[buildFinishedGame()]}
+        isLoading={false}
+        isError={false}
+        onOutcomeClick={vi.fn()}
+        buildEventHref={buildEventHref}
+        showFinished
+      />
+    );
+    expect(screen.getByText(/closed/i)).toBeInTheDocument();
+    expect(screen.queryByText(/live/i)).not.toBeInTheDocument();
+    const buttons = screen.getAllByRole('button');
+    expect(buttons).toHaveLength(3);
+    for (const btn of buttons) expect(btn).toBeDisabled();
+  });
+
+  it('hides finished games from the default (live + upcoming) feed', () => {
+    // A finished game leaking into the default feed (stale-open sync) must not
+    // clutter it — the "upcoming + live only" contract.
     renderWithProviders(
       <GamesList
         games={[buildFinishedGame()]}
@@ -333,10 +391,8 @@ describe('GamesList — finished games + View finished toggle', () => {
         buildEventHref={buildEventHref}
       />
     );
-    expect(screen.getByText(/final/i)).toBeInTheDocument();
-    const buttons = screen.getAllByRole('button');
-    expect(buttons).toHaveLength(3);
-    for (const btn of buttons) expect(btn).toBeDisabled();
+    expect(screen.getByText(/no games scheduled/i)).toBeInTheDocument();
+    expect(screen.queryByText(/closed/i)).not.toBeInTheDocument();
   });
 
   it('renders the "View finished" control and invokes the toggle when clicked', async () => {
@@ -381,6 +437,51 @@ describe('GamesList — finished games + View finished toggle', () => {
       />
     );
     expect(screen.queryByRole('button', { name: /finished/i })).not.toBeInTheDocument();
+  });
+});
+
+describe('GamesList — Live / Closed badge by kickoff', () => {
+  // "now" is pinned to 2026-06-16T20:00Z by the file-level Date.now stub.
+  const gameKickingOffAt = (iso: string): WorldCupGame => {
+    const evt = { ...event, id: 'evt-rel', game_start_time: iso };
+    return groupGames([
+      { ...market('m-fra', 'France', 0.665), event_id: 'evt-rel', event: evt },
+      { ...market('m-draw', 'Draw (France vs. Senegal)', 0.215), event_id: 'evt-rel', event: evt },
+      { ...market('m-sen', 'Senegal', 0.125), event_id: 'evt-rel', event: evt },
+    ])[0];
+  };
+
+  const renderGame = (game: WorldCupGame, showFinished = false) =>
+    renderWithProviders(
+      <GamesList
+        games={[game]}
+        isLoading={false}
+        isError={false}
+        onOutcomeClick={vi.fn()}
+        buildEventHref={buildEventHref}
+        showFinished={showFinished}
+      />
+    );
+
+  it('shows the Live badge while a game is being played (kickoff passed, within window)', () => {
+    renderGame(gameKickingOffAt('2026-06-16T19:30:00Z')); // 30m before pinned now
+    expect(screen.getByText(/live/i)).toBeInTheDocument();
+    expect(screen.queryByText(/closed/i)).not.toBeInTheDocument();
+    for (const btn of screen.getAllByRole('button')) expect(btn).toBeEnabled();
+  });
+
+  it('shows Closed — not Live — for a stale-open game past its window (View finished)', () => {
+    // 6h before pinned now, markets still open: past the play window → Closed.
+    renderGame(gameKickingOffAt('2026-06-16T14:00:00Z'), true);
+    expect(screen.getByText(/closed/i)).toBeInTheDocument();
+    expect(screen.queryByText(/live/i)).not.toBeInTheDocument();
+    for (const btn of screen.getAllByRole('button')) expect(btn).toBeDisabled();
+  });
+
+  it('shows no Live/Closed badge for an upcoming game', () => {
+    renderGame(gameKickingOffAt('2026-06-16T22:00:00Z')); // 2h after pinned now
+    expect(screen.queryByText(/live/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/closed/i)).not.toBeInTheDocument();
   });
 });
 

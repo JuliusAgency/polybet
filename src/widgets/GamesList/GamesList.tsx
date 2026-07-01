@@ -3,7 +3,7 @@ import type { Market, MarketOutcome } from '@/entities/market';
 import type { WorldCupGame } from '@/features/bet';
 import { CardGridSkeleton } from '@/shared/ui/CardGridSkeleton';
 import { GameCard } from './GameCard';
-import { groupGamesByDate } from './helpers';
+import { gameStatus, groupGamesByDate } from './helpers';
 
 export interface GamesListProps {
   games: WorldCupGame[];
@@ -58,7 +58,14 @@ export function GamesList({
     );
   }
 
-  const groups = groupGamesByDate(games);
+  // The default feed is "upcoming + live only": its source query filters on the
+  // DB status='open', but the Polymarket sync can leave a finished game's markets
+  // open for hours/days, so gameStatus is the source of truth. Drop games it
+  // classifies 'final' unless the user opted into finished games — otherwise
+  // stale-but-open finished matches would pile up as disabled "Closed" cards in
+  // the live/upcoming feed.
+  const visibleGames = showFinished ? games : games.filter((g) => gameStatus(g) !== 'final');
+  const groups = groupGamesByDate(visibleGames);
 
   // The "View finished" control loads recently-played games on demand
   // (Polymarket parity). Rendered only when the parent wires a toggle handler.
@@ -77,7 +84,7 @@ export function GamesList({
 
   return (
     <div className="flex flex-col gap-6">
-      {games.length === 0 ? (
+      {visibleGames.length === 0 ? (
         <div className="flex min-h-[40vh] items-center justify-center">
           <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
             {t('worldCup.gamesEmpty')}
