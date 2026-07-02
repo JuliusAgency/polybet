@@ -21,8 +21,14 @@ const PRICE_DRIFT_TOLERANCE = 0.02;
 
 export interface SellFormProps {
   position: Position;
+  /** Called after a successful sell. The host decides whether the surrounding
+   *  panel then closes (overlay/modal) or stays open (docked column). */
   onClose: () => void;
   onSuccess?: () => void;
+  /** User-initiated dismiss (the Cancel button). Distinct from `onClose` so a
+   *  docked host can keep the panel open on a successful sell while still letting
+   *  Cancel close it. Defaults to `onClose`. */
+  onCancel?: () => void;
 }
 
 const parseShares = (value: string): number | null => {
@@ -36,7 +42,7 @@ const parseShares = (value: string): number | null => {
  * SellSlip modal (from the Portfolio) and inline inside the BetSlip Sell tab
  * (from the event page).
  */
-export const SellForm = ({ position, onClose, onSuccess }: SellFormProps) => {
+export const SellForm = ({ position, onClose, onSuccess, onCancel }: SellFormProps) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [amount, setAmount] = useState('');
@@ -341,7 +347,7 @@ export const SellForm = ({ position, onClose, onSuccess }: SellFormProps) => {
         >
           {isPending ? t('common.saving') : t('portfolio.confirmSell')}
         </Button>
-        <Button variant="secondary" onClick={onClose} type="button" className="w-full">
+        <Button variant="secondary" onClick={onCancel ?? onClose} type="button" className="w-full">
           {t('common.cancel')}
         </Button>
       </div>

@@ -6,6 +6,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import './SidePanel.css';
 
 interface SidePanelProps {
@@ -50,6 +51,7 @@ export const SidePanel = ({
   showClose = true,
   children,
 }: SidePanelProps) => {
+  const { t } = useTranslation();
   const titleId = useId();
 
   // Mobile bottom-sheet swipe-to-dismiss. The grab handle is the drag target;
@@ -184,7 +186,7 @@ export const SidePanel = ({
                   opacity: closeDisabled ? 0.4 : 1,
                   cursor: closeDisabled ? 'not-allowed' : 'pointer',
                 }}
-                aria-label="Close"
+                aria-label={t('common.close')}
               >
                 ×
               </button>
@@ -203,7 +205,7 @@ export const SidePanel = ({
                 opacity: closeDisabled ? 0.4 : 1,
                 cursor: closeDisabled ? 'not-allowed' : 'pointer',
               }}
-              aria-label="Close"
+              aria-label={t('common.close')}
             >
               ×
             </button>

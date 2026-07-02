@@ -25,12 +25,19 @@ export interface BetSlipProps {
    *  `market.market_outcomes` without reopening. */
   outcome: MarketOutcome;
   availableBalance: number;
+  /** Called after a successful trade (buy or sell). The host decides what
+   *  happens next — the floating/overlay slip closes; the docked column stays
+   *  open and just remounts with a cleared amount. NOT the user-dismiss signal. */
   onClose: () => void;
   onSuccess: () => void;
   /** Render as an in-flow sticky column instead of a floating overlay. */
   docked?: boolean;
   /** Hide the close (×) — used when the slip is a permanent page column. */
   showClose?: boolean;
+  /** User-initiated dismiss: the × / Escape / Cancel controls. Kept separate
+   *  from `onClose` so a docked host can stay open after a trade yet still be
+   *  dismissed by the user. Defaults to `onClose`. */
+  onRequestClose?: () => void;
 }
 
 const parseStake = (value: string): number | null => {
@@ -48,9 +55,16 @@ export const BetSlip = ({
   onSuccess,
   docked = false,
   showClose = true,
+  onRequestClose,
 }: BetSlipProps) => {
   const { t } = useTranslation();
   const [amount, setAmount] = useState('');
+
+  // User-initiated dismiss (× / Escape / Cancel). Separate from `onClose`, which
+  // fires on trade success — so a docked host keeps the panel open after a trade
+  // yet the user can still close it. Falls back to `onClose` for overlay hosts
+  // that treat "trade done" and "dismiss" the same way.
+  const requestClose = onRequestClose ?? onClose;
 
   // Single source of truth for which side we're buying. Everything downstream
   // (quote token, price, shares, drift, place_bet payload) derives from
@@ -199,7 +213,7 @@ export const BetSlip = ({
   } as const;
 
   return (
-    <SidePanel isOpen onClose={onClose} docked={docked} showClose={showClose}>
+    <SidePanel isOpen onClose={requestClose} docked={docked} showClose={showClose}>
       <div className="flex flex-col gap-4">
         {/* Header — event thumbnail + event title + "Market · Outcome" */}
         <div className="flex items-center gap-3 pe-6">
@@ -496,7 +510,12 @@ export const BetSlip = ({
 
         {mode === 'sell' &&
           (sellPosition && sellPosition.shares > 0 ? (
-            <SellForm position={sellPosition} onClose={onClose} onSuccess={onSuccess} />
+            <SellForm
+              position={sellPosition}
+              onClose={onClose}
+              onSuccess={onSuccess}
+              onCancel={requestClose}
+            />
           ) : (
             <div className="flex flex-col gap-3">
               <div
@@ -508,7 +527,7 @@ export const BetSlip = ({
               >
                 {t('markets.noSharesToSell', { outcome: selected.name })}
               </div>
-              <Button variant="secondary" onClick={onClose} type="button" className="w-full">
+              <Button variant="secondary" onClick={requestClose} type="button" className="w-full">
                 {t('common.cancel')}
               </Button>
             </div>

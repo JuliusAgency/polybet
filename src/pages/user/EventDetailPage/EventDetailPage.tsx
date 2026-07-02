@@ -137,12 +137,14 @@ const EventDetailPage = ({ readonly = false }: EventDetailPageProps = {}) => {
     if (market && outcome) setSelectedBet({ market, outcome });
   }
 
-  // Desktop docked column: pre-select a default so the trade column is ALWAYS
-  // populated (Polymarket-style) and never empty. Prefers the top OPEN market's
-  // Yes outcome, but falls back to the top market regardless of status so the
-  // slip always renders — if that market isn't tradable the slip disables its
-  // own CTA (stale book → "quote unavailable"). Fires once on load; the column
-  // is never cleared afterwards. Skipped when a ?market= deep-link drives it.
+  // Desktop docked column: pre-select a default so the trade column starts
+  // populated (Polymarket-style). Prefers the top OPEN market's Yes outcome,
+  // but falls back to the top market regardless of status so the slip always
+  // renders — if that market isn't tradable the slip disables its own CTA
+  // (stale book → "quote unavailable"). Fires once on load; because
+  // `appliedDefault` stays true, a column the user dismissed via × / Escape
+  // stays closed until an outcome is clicked. Skipped when a ?market=
+  // deep-link drives it.
   const [appliedDefault, setAppliedDefault] = useState(false);
   // Bumped after a successful trade so the always-on slip remounts with a
   // cleared amount while keeping the same selection (it never closes).
@@ -376,10 +378,12 @@ const EventDetailPage = ({ readonly = false }: EventDetailPageProps = {}) => {
           </div>
         </div>
 
-        {/* Desktop docked trade column — always present and never closes; it
-            sticks below the header while the left column scrolls. Keyed on
-            market+outcome (+nonce) so switching outcome or finishing a trade
-            remounts the slip with a fresh amount. */}
+        {/* Desktop docked trade column — pre-populated on load, sticks below the
+            header while the left column scrolls. Keyed on market+outcome (+nonce)
+            so switching outcome or finishing a trade remounts the slip with a
+            fresh amount. The × / Escape clears the selection; `appliedDefault`
+            stays true so the auto-select never re-opens a user-dismissed column
+            (clicking any outcome re-opens it). */}
         {dockColumn && selectedBet && (
           <aside className="mt-6 w-[360px] shrink-0">
             <BetSlip
@@ -388,8 +392,11 @@ const EventDetailPage = ({ readonly = false }: EventDetailPageProps = {}) => {
               outcome={selectedBet.outcome}
               availableBalance={balance?.available ?? 0}
               docked
-              showClose={false}
+              showClose
+              // Trade success keeps the docked column open (onSuccess remounts it
+              // cleared); only the user-initiated × / Escape dismisses it.
               onClose={() => {}}
+              onRequestClose={() => setSelectedBet(null)}
               onSuccess={() => setSlipNonce((n) => n + 1)}
             />
           </aside>

@@ -393,3 +393,107 @@ describe('BetSlip — shares model', () => {
     });
   });
 });
+
+describe('BetSlip — docked close control', () => {
+  beforeEach(() => {
+    rpcMock.mockReset();
+    quoteMock.mockReset();
+    quoteMock.mockReturnValue(bookQuote());
+  });
+
+  // Regression: the docked (desktop) feed slip opened on outcome-click but had
+  // no way to close — showClose=false + a no-op onClose left the user stuck
+  // until a page refresh/navigation. It must render a working × that dismisses it
+  // via the user-dismiss handler (onRequestClose), distinct from onClose.
+  it('the × fires onRequestClose (user-dismiss), not onClose', async () => {
+    const onClose = vi.fn();
+    const onRequestClose = vi.fn();
+    const market = makeMarket([YES, NO]);
+
+    renderWithProviders(
+      <BetSlip
+        market={market}
+        outcome={YES}
+        availableBalance={500}
+        onClose={onClose}
+        onRequestClose={onRequestClose}
+        onSuccess={() => {}}
+        docked
+        showClose
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /close/i }));
+    expect(onRequestClose).toHaveBeenCalledTimes(1);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('the × falls back to onClose when onRequestClose is omitted (overlay hosts)', async () => {
+    const onClose = vi.fn();
+    const market = makeMarket([YES, NO]);
+
+    renderWithProviders(
+      <BetSlip
+        market={market}
+        outcome={YES}
+        availableBalance={500}
+        onClose={onClose}
+        onSuccess={() => {}}
+        docked
+        showClose
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /close/i }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  // Guards the regression where wiring the × through onClose also closed the
+  // docked column on every trade: a successful trade must NOT invoke the
+  // user-dismiss handler, so the docked host can stay open.
+  it('a successful trade fires onClose + onSuccess but never onRequestClose', async () => {
+    const onClose = vi.fn();
+    const onRequestClose = vi.fn();
+    const onSuccess = vi.fn();
+    const market = makeMarket([YES, NO]);
+    rpcMock.mockResolvedValueOnce({ data: 'bet-uuid', error: null });
+
+    renderWithProviders(
+      <BetSlip
+        market={market}
+        outcome={YES}
+        availableBalance={500}
+        onClose={onClose}
+        onRequestClose={onRequestClose}
+        onSuccess={onSuccess}
+        docked
+        showClose
+      />
+    );
+
+    await userEvent.type(screen.getByLabelText(/amount/i), '25');
+    await userEvent.click(screen.getByRole('button', { name: /trade/i }));
+
+    await vi.waitFor(() => expect(onSuccess).toHaveBeenCalled());
+    expect(onClose).toHaveBeenCalled();
+    expect(onRequestClose).not.toHaveBeenCalled();
+  });
+
+  it('renders no close control when docked with showClose=false (permanent column)', () => {
+    const market = makeMarket([YES, NO]);
+
+    renderWithProviders(
+      <BetSlip
+        market={market}
+        outcome={YES}
+        availableBalance={500}
+        onClose={() => {}}
+        onSuccess={() => {}}
+        docked
+        showClose={false}
+      />
+    );
+
+    expect(screen.queryByRole('button', { name: /close/i })).not.toBeInTheDocument();
+  });
+});

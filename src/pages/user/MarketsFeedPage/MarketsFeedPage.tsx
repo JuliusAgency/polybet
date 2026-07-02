@@ -572,8 +572,11 @@ const MarketsFeedPage = () => {
             outcome={selectedBet.outcome}
             availableBalance={availableBalance}
             docked
-            showClose={false}
+            showClose
+            // Trade success keeps the docked column open (onSuccess remounts it
+            // cleared); only the user-initiated × / Escape dismisses it.
             onClose={() => {}}
+            onRequestClose={() => setSelectedBet(null)}
             onSuccess={() => setSlipNonce((n) => n + 1)}
           />
         </aside>
