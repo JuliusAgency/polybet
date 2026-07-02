@@ -20,7 +20,10 @@ test.describe('authed: markets feed', () => {
     await page.goto('/markets');
 
     await expect(page).toHaveURL(/\/markets/);
-    await expect(page.getByRole('heading', { name: /^markets$/i })).toBeVisible();
+    // The feed H1 is "All markets" since c83e3dd (2026-06-18); the previous
+    // /^markets$/i expectation matched the pre-rename title and could never
+    // match the anchored new label.
+    await expect(page.getByRole('heading', { name: /^all markets$/i })).toBeVisible();
 
     // One of two valid terminal states:
     //   * empty seed → "No markets available"
